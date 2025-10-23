@@ -1,9 +1,22 @@
-// Imagen de uva (se carga globalmente)
-let grapeImage = null;
+// Imágenes de items buenos (se cargan globalmente)
+let goodItemImages = [];
+let badItemImage = null;
 
-// Cargar imagen de uva
+// Cargar imágenes de items buenos
 function loadGrapeImage() {
-    grapeImage = loadImage('img/uva_roja.png');
+    goodItemImages.push(loadImage('img/uva_roja.png'));
+    goodItemImages.push(loadImage('img/uva_roja2.png'));
+    goodItemImages.push(loadImage('img/uva_verde.png'));
+    goodItemImages.push(loadImage('img/uva.png'));
+    goodItemImages.push(loadImage('img/hoja.png'));
+    goodItemImages.push(loadImage('img/copa.png'));
+    goodItemImages.push(loadImage('img/copa2.png'));
+    goodItemImages.push(loadImage('img/botella.png'));
+    goodItemImages.push(loadImage('img/destapador.png'));
+    goodItemImages.push(loadImage('img/destapador2.png'));
+    
+    // Cargar imagen de item malo
+    badItemImage = loadImage('img/gota.png');
 }
 
 // Sistema de copas de vino que caen
@@ -135,7 +148,7 @@ class WineGlass {
         this.x = x;
         this.y = -50;
         this.speed = random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
-        this.size = CONFIG.wineGlasses.glassSize * CONFIG.wineGlasses.globalSize;
+        this.size = CONFIG.wineGlasses.glassSize * CONFIG.wineGlasses.globalSize * 1.1; // Tamaño aumentado (110%)
         
         // Tipo de vino: blanco, tinto, rosado
         const wineTypes = ['white', 'red', 'rose'];
@@ -143,6 +156,9 @@ class WineGlass {
         
         // Colores según tipo de vino
         this.wineColor = this.getWineColor();
+        
+        // Seleccionar imagen aleatoria
+        this.imageIndex = floor(random(goodItemImages.length));
         
         // Sistema de hover
         this.hoverTime = 0;
@@ -203,24 +219,24 @@ class WineGlass {
         // Calcular progreso de captura (0 a 1)
         const captureProgress = this.hoverTime / this.requiredHoverTime;
         
-        // ANIMACIÓN ÉPICA DE CAPTURA
-        // Escala: crece de 1.0 a 1.5 mientras la agarrás
-        const scaleFactor = 1.0 + captureProgress * 0.5;
+        // ANIMACIÓN DE CAPTURA (más sutil)
+        // Escala: crece de 1.0 a 1.3 mientras la agarrás (reducido)
+        const scaleFactor = 1.0 + captureProgress * 0.3;
         
-        // Rotación: gira mientras la agarrás
-        const rotation = captureProgress * TWO_PI * 2; // 2 vueltas completas
+        // Rotación: gira menos (solo media vuelta)
+        const rotation = captureProgress * PI; // Media vuelta
         
         // Pulso adicional si está siendo hovereada
-        const pulseFactor = this.isBeingHovered ? 1 + 0.08 * sin(this.pulsePhase * 4) : 1;
+        const pulseFactor = this.isBeingHovered ? 1 + 0.05 * sin(this.pulsePhase * 4) : 1;
         
-        // GLOW ÉPICO - múltiples capas que crecen con el progreso
+        // GLOW SUTIL - menos capas y más transparente
         if (this.isBeingHovered || captureProgress > 0) {
             ctx.noStroke();
             
-            // Glow exterior (más grande)
-            for (let i = 5; i > 0; i--) {
-                const glowSize = this.size * (1.5 + i * 0.15 + captureProgress * 0.5) * pulseFactor * scaleFactor;
-                const glowAlpha = (30 - i * 3) * (0.5 + captureProgress * 0.5);
+            // Glow exterior (más sutil)
+            for (let i = 3; i > 0; i--) {
+                const glowSize = this.size * (1.2 + i * 0.1 + captureProgress * 0.3) * pulseFactor * scaleFactor;
+                const glowAlpha = (15 - i * 3) * (0.3 + captureProgress * 0.4); // Más transparente
                 
                 // Color shift: amarillo -> naranja -> dorado según progreso
                 const r = 255;
@@ -231,14 +247,11 @@ class WineGlass {
                 ctx.ellipse(0, 0, glowSize);
             }
             
-            // Partículas orbitando
-            if (captureProgress > 0.2) {
-                this.drawOrbitingParticles(ctx, captureProgress, scaleFactor);
-            }
+            // SIN partículas orbitando
         }
         
-        // Dibujar imagen de uva con todas las transformaciones
-        if (grapeImage) {
+        // Dibujar imagen del item con todas las transformaciones
+        if (goodItemImages.length > 0 && goodItemImages[this.imageIndex]) {
             ctx.push();
             
             // Aplicar rotación
@@ -248,12 +261,12 @@ class WineGlass {
             ctx.scale(scaleFactor * pulseFactor);
             
             // Tinte de color según progreso (más brillante)
-            const brightness = 1.0 + captureProgress * 0.5;
+            const brightness = 1.0 + captureProgress * 0.4; // Menos brillo
             ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
             
-            // Dibujar imagen
+            // Dibujar imagen seleccionada
             ctx.imageMode(CENTER);
-            ctx.image(grapeImage, 0, 0, this.size, this.size);
+            ctx.image(goodItemImages[this.imageIndex], 0, 0, this.size, this.size);
             
             ctx.pop();
         } else {
@@ -605,28 +618,51 @@ class BadItem {
         ctx.push();
         ctx.translate(this.x, this.y);
         
-        // Aura roja de peligro
-        const pulseFactor = 1 + 0.1 * sin(this.pulsePhase);
+        // ANIMACIÓN DE ITEM MALO
+        const pulseFactor = 1 + 0.15 * sin(this.pulsePhase * 2); // Pulso más rápido
+        const rotation = this.pulsePhase * 0.5; // Rotación constante
+        
+        // Aura roja de peligro (más intensa)
         ctx.noStroke();
         for (let i = 3; i > 0; i--) {
-            ctx.fill(255, 0, 0, 20);
-            ctx.ellipse(0, 0, this.size * (1.2 + i * 0.1) * pulseFactor);
+            ctx.fill(255, 0, 0, 30 + i * 10);
+            ctx.ellipse(0, 0, this.size * (1.3 + i * 0.15) * pulseFactor);
         }
         
-        // Dibujar según tipo
-        switch(this.itemType) {
-            case 'whiskey':
-                this.drawWhiskey(ctx);
-                break;
-            case 'daiquiri':
-                this.drawDaiquiri(ctx);
-                break;
-            case 'energyDrink':
-                this.drawEnergyDrink(ctx);
-                break;
-            case 'soda':
-                this.drawSoda(ctx);
-                break;
+        // Dibujar imagen de gota con animación
+        if (badItemImage) {
+            ctx.push();
+            
+            // Aplicar rotación
+            ctx.rotate(rotation);
+            
+            // Aplicar escala pulsante
+            ctx.scale(pulseFactor);
+            
+            // Tinte rojo para indicar peligro
+            ctx.tint(255, 100, 100); // Tinte rojizo
+            
+            // Dibujar imagen
+            ctx.imageMode(CENTER);
+            ctx.image(badItemImage, 0, 0, this.size, this.size);
+            
+            ctx.pop();
+        } else {
+            // Fallback: dibujar según tipo
+            switch(this.itemType) {
+                case 'whiskey':
+                    this.drawWhiskey(ctx);
+                    break;
+                case 'daiquiri':
+                    this.drawDaiquiri(ctx);
+                    break;
+                case 'energyDrink':
+                    this.drawEnergyDrink(ctx);
+                    break;
+                case 'soda':
+                    this.drawSoda(ctx);
+                    break;
+            }
         }
         
         ctx.pop();

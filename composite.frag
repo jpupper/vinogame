@@ -76,7 +76,7 @@ void main() {
     displacement.x /= u_resolution.x / u_resolution.y;
     
     // 2. DISTORSIÓN GRAVITACIONAL POR UVAS
-    const float GRAVITY_STRENGTH = 0.015; // Fuerza de la distorsión gravitacional
+    const float GRAVITY_STRENGTH = 0.008; // Fuerza de la distorsión gravitacional (más sutil)
     
     for (int i = 0; i < 10; i++) {
         if (u_grapeActive[i] > 0.5) {

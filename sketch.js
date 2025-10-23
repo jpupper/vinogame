@@ -5,6 +5,7 @@ let particleSystem;
 let trailSystem;
 let dynamicBackground;
 let scoreSystem;
+let barrelIndicator;
 
 // Texturas de uvas
 let grapeTextures = [];
@@ -86,6 +87,10 @@ function preload() {
   
   // Cargar imagen de uva
   loadGrapeImage();
+  
+  // Crear e inicializar barril
+  barrelIndicator = new BarrelIndicator();
+  barrelIndicator.loadAssets();
 }
 
 function setup() {
@@ -109,6 +114,7 @@ function setup() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
+  barrelIndicator.setup();
 }
 
 function draw() {
@@ -310,6 +316,10 @@ function draw() {
   // Actualizar y mostrar sistema de puntuación (en juegoBuffer)
   scoreSystem.update();
   scoreSystem.display(juegoBuffer);
+  
+  // Actualizar barril con nivel de combo
+  barrelIndicator.update(comboLevel);
+  barrelIndicator.display(juegoBuffer);
   
   // ===== COMPOSICIÓN FINAL =====
   push();
