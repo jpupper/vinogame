@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>RGB Madness</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+    <script src="p5.min2.js"></script>
+    <script src="config.js?v=14"></script>
+    <script src="pointserver.js?v=14"></script>
+    <script src="particles.js?v=14"></script>
+    <script src="traileffect.js?v=14"></script>
+    <script src="background.js?v=14"></script>
+    <script src="scoreeffect.js?v=14"></script>
+    <script src="obstacles.js?v=14"></script>
+    <script src="gameoveranimation.js?v=14"></script>
+    <script src="wineglasses.js?v=14"></script>
+    <script src="sketch.js?v=14"></script>
+    <script>
+        // Forzar recarga sin caché
+        console.log('Forzando recarga de scripts v14 - ' + new Date().toISOString());
+        
+        // Limpiar caché de localStorage si existe
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Forzar recarga completa si es necesario
+            if (location.href.indexOf('nocache') === -1) {
+                const separator = location.href.indexOf('?') !== -1 ? '&' : '?';
+                // window.location.href = location.href + separator + 'nocache=' + new Date().getTime();
+            }
+        } catch (e) {
+            console.log('No se pudo limpiar cache');
+        }
+    </script>
+</head>
+<body>
+</body>
+</html>
