@@ -1,6 +1,6 @@
 // Imágenes de items buenos (se cargan globalmente)
 let goodItemImages = [];
-let badItemImage = null;
+let badItemImages = [];
 
 // Cargar imágenes de items buenos
 function loadGrapeImage() {
@@ -15,8 +15,14 @@ function loadGrapeImage() {
     goodItemImages.push(loadImage('img/destapador.png'));
     goodItemImages.push(loadImage('img/destapador2.png'));
     
-    // Cargar imagen de item malo
-    badItemImage = loadImage('img/gota.png');
+    // Cargar imágenes de items malos (bichos)
+    badItemImages.push(loadImage('img/bicho1.png'));
+    badItemImages.push(loadImage('img/bicho2.png'));
+    badItemImages.push(loadImage('img/bicho3.png'));
+    badItemImages.push(loadImage('img/bicho4.png'));
+    badItemImages.push(loadImage('img/bicho5.png'));
+    badItemImages.push(loadImage('img/bicho6.png'));
+    badItemImages.push(loadImage('img/bicho7.png'));
 }
 
 // Sistema de copas de vino que caen
@@ -148,7 +154,7 @@ class WineGlass {
         this.x = x;
         this.y = -50;
         this.speed = random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
-        this.size = CONFIG.wineGlasses.glassSize * CONFIG.wineGlasses.globalSize * 1.1; // Tamaño aumentado (110%)
+        this.size = CONFIG.wineGlasses.itemSize; // Tamaño único para todos
         
         // Tipo de vino: blanco, tinto, rosado
         const wineTypes = ['white', 'red', 'rose'];
@@ -219,9 +225,10 @@ class WineGlass {
         // Calcular progreso de captura (0 a 1)
         const captureProgress = this.hoverTime / this.requiredHoverTime;
         
-        // ANIMACIÓN DE CAPTURA (más sutil)
-        // Escala: crece de 1.0 a 1.3 mientras la agarrás (reducido)
-        const scaleFactor = 1.0 + captureProgress * 0.3;
+        // ANIMACIÓN DE CAPTURA
+        // Escala: crece según captureScale del config
+        const maxScale = CONFIG.wineGlasses.captureScale;
+        const scaleFactor = 1.0 + captureProgress * (maxScale - 1.0);
         
         // Rotación: gira menos (solo media vuelta)
         const rotation = captureProgress * PI; // Media vuelta
@@ -593,11 +600,14 @@ class BadItem {
         this.x = x;
         this.y = -50;
         this.speed = random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
-        this.size = CONFIG.wineGlasses.badItemSize * CONFIG.wineGlasses.globalSize;
+        this.size = CONFIG.wineGlasses.itemSize; // Tamaño único para todos
         
         // Tipos de items malos
         const badTypes = ['whiskey', 'daiquiri', 'energyDrink', 'soda'];
         this.itemType = random(badTypes);
+        
+        // Seleccionar imagen aleatoria de bicho
+        this.imageIndex = floor(random(badItemImages.length));
         
         this.penalty = CONFIG.wineGlasses.badItemPenalty;
         this.pulsePhase = random(TWO_PI);
@@ -629,8 +639,8 @@ class BadItem {
             ctx.ellipse(0, 0, this.size * (1.3 + i * 0.15) * pulseFactor);
         }
         
-        // Dibujar imagen de gota con animación
-        if (badItemImage) {
+        // Dibujar imagen de bicho con animación
+        if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
             ctx.push();
             
             // Aplicar rotación
@@ -642,9 +652,9 @@ class BadItem {
             // Tinte rojo para indicar peligro
             ctx.tint(255, 100, 100); // Tinte rojizo
             
-            // Dibujar imagen
+            // Dibujar imagen de bicho seleccionada
             ctx.imageMode(CENTER);
-            ctx.image(badItemImage, 0, 0, this.size, this.size);
+            ctx.image(badItemImages[this.imageIndex], 0, 0, this.size, this.size);
             
             ctx.pop();
         } else {

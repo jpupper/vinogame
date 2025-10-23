@@ -37,33 +37,22 @@ class BarrelIndicator {
     display(ctx = window) {
         if (!this.barrelImage || !this.barrelShader || !this.barrelBuffer) return;
         
-        // Renderizar barril con shader
+        // Renderizar en el buffer WEBGL con shader
+        this.barrelBuffer.clear();
         this.barrelBuffer.shader(this.barrelShader);
+        
+        // Pasar uniforms
         this.barrelShader.setUniform('u_barrelTexture', this.barrelImage);
         this.barrelShader.setUniform('u_fillLevel', this.fillLevel);
         this.barrelShader.setUniform('u_time', millis() / 1000.0);
         this.barrelShader.setUniform('u_resolution', [this.size.w, this.size.h]);
         
+        // Dibujar quad que cubre todo el buffer
+        this.barrelBuffer.noStroke();
         this.barrelBuffer.rect(0, 0, this.size.w, this.size.h);
         
         // Dibujar el buffer en pantalla
-        ctx.push();
         ctx.imageMode(CORNER);
         ctx.image(this.barrelBuffer, this.position.x, this.position.y, this.size.w, this.size.h);
-        
-        // Texto de combo encima del barril
-        if (scoreSystem && scoreSystem.currentCombo > 0) {
-            ctx.fill(255, 220, 100);
-            ctx.stroke(100, 50, 0);
-            ctx.strokeWeight(3);
-            ctx.textAlign(CENTER, CENTER);
-            ctx.textSize(24);
-            ctx.textFont('Arial Black');
-            ctx.text(`x${scoreSystem.currentCombo}`, 
-                     this.position.x + this.size.w / 2, 
-                     this.position.y - 20);
-        }
-        
-        ctx.pop();
     }
 }

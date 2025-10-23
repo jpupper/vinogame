@@ -54,7 +54,7 @@ void main() {
     liquidColor += vec3(0.3, 0.1, 0.15) * bubbles * isLiquid;
     
     // Mezclar barril con líquido
-    vec3 finalColor = mix(barrelColor.rgb, liquidColor, isLiquid * 0.7);
+    vec3 finalColor = mix(barrelColor.rgb, liquidColor, 0.7);
     
     // Mantener el alpha del barril
     float finalAlpha = barrelColor.a;

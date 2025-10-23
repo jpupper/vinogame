@@ -210,17 +210,15 @@ const CONFIG = {
         }
     },
     
-    // SISTEMA DE COPAS DE VINO
+    // SISTEMA DE ITEMS QUE CAEN
     wineGlasses: {
         spawnInterval: 2000,          // Intervalo de aparición (ms)
         speed: {
             min: 1.5,
             max: 3
         },
-        globalSize: 1.0,              // Escala global de todas las copas (1.0 = 100%)
-        glassSize: 80,                // Tamaño base de las copas
-        bottleSize: 100,              // Tamaño base de las botellas
-        badItemSize: 80,              // Tamaño base de items malos
+        itemSize: 100,                // Tamaño inicial de items (px)
+        captureScale: 1.3,            // Escala al capturar (1.3 = 130%)
         hoverTime: 1000,              // Tiempo requerido de hover en ms (1 segundo)
         points: {                     // Puntos por tipo de vino
             white: 5,
