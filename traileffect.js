@@ -30,14 +30,14 @@ class TrailSystem {
         }
     }
 
-    display() {
+    display(ctx = window) {
         // Dibujar cada rastro
         for (let id in this.trails) {
             const trail = this.trails[id];
             if (trail.length < 2) continue;
             
-            noFill();
-            strokeWeight(CONFIG.trail.thickness);
+            ctx.noFill();
+            ctx.strokeWeight(CONFIG.trail.thickness);
             
             // Dibujar segmentos del rastro con degradado
             for (let i = 0; i < trail.length - 1; i++) {
@@ -48,10 +48,10 @@ class TrailSystem {
                 if (CONFIG.trail.colorMode === 'rainbow') {
                     // Modo arcoíris
                     const hue = (frameCount * 2 + i * 10) % 360;
-                    colorMode(HSB, 360, 100, 100, 255);
+                    ctx.colorMode(HSB, 360, 100, 100, 255);
                     const alpha = map(i, 0, trail.length - 1, 0, CONFIG.trail.opacity);
-                    stroke(hue, 80, 100, alpha);
-                    colorMode(RGB, 255, 255, 255, 255);
+                    ctx.stroke(hue, 80, 100, alpha);
+                    ctx.colorMode(RGB, 255, 255, 255, 255);
                 } else if (CONFIG.trail.colorMode === 'gradient') {
                     // Modo gradiente entre dos colores
                     const progress = map(i, 0, trail.length - 1, 0, 1);
@@ -59,15 +59,15 @@ class TrailSystem {
                     const g = lerp(CONFIG.trail.gradient.start[1], CONFIG.trail.gradient.end[1], progress);
                     const b = lerp(CONFIG.trail.gradient.start[2], CONFIG.trail.gradient.end[2], progress);
                     const alpha = map(i, 0, trail.length - 1, 0, CONFIG.trail.opacity);
-                    stroke(r, g, b, alpha);
+                    ctx.stroke(r, g, b, alpha);
                 } else {
                     // Modo color fijo
                     const alpha = map(i, 0, trail.length - 1, 0, CONFIG.trail.opacity);
-                    stroke(CONFIG.trail.color[0], CONFIG.trail.color[1], CONFIG.trail.color[2], alpha);
+                    ctx.stroke(CONFIG.trail.color[0], CONFIG.trail.color[1], CONFIG.trail.color[2], alpha);
                 }
                 
                 // Dibujar la línea entre los puntos
-                line(p1.x, p1.y, p2.x, p2.y);
+                ctx.line(p1.x, p1.y, p2.x, p2.y);
             }
         }
     }

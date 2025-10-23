@@ -12,56 +12,56 @@ class PointServer {
 		//this.points.push(new LidarPoint(width/2, height/2, 1));
 		//this.points.push(new LidarPoint(width/2, height*3/4, 2));
 	}
-	display() {
+	display(ctx = window) {
 		// Dibujar partículas de uvas primero (detrás)
-		this.displayCursorGrapes();
+		this.displayCursorGrapes(ctx);
 		
 		// Dibujamos todos los puntos (LIDAR + input)
 		const allPoints = [...this.points, ...this.inputPoints];
 
-		textAlign(LEFT)
-		fill(255);
-		textSize(30);
-		text(`Puntos: ${allPoints.length}`, 40, 40);
+		ctx.textAlign(LEFT);
+		ctx.fill(255);
+		ctx.textSize(30);
+		ctx.text(`Puntos: ${allPoints.length}`, 40, 40);
 	  
 		// Dibujar conexiones entre puntos cercanos
-		stroke(
+		ctx.stroke(
 			CONFIG.points.connectionColor[0],
 			CONFIG.points.connectionColor[1],
 			CONFIG.points.connectionColor[2],
 			CONFIG.points.connectionColor[3]
 		);
-		strokeWeight(CONFIG.points.connectionThickness);
+		ctx.strokeWeight(CONFIG.points.connectionThickness);
 		for (let i = 0; i < allPoints.length; i++) {
 			for (let j = i + 1; j < allPoints.length; j++) {
 				const d = dist(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
-				if (d < CONFIG.points.connectionDistance) { // Distancia máxima para conectar
+				if (d < CONFIG.points.connectionDistance) {
 					const alpha = map(d, 0, CONFIG.points.connectionDistance, CONFIG.points.connectionColor[3], 0);
-					stroke(
+					ctx.stroke(
 						CONFIG.points.connectionColor[0],
 						CONFIG.points.connectionColor[1],
 						CONFIG.points.connectionColor[2],
 						alpha
 					);
-					line(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
+					ctx.line(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
 				}
 			}
 		}
 		
 		// Dibujar los puntos
 		for (let i = 0; i < allPoints.length; i++) {
-			fill(
+			ctx.fill(
 				CONFIG.points.color[0],
 				CONFIG.points.color[1],
 				CONFIG.points.color[2]
 			);
-			noStroke();
-			ellipse(allPoints[i].x, allPoints[i].y, CONFIG.points.size, CONFIG.points.size);
-			fill(255);
-			ellipse(allPoints[i].x, allPoints[i].y, 15,15);
-			textSize(20);
-			fill(255,255,0)
-			text(str(allPoints[i].id), allPoints[i].x+30, allPoints[i].y-30)
+			ctx.noStroke();
+			ctx.ellipse(allPoints[i].x, allPoints[i].y, CONFIG.points.size, CONFIG.points.size);
+			ctx.fill(255);
+			ctx.ellipse(allPoints[i].x, allPoints[i].y, 15,15);
+			ctx.textSize(20);
+			ctx.fill(255,255,0);
+			ctx.text(str(allPoints[i].id), allPoints[i].x+30, allPoints[i].y-30);
 		}
 	}
 	getAllPoints(){
@@ -132,30 +132,30 @@ class PointServer {
 		}
 	}
 	
-	displayCursorGrapes() {
+	displayCursorGrapes(ctx = window) {
 		for (let grape of this.cursorGrapes) {
-			push();
-			translate(grape.pos.x, grape.pos.y);
+			ctx.push();
+			ctx.translate(grape.pos.x, grape.pos.y);
 			
 			// Efecto de brillo pulsante
 			const glowIntensity = sin(grape.glowPhase) * 0.3 + 0.7;
 			const currentSize = grape.size * glowIntensity;
 			
-			noStroke();
+			ctx.noStroke();
 			
 			// Halo
-			fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha * 0.3);
-			ellipse(0, 0, currentSize * 2, currentSize * 2);
+			ctx.fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha * 0.3);
+			ctx.ellipse(0, 0, currentSize * 2, currentSize * 2);
 			
 			// Uva principal
-			fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha);
-			ellipse(0, 0, currentSize, currentSize * 1.1);
+			ctx.fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha);
+			ctx.ellipse(0, 0, currentSize, currentSize * 1.1);
 			
 			// Brillo
-			fill(255, 255, 255, grape.alpha * 0.6);
-			ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
+			ctx.fill(255, 255, 255, grape.alpha * 0.6);
+			ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
 			
-			pop();
+			ctx.pop();
 		}
 	}
 

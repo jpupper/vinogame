@@ -14,6 +14,15 @@ let grapeTexturesLoaded = false;
 let backgroundTextures = [];
 let backgroundTexturesLoaded = false;
 
+// Buffers
+let fondoBuffer;
+let juegoBuffer;
+let feedbackBuffer;
+
+// Shader
+let feedbackShader;
+let shaderLoaded = false;
+
 function preload() {
   // Cargar texturas de uvas (imágenes 1, 3, 6, 7, 8)
   grapeTextures.push(loadImage('img/1.jpg'));  // Uvas verdes translúcidas
@@ -26,13 +35,22 @@ function preload() {
   backgroundTextures.push(loadImage('img/9.jpg'));  // Explosión de colores
   backgroundTextures.push(loadImage('img/10.jpg')); // Líquido naranja
   backgroundTextures.push(loadImage('img/2.jpg'));  // Patrón radial
+  
+  // Cargar shader
+  feedbackShader = loadShader('feedback.vert', 'feedback.frag');
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth, windowHeight, WEBGL);
   frameRate(CONFIG.general.frameRate);
   grapeTexturesLoaded = true;
   backgroundTexturesLoaded = true;
+  shaderLoaded = true;
+  
+  // Crear buffers
+  fondoBuffer = createGraphics(width, height, WEBGL);
+  juegoBuffer = createGraphics(width, height);
+  feedbackBuffer = createGraphics(width, height, WEBGL);
   
   // Inicializar sistemas
   Pserver = new PointServer();
@@ -45,23 +63,51 @@ function setup() {
 }
 
 function draw() {
-  // Dibujar fondo dinámico primero
+  // Actualizar sistemas
   dynamicBackground.update();
-  dynamicBackground.display();
   
-  // Mostrar FPS
-  displayFPS();
+  // ===== BUFFER DE FONDO =====
+  fondoBuffer.push();
+  fondoBuffer.background(5, 5, 10);
+  
+  // Dibujar texturas rotantes en el buffer de fondo (escaladas x1.6 para más zoom)
+  if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
+    fondoBuffer.imageMode(CENTER);
+    fondoBuffer.translate(0, 0);
+    fondoBuffer.rotate(dynamicBackground.textureRotation);
+    
+    // Textura actual
+    fondoBuffer.tint(255, 255, 255, 70 * (1 - dynamicBackground.transitionProgress));
+    fondoBuffer.image(backgroundTextures[dynamicBackground.currentTextureIndex], 0, 0, width * 1.6, height * 1.6);
+    
+    // Textura siguiente (fade in)
+    fondoBuffer.tint(255, 255, 255, 70 * dynamicBackground.transitionProgress);
+    fondoBuffer.image(backgroundTextures[dynamicBackground.nextTextureIndex], 0, 0, width * 1.6, height * 1.6);
+  }
+  fondoBuffer.pop();
+  
+  // Aplicar shader con feedback al fondo
+  feedbackBuffer.shader(feedbackShader);
+  feedbackShader.setUniform('u_texture', fondoBuffer);
+  feedbackShader.setUniform('u_feedbackTexture', feedbackBuffer);
+  feedbackShader.setUniform('u_resolution', [width, height]);
+  feedbackShader.setUniform('u_mouse', [mouseX, mouseY]);
+  feedbackShader.setUniform('u_time', millis() / 1000.0);
+  feedbackBuffer.rect(0, 0, width, height);
+  
+  // ===== BUFFER DE JUEGO =====
+  juegoBuffer.clear();
 
-  // Actualizar y mostrar rastros
+  // Actualizar y mostrar rastros (en juegoBuffer)
   trailSystem.update();
-  trailSystem.display();
+  trailSystem.display(juegoBuffer);
   
-  // Actualizar y mostrar copas de vino
+  // Actualizar y mostrar copas de vino (en juegoBuffer)
   wineGlassSystem.update();
-  wineGlassSystem.display();
+  wineGlassSystem.display(juegoBuffer);
 
-  // Actualizar y mostrar el servidor de puntos
-  Pserver.display();
+  // Actualizar y mostrar el servidor de puntos (en juegoBuffer)
+  Pserver.display(juegoBuffer);
   Pserver.update();
   
   // Comprobar colisiones con copas de vino y items malos
@@ -86,13 +132,29 @@ function draw() {
     }
   }
   
-  // Actualizar y mostrar efectos de partículas
+  // Actualizar y mostrar efectos de partículas (en juegoBuffer)
   particleSystem.update();
-  particleSystem.display();
+  particleSystem.display(juegoBuffer);
   
-  // Actualizar y mostrar sistema de puntuación
+  // Actualizar y mostrar sistema de puntuación (en juegoBuffer)
   scoreSystem.update();
-  scoreSystem.display();
+  scoreSystem.display(juegoBuffer);
+  
+  // ===== COMPOSICIÓN FINAL =====
+  push();
+  translate(-width/2, -height/2);
+  imageMode(CORNER);
+  
+  // Dibujar fondo con shader
+  image(feedbackBuffer, 0, 0);
+  
+  // Dibujar juego encima
+  image(juegoBuffer, 0, 0);
+  
+  // FPS (directo en canvas principal)
+  displayFPS();
+  
+  pop();
   
   // Agregar rastros para cada punto del servidor
   const allPoints = Pserver.getAllPoints();

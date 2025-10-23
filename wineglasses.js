@@ -35,15 +35,15 @@ class WineGlassSystem {
         }
     }
 
-    display() {
+    display(ctx = window) {
         // Mostrar copas de vino
         for (let glass of this.glasses) {
-            glass.display();
+            glass.display(ctx);
         }
 
         // Mostrar items malos
         for (let item of this.badItems) {
-            item.display();
+            item.display(ctx);
         }
     }
 
@@ -186,54 +186,54 @@ class WineGlass {
         return this.y > height + 100;
     }
 
-    display() {
-        push();
-        translate(this.x, this.y);
+    display(ctx = window) {
+        ctx.push();
+        ctx.translate(this.x, this.y);
         
         // Efecto de pulso si está siendo hovereado
         const pulseFactor = this.isBeingHovered ? 1 + 0.1 * sin(this.pulsePhase * 3) : 1;
         
         // Aura si está siendo hovereado
         if (this.isBeingHovered) {
-            noStroke();
+            ctx.noStroke();
             for (let i = 3; i > 0; i--) {
-                fill(255, 255, 0, 30);
-                ellipse(0, 0, this.size * (1.3 + i * 0.1) * pulseFactor);
+                ctx.fill(255, 255, 0, 30);
+                ctx.ellipse(0, 0, this.size * (1.3 + i * 0.1) * pulseFactor);
             }
         }
         
         // Dibujar copa
-        this.drawGlass(pulseFactor);
+        this.drawGlass(pulseFactor, ctx);
         
         // Barra de progreso de hover
         if (this.hoverTime > 0) {
-            this.drawProgressBar();
+            this.drawProgressBar(ctx);
         }
         
-        pop();
+        ctx.pop();
     }
 
-    drawGlass(pulseFactor) {
+    drawGlass(pulseFactor, ctx = window) {
         const scale = pulseFactor;
         
         // Calcular nivel de llenado: 0 = vacío, 1 = lleno
         const fillLevel = 1 - (this.hoverTime / this.requiredHoverTime);
         
         // BASE DE LA COPA (abajo)
-        fill(180, 180, 180);
-        stroke(140, 140, 140);
-        strokeWeight(2);
-        ellipse(0, 40 * scale, 20 * scale, 6 * scale);
+        ctx.fill(180, 180, 180);
+        ctx.stroke(140, 140, 140);
+        ctx.strokeWeight(2);
+        ctx.ellipse(0, 40 * scale, 20 * scale, 6 * scale);
         
         // TALLO (vertical)
-        strokeWeight(3);
-        stroke(160, 160, 160);
-        line(0, 40 * scale, 0, 15 * scale);
+        ctx.strokeWeight(3);
+        ctx.stroke(160, 160, 160);
+        ctx.line(0, 40 * scale, 0, 15 * scale);
         
         // VINO DENTRO (dibujar primero)
         if (fillLevel > 0.05) {
-            noStroke();
-            fill(this.wineColor);
+            ctx.noStroke();
+            ctx.fill(this.wineColor);
             
             // El vino va desde el borde superior (y=-25) hasta el fondo (y=10)
             // fillLevel 1 = lleno hasta arriba, fillLevel 0 = vacío
@@ -246,58 +246,58 @@ class WineGlass {
                 const topWidth = lerp(18, 13, fillLevel);
                 
                 // Cuerpo del vino
-                beginShape();
-                vertex(-18 * scale, wineBottom);
-                vertex(18 * scale, wineBottom);
-                vertex(topWidth * scale, wineTop);
-                vertex(-topWidth * scale, wineTop);
-                endShape(CLOSE);
+                ctx.beginShape();
+                ctx.vertex(-18 * scale, wineBottom);
+                ctx.vertex(18 * scale, wineBottom);
+                ctx.vertex(topWidth * scale, wineTop);
+                ctx.vertex(-topWidth * scale, wineTop);
+                ctx.endShape(CLOSE);
                 
                 // Superficie del vino (elipse)
-                fill(red(this.wineColor) + 20, green(this.wineColor) + 20, blue(this.wineColor) + 20, 180);
-                ellipse(0, wineTop, topWidth * 2 * scale, 5 * scale);
+                ctx.fill(red(this.wineColor) + 20, green(this.wineColor) + 20, blue(this.wineColor) + 20, 180);
+                ctx.ellipse(0, wineTop, topWidth * 2 * scale, 5 * scale);
             }
         }
         
         // CONTORNO DE LA COPA (vidrio transparente)
-        noFill();
-        stroke(220, 230, 240, 200);
-        strokeWeight(2.5);
+        ctx.noFill();
+        ctx.stroke(220, 230, 240, 200);
+        ctx.strokeWeight(2.5);
         
         // Lado izquierdo
-        line(-18 * scale, 10 * scale, -13 * scale, -25 * scale);
+        ctx.line(-18 * scale, 10 * scale, -13 * scale, -25 * scale);
         // Lado derecho
-        line(18 * scale, 10 * scale, 13 * scale, -25 * scale);
+        ctx.line(18 * scale, 10 * scale, 13 * scale, -25 * scale);
         // Borde superior
-        arc(0, -25 * scale, 26 * scale, 8 * scale, 0, PI);
+        ctx.arc(0, -25 * scale, 26 * scale, 8 * scale, 0, PI);
         
         // Línea del fondo
-        noFill();
-        stroke(200, 210, 220, 150);
-        strokeWeight(1.5);
-        ellipse(0, 10 * scale, 36 * scale, 6 * scale);
+        ctx.noFill();
+        ctx.stroke(200, 210, 220, 150);
+        ctx.strokeWeight(1.5);
+        ctx.ellipse(0, 10 * scale, 36 * scale, 6 * scale);
         
         // BRILLO en el vidrio
-        noStroke();
-        fill(255, 255, 255, 120);
-        ellipse(-6 * scale, -10 * scale, 4 * scale, 15 * scale);
-        fill(255, 255, 255, 60);
-        ellipse(8 * scale, 0, 3 * scale, 10 * scale);
+        ctx.noStroke();
+        ctx.fill(255, 255, 255, 120);
+        ctx.ellipse(-6 * scale, -10 * scale, 4 * scale, 15 * scale);
+        ctx.fill(255, 255, 255, 60);
+        ctx.ellipse(8 * scale, 0, 3 * scale, 10 * scale);
     }
 
-    drawProgressBar() {
+    drawProgressBar(ctx = window) {
         const barWidth = 40;
         const barHeight = 5;
         const progress = this.hoverTime / this.requiredHoverTime;
         
         // Fondo de la barra
-        noStroke();
-        fill(50, 50, 50, 150);
-        rect(-barWidth/2, -50, barWidth, barHeight, 2);
+        ctx.noStroke();
+        ctx.fill(50, 50, 50, 150);
+        ctx.rect(-barWidth/2, -50, barWidth, barHeight, 2);
         
         // Progreso
-        fill(255, 200, 0);
-        rect(-barWidth/2, -50, barWidth * progress, barHeight, 2);
+        ctx.fill(255, 200, 0);
+        ctx.rect(-barWidth/2, -50, barWidth * progress, barHeight, 2);
     }
 }
 
@@ -311,143 +311,184 @@ class WineBottle extends WineGlass {
         this.wineColor = this.getWineColor();
     }
 
-    drawGlass(pulseFactor) {
+    drawGlass(pulseFactor, ctx = window) {
         const scale = pulseFactor;
         
         // Calcular nivel de llenado: 0 = vacío, 1 = lleno
         const fillLevel = 1 - (this.hoverTime / this.requiredHoverTime);
         
+        // Sombra de la botella
+        ctx.push();
+        ctx.translate(3 * scale, 3 * scale);
+        ctx.noStroke();
+        ctx.fill(0, 0, 0, 40);
+        ctx.beginShape();
+        ctx.vertex(-12 * scale, 32 * scale);
+        ctx.vertex(-12 * scale, -12 * scale);
+        ctx.vertex(-9 * scale, -15 * scale);
+        ctx.vertex(-5 * scale, -18 * scale);
+        ctx.vertex(-5 * scale, -35 * scale);
+        ctx.vertex(5 * scale, -35 * scale);
+        ctx.vertex(5 * scale, -18 * scale);
+        ctx.vertex(9 * scale, -15 * scale);
+        ctx.vertex(12 * scale, -12 * scale);
+        ctx.vertex(12 * scale, 32 * scale);
+        ctx.endShape(CLOSE);
+        ctx.pop();
+        
         // VINO DENTRO DE LA BOTELLA (dibujar primero)
         if (fillLevel > 0.05) {
-            noStroke();
-            fill(this.wineColor);
+            ctx.noStroke();
+            ctx.fill(this.wineColor);
             
             // Vino en el cuerpo - forma realista de botella
             const wineBottom = 30 * scale;
             const wineTop = lerp(30, -15, fillLevel) * scale;
             
             if (wineBottom - wineTop > 0) {
-                beginShape();
+                ctx.beginShape();
                 // Base ancha
-                vertex(-11 * scale, wineBottom);
-                vertex(11 * scale, wineBottom);
+                ctx.vertex(-11 * scale, wineBottom);
+                ctx.vertex(11 * scale, wineBottom);
                 // Hombros de la botella
-                vertex(11 * scale, max(wineTop, -15 * scale));
+                ctx.vertex(11 * scale, max(wineTop, -15 * scale));
                 if (wineTop < -15 * scale) {
-                    vertex(8 * scale, -15 * scale);
-                    vertex(8 * scale, wineTop);
-                    vertex(-8 * scale, wineTop);
-                    vertex(-8 * scale, -15 * scale);
+                    ctx.vertex(8 * scale, -15 * scale);
+                    ctx.vertex(8 * scale, wineTop);
+                    ctx.vertex(-8 * scale, wineTop);
+                    ctx.vertex(-8 * scale, -15 * scale);
                 }
-                vertex(-11 * scale, max(wineTop, -15 * scale));
-                endShape(CLOSE);
+                ctx.vertex(-11 * scale, max(wineTop, -15 * scale));
+                ctx.endShape(CLOSE);
             }
+            
+            // Reflejo del vino
+            ctx.fill(red(this.wineColor) + 30, green(this.wineColor) + 30, blue(this.wineColor) + 30, 100);
+            ctx.ellipse(-7 * scale, (wineTop + wineBottom) / 2, 2 * scale, (wineBottom - wineTop) * 0.3);
         }
         
-        // VIDRIO DE LA BOTELLA (verde oscuro transparente)
-        // Cuerpo principal
-        fill(35, 70, 35, 80);
-        stroke(25, 50, 25);
-        strokeWeight(2.5);
+        // VIDRIO DE LA BOTELLA (verde oscuro transparente con gradiente)
+        // Cuerpo principal - lado oscuro
+        ctx.fill(25, 55, 25, 100);
+        ctx.stroke(15, 40, 15);
+        ctx.strokeWeight(2.5);
         
         // Forma de botella Bordeaux clásica
-        beginShape();
-        vertex(-12 * scale, 32 * scale);  // Base
-        vertex(-12 * scale, -12 * scale); // Subir recto
-        vertex(-9 * scale, -15 * scale);  // Hombro
-        vertex(-5 * scale, -18 * scale);  // Cuello
-        vertex(-5 * scale, -35 * scale);  // Arriba del cuello
-        vertex(5 * scale, -35 * scale);   // Cruzar
-        vertex(5 * scale, -18 * scale);   // Bajar cuello
-        vertex(9 * scale, -15 * scale);   // Hombro derecho
-        vertex(12 * scale, -12 * scale);  // Bajar
-        vertex(12 * scale, 32 * scale);   // Base derecha
-        endShape(CLOSE);
+        ctx.beginShape();
+        ctx.vertex(-12 * scale, 32 * scale);  // Base
+        ctx.vertex(-12 * scale, -12 * scale); // Subir recto
+        ctx.vertex(-9 * scale, -15 * scale);  // Hombro
+        ctx.vertex(-5 * scale, -18 * scale);  // Cuello
+        ctx.vertex(-5 * scale, -35 * scale);  // Arriba del cuello
+        ctx.vertex(5 * scale, -35 * scale);   // Cruzar
+        ctx.vertex(5 * scale, -18 * scale);   // Bajar cuello
+        ctx.vertex(9 * scale, -15 * scale);   // Hombro derecho
+        ctx.vertex(12 * scale, -12 * scale);  // Bajar
+        ctx.vertex(12 * scale, 32 * scale);   // Base derecha
+        ctx.endShape(CLOSE);
+        
+        // Lado iluminado (más claro)
+        ctx.fill(40, 75, 40, 120);
+        ctx.noStroke();
+        ctx.beginShape();
+        ctx.vertex(-11 * scale, 31 * scale);
+        ctx.vertex(-11 * scale, -11 * scale);
+        ctx.vertex(-8.5 * scale, -14 * scale);
+        ctx.vertex(-4.5 * scale, -17 * scale);
+        ctx.vertex(-4.5 * scale, -34 * scale);
+        ctx.vertex(-5.5 * scale, -34 * scale);
+        ctx.vertex(-5.5 * scale, -18 * scale);
+        ctx.vertex(-9 * scale, -15 * scale);
+        ctx.vertex(-12 * scale, -12 * scale);
+        ctx.vertex(-12 * scale, 31 * scale);
+        ctx.endShape(CLOSE);
         
         // Fondo de la botella (concavidad)
-        fill(25, 50, 25);
-        noStroke();
-        ellipse(0, 32 * scale, 18 * scale, 5 * scale);
+        ctx.fill(15, 35, 15);
+        ctx.noStroke();
+        ctx.ellipse(0, 32 * scale, 18 * scale, 5 * scale);
+        ctx.fill(25, 50, 25, 150);
+        ctx.ellipse(0, 31 * scale, 14 * scale, 4 * scale);
         
         // CÁPSULA (papel aluminio sobre el corcho)
-        fill(140, 30, 40);
-        stroke(100, 20, 30);
-        strokeWeight(1.5);
+        ctx.fill(140, 30, 40);
+        ctx.stroke(100, 20, 30);
+        ctx.strokeWeight(1.5);
         
         // Parte superior de la cápsula
-        ellipse(0, -35 * scale, 11 * scale, 5 * scale);
+        ctx.ellipse(0, -35 * scale, 11 * scale, 5 * scale);
         
         // Cuerpo de la cápsula
-        noStroke();
-        beginShape();
-        vertex(-5.5 * scale, -35 * scale);
-        vertex(-5.5 * scale, -30 * scale);
-        vertex(-6 * scale, -28 * scale);
-        vertex(6 * scale, -28 * scale);
-        vertex(5.5 * scale, -30 * scale);
-        vertex(5.5 * scale, -35 * scale);
-        endShape(CLOSE);
+        ctx.noStroke();
+        ctx.beginShape();
+        ctx.vertex(-5.5 * scale, -35 * scale);
+        ctx.vertex(-5.5 * scale, -30 * scale);
+        ctx.vertex(-6 * scale, -28 * scale);
+        ctx.vertex(6 * scale, -28 * scale);
+        ctx.vertex(5.5 * scale, -30 * scale);
+        ctx.vertex(5.5 * scale, -35 * scale);
+        ctx.endShape(CLOSE);
         
         // Anillos de la cápsula
-        stroke(100, 20, 30);
-        strokeWeight(0.8);
-        noFill();
-        line(-5.5 * scale, -32 * scale, 5.5 * scale, -32 * scale);
-        line(-5.8 * scale, -29 * scale, 5.8 * scale, -29 * scale);
+        ctx.stroke(100, 20, 30);
+        ctx.strokeWeight(0.8);
+        ctx.noFill();
+        ctx.line(-5.5 * scale, -32 * scale, 5.5 * scale, -32 * scale);
+        ctx.line(-5.8 * scale, -29 * scale, 5.8 * scale, -29 * scale);
         
         // ETIQUETA PRINCIPAL
-        noStroke();
-        fill(245, 240, 230);
-        rect(-10 * scale, 2 * scale, 20 * scale, 20 * scale, 1);
+        ctx.noStroke();
+        ctx.fill(245, 240, 230);
+        ctx.rect(-10 * scale, 2 * scale, 20 * scale, 20 * scale, 1);
         
         // Borde dorado de la etiqueta
-        noFill();
-        stroke(180, 140, 60);
-        strokeWeight(1.2);
-        rect(-9.5 * scale, 2.5 * scale, 19 * scale, 19 * scale, 1);
+        ctx.noFill();
+        ctx.stroke(180, 140, 60);
+        ctx.strokeWeight(1.2);
+        ctx.rect(-9.5 * scale, 2.5 * scale, 19 * scale, 19 * scale, 1);
         
         // Escudo/Logo en la etiqueta
-        noStroke();
-        fill(120, 20, 40);
+        ctx.noStroke();
+        ctx.fill(120, 20, 40);
         
         // Forma de escudo
-        beginShape();
-        vertex(0, 7 * scale);
-        vertex(-4 * scale, 8 * scale);
-        vertex(-4 * scale, 14 * scale);
-        vertex(0, 17 * scale);
-        vertex(4 * scale, 14 * scale);
-        vertex(4 * scale, 8 * scale);
-        endShape(CLOSE);
+        ctx.beginShape();
+        ctx.vertex(0, 7 * scale);
+        ctx.vertex(-4 * scale, 8 * scale);
+        ctx.vertex(-4 * scale, 14 * scale);
+        ctx.vertex(0, 17 * scale);
+        ctx.vertex(4 * scale, 14 * scale);
+        ctx.vertex(4 * scale, 8 * scale);
+        ctx.endShape(CLOSE);
         
         // Detalles del escudo
-        fill(180, 140, 60);
-        textAlign(CENTER, CENTER);
-        textSize(4 * scale);
-        textStyle(BOLD);
-        text('VR', 0, 12 * scale);
-        textStyle(NORMAL);
+        ctx.fill(180, 140, 60);
+        ctx.textAlign(CENTER, CENTER);
+        ctx.textSize(4 * scale);
+        ctx.textStyle(BOLD);
+        ctx.text('VR', 0, 12 * scale);
+        ctx.textStyle(NORMAL);
         
         // Texto en la etiqueta
-        fill(80, 80, 80);
-        textSize(2.5 * scale);
-        text('RESERVA', 0, 19 * scale);
+        ctx.fill(80, 80, 80);
+        ctx.textSize(2.5 * scale);
+        ctx.text('RESERVA', 0, 19 * scale);
         
         // ETIQUETA SECUNDARIA (cuello)
-        fill(245, 240, 230);
-        noStroke();
-        rect(-4 * scale, -24 * scale, 8 * scale, 6 * scale, 0.5);
+        ctx.fill(245, 240, 230);
+        ctx.noStroke();
+        ctx.rect(-4 * scale, -24 * scale, 8 * scale, 6 * scale, 0.5);
         
-        fill(120, 20, 40);
-        textSize(2 * scale);
-        text('2024', 0, -21 * scale);
+        ctx.fill(120, 20, 40);
+        ctx.textSize(2 * scale);
+        ctx.text('2024', 0, -21 * scale);
         
         // BRILLOS en el vidrio
-        noStroke();
-        fill(255, 255, 255, 80);
-        ellipse(-7 * scale, 0, 3 * scale, 30 * scale);
-        fill(255, 255, 255, 50);
-        ellipse(8 * scale, 8 * scale, 2 * scale, 20 * scale);
+        ctx.noStroke();
+        ctx.fill(255, 255, 255, 80);
+        ctx.ellipse(-7 * scale, 0, 3 * scale, 30 * scale);
+        ctx.fill(255, 255, 255, 50);
+        ctx.ellipse(8 * scale, 8 * scale, 2 * scale, 20 * scale);
     }
 }
 
@@ -476,260 +517,202 @@ class BadItem {
         return this.y > height + 100;
     }
 
-    display() {
-        push();
-        translate(this.x, this.y);
+    display(ctx = window) {
+        ctx.push();
+        ctx.translate(this.x, this.y);
         
         // Aura roja de peligro
         const pulseFactor = 1 + 0.1 * sin(this.pulsePhase);
-        noStroke();
+        ctx.noStroke();
         for (let i = 3; i > 0; i--) {
-            fill(255, 0, 0, 20);
-            ellipse(0, 0, this.size * (1.2 + i * 0.1) * pulseFactor);
+            ctx.fill(255, 0, 0, 20);
+            ctx.ellipse(0, 0, this.size * (1.2 + i * 0.1) * pulseFactor);
         }
         
         // Dibujar según tipo
         switch(this.itemType) {
             case 'whiskey':
-                this.drawWhiskey();
+                this.drawWhiskey(ctx);
                 break;
             case 'daiquiri':
-                this.drawDaiquiri();
+                this.drawDaiquiri(ctx);
                 break;
             case 'energyDrink':
-                this.drawEnergyDrink();
+                this.drawEnergyDrink(ctx);
                 break;
             case 'soda':
-                this.drawSoda();
+                this.drawSoda(ctx);
                 break;
         }
         
-        // Símbolo de peligro (X)
-        stroke(255, 0, 0);
-        strokeWeight(3);
-        line(-8, -45, 8, -35);
-        line(8, -45, -8, -35);
-        
-        pop();
+        ctx.pop();
     }
 
-    drawWhiskey() {
+    drawWhiskey(ctx = window) {
         // VASO DE WHISKEY - Vaso bajo y ancho
         
-        // Whiskey dentro (dibujar primero)
-        noStroke();
-        fill(200, 130, 50, 220);
-        beginShape();
-        vertex(-16, 22);
-        vertex(-14, 5);
-        vertex(14, 5);
-        vertex(16, 22);
-        endShape(CLOSE);
+        // Whiskey dentro
+        ctx.noStroke();
+        ctx.fill(200, 130, 50, 220);
+        ctx.beginShape();
+        ctx.vertex(-16, 22);
+        ctx.vertex(-14, 5);
+        ctx.vertex(14, 5);
+        ctx.vertex(16, 22);
+        ctx.endShape(CLOSE);
         
         // Cubos de hielo
-        fill(220, 240, 255, 180);
-        stroke(180, 200, 220, 150);
-        strokeWeight(1);
-        rect(-7, 8, 9, 9, 1);
-        rect(3, 11, 8, 8, 1);
-        
-        // Reflejos en el hielo
-        noStroke();
-        fill(255, 255, 255, 120);
-        rect(-6, 9, 3, 3);
-        rect(4, 12, 3, 3);
+        ctx.fill(220, 240, 255, 180);
+        ctx.stroke(180, 200, 220, 150);
+        ctx.strokeWeight(1);
+        ctx.rect(-7, 8, 9, 9, 1);
+        ctx.rect(3, 11, 8, 8, 1);
         
         // Contorno del vaso
-        noFill();
-        stroke(220, 230, 240, 200);
-        strokeWeight(2.5);
-        beginShape();
-        vertex(-17, 25);
-        vertex(-14, -15);
-        vertex(14, -15);
-        vertex(17, 25);
-        endShape(CLOSE);
+        ctx.noFill();
+        ctx.stroke(220, 230, 240, 200);
+        ctx.strokeWeight(2.5);
+        ctx.beginShape();
+        ctx.vertex(-17, 25);
+        ctx.vertex(-14, -15);
+        ctx.vertex(14, -15);
+        ctx.vertex(17, 25);
+        ctx.endShape(CLOSE);
         
-        // Base gruesa del vaso
-        fill(200, 210, 220, 150);
-        stroke(180, 190, 200);
-        strokeWeight(1.5);
-        rect(-19, 25, 38, 5, 2);
+        // Base del vaso
+        ctx.fill(200, 210, 220, 150);
+        ctx.stroke(180, 190, 200);
+        ctx.strokeWeight(1.5);
+        ctx.rect(-19, 25, 38, 5, 2);
         
-        // Brillo en el vidrio
-        noStroke();
-        fill(255, 255, 255, 100);
-        ellipse(-9, 0, 5, 18);
-        fill(255, 255, 255, 60);
-        ellipse(10, 10, 4, 12);
+        // Brillo
+        ctx.noStroke();
+        ctx.fill(255, 255, 255, 100);
+        ctx.ellipse(-9, 0, 5, 18);
     }
 
-    drawDaiquiri() {
+    drawDaiquiri(ctx = window) {
         // COPA DAIQUIRI - Copa ancha tipo margarita
         
-        // Base de la copa
-        fill(180, 180, 180);
-        stroke(140, 140, 140);
-        strokeWeight(2);
-        ellipse(0, 35, 18, 5);
+        // Base y tallo
+        ctx.fill(180, 180, 180);
+        ctx.stroke(140, 140, 140);
+        ctx.strokeWeight(2);
+        ctx.ellipse(0, 35, 18, 5);
+        ctx.strokeWeight(3);
+        ctx.line(0, 35, 0, 12);
         
-        // Tallo
-        strokeWeight(3);
-        stroke(160, 160, 160);
-        line(0, 35, 0, 12);
-        
-        // Bebida tropical dentro
-        noStroke();
-        fill(80, 220, 140, 220);
-        beginShape();
-        vertex(-22, -18);
-        vertex(22, -18);
-        vertex(13, 8);
-        vertex(-13, 8);
-        endShape(CLOSE);
-        
-        // Superficie de la bebida
-        fill(100, 240, 160, 180);
-        quad(-22, -18, 22, -18, 18, -20, -18, -20);
+        // Bebida tropical
+        ctx.noStroke();
+        ctx.fill(80, 220, 140, 220);
+        ctx.beginShape();
+        ctx.vertex(-22, -18);
+        ctx.vertex(22, -18);
+        ctx.vertex(13, 8);
+        ctx.vertex(-13, 8);
+        ctx.endShape(CLOSE);
         
         // Contorno de la copa
-        noFill();
-        stroke(220, 230, 240, 200);
-        strokeWeight(2.5);
-        beginShape();
-        vertex(-24, -20);
-        vertex(24, -20);
-        vertex(14, 12);
-        vertex(-14, 12);
-        endShape(CLOSE);
+        ctx.noFill();
+        ctx.stroke(220, 230, 240, 200);
+        ctx.strokeWeight(2.5);
+        ctx.beginShape();
+        ctx.vertex(-24, -20);
+        ctx.vertex(24, -20);
+        ctx.vertex(14, 12);
+        ctx.vertex(-14, 12);
+        ctx.endShape(CLOSE);
         
-        // Borde de la copa
-        stroke(200, 210, 220, 150);
-        strokeWeight(1.5);
-        line(-24, -20, 24, -20);
-        
-        // Sombrilla decorativa
-        stroke(255, 80, 100);
-        strokeWeight(2);
-        line(8, -8, 8, -22);
-        
-        // Paraguas de la sombrilla
-        fill(255, 80, 100);
-        noStroke();
-        arc(8, -22, 18, 12, PI, TWO_PI);
-        
-        // Detalles del paraguas
-        stroke(200, 60, 80);
-        strokeWeight(1);
-        for (let i = -1; i <= 1; i++) {
-            line(8 + i * 5, -22, 8 + i * 5, -28);
-        }
-        
-        // Brillo en el vidrio
-        noStroke();
-        fill(255, 255, 255, 100);
-        ellipse(-10, -5, 6, 15);
+        // Sombrilla
+        ctx.stroke(255, 80, 100);
+        ctx.strokeWeight(2);
+        ctx.line(8, -8, 8, -22);
+        ctx.fill(255, 80, 100);
+        ctx.noStroke();
+        ctx.arc(8, -22, 18, 12, PI, TWO_PI);
     }
 
-    drawEnergyDrink() {
+    drawEnergyDrink(ctx = window) {
         // LATA DE ENERGIZANTE
         
-        // Cuerpo de la lata (negro/azul oscuro)
-        fill(20, 25, 35);
-        stroke(40, 45, 55);
-        strokeWeight(2);
-        rect(-11, -28, 22, 53, 2);
+        // Cuerpo de la lata
+        ctx.fill(20, 25, 35);
+        ctx.stroke(40, 45, 55);
+        ctx.strokeWeight(2);
+        ctx.rect(-11, -28, 22, 53, 2);
         
         // Tapa superior
-        fill(70, 75, 85);
-        stroke(50, 55, 65);
-        strokeWeight(1.5);
-        ellipse(0, -28, 22, 6);
+        ctx.fill(70, 75, 85);
+        ctx.stroke(50, 55, 65);
+        ctx.strokeWeight(1.5);
+        ctx.ellipse(0, -28, 22, 6);
         
-        // Anillo de apertura
-        fill(90, 95, 105);
-        noStroke();
-        ellipse(0, -28, 6, 3);
-        rect(-1, -28, 2, 4);
+        // Bandas de color
+        ctx.noStroke();
+        ctx.fill(0, 180, 255);
+        ctx.rect(-11, -10, 22, 8);
+        ctx.fill(255, 220, 0);
+        ctx.rect(-11, -2, 22, 8);
         
-        // Banda de color
-        noStroke();
-        fill(0, 180, 255);
-        rect(-11, -10, 22, 8);
-        fill(255, 220, 0);
-        rect(-11, -2, 22, 8);
-        
-        // Logo - Rayo energético
-        fill(255, 220, 0);
-        beginShape();
-        vertex(2, -20);
-        vertex(-6, -5);
-        vertex(-1, -5);
-        vertex(-4, 10);
-        vertex(6, -5);
-        vertex(1, -5);
-        endShape(CLOSE);
-        
-        // Sin texto ENERGY
+        // Logo - Rayo
+        ctx.fill(255, 220, 0);
+        ctx.beginShape();
+        ctx.vertex(2, -20);
+        ctx.vertex(-6, -5);
+        ctx.vertex(-1, -5);
+        ctx.vertex(-4, 10);
+        ctx.vertex(6, -5);
+        ctx.vertex(1, -5);
+        ctx.endShape(CLOSE);
         
         // Brillo metálico
-        noStroke();
-        fill(255, 255, 255, 60);
-        rect(-9, -25, 3, 48, 1);
-        fill(255, 255, 255, 30);
-        rect(7, -25, 2, 48, 1);
+        ctx.noStroke();
+        ctx.fill(255, 255, 255, 60);
+        ctx.rect(-9, -25, 3, 48, 1);
     }
 
-    drawSoda() {
-        // BOTELLA DE GASEOSA - Diseño más amigable
+    drawSoda(ctx = window) {
+        // BOTELLA DE GASEOSA
         
-        // Líquido dentro (gaseosa clara)
-        noStroke();
-        fill(230, 245, 210, 200);
+        // Líquido dentro
+        ctx.noStroke();
+        ctx.fill(230, 245, 210, 200);
+        ctx.beginShape();
+        ctx.vertex(-10, 25);
+        ctx.vertex(-10, 0);
+        ctx.vertex(-8, -8);
+        ctx.vertex(8, -8);
+        ctx.vertex(10, 0);
+        ctx.vertex(10, 25);
+        ctx.endShape(CLOSE);
         
-        // Forma del líquido siguiendo la botella
-        beginShape();
-        vertex(-10, 25);
-        vertex(-10, 0);
-        vertex(-8, -8);
-        vertex(8, -8);
-        vertex(10, 0);
-        vertex(10, 25);
-        endShape(CLOSE);
+        // Burbujas
+        ctx.fill(255, 255, 255, 180);
+        ctx.ellipse(-4, 2, 5, 5);
+        ctx.ellipse(5, 6, 4, 4);
+        ctx.ellipse(-2, 12, 3, 3);
+        ctx.ellipse(6, 16, 5, 5);
         
-        // Burbujas en el líquido
-        fill(255, 255, 255, 180);
-        ellipse(-4, 2, 5, 5);
-        ellipse(5, 6, 4, 4);
-        ellipse(-2, 12, 3, 3);
-        ellipse(6, 16, 5, 5);
-        ellipse(-5, 20, 4, 4);
-        ellipse(3, 22, 3, 3);
+        // Cuerpo de la botella
+        ctx.fill(80, 180, 100, 60);
+        ctx.stroke(60, 140, 80);
+        ctx.strokeWeight(2);
+        ctx.beginShape();
+        ctx.vertex(-11, 28);
+        ctx.vertex(-11, 2);
+        ctx.vertex(-10, -10);
+        ctx.vertex(-7, -26);
+        ctx.vertex(-6, -32);
+        ctx.vertex(6, -32);
+        ctx.vertex(7, -26);
+        ctx.vertex(10, -10);
+        ctx.vertex(11, 2);
+        ctx.vertex(11, 28);
+        ctx.endShape(CLOSE);
         
-        // Cuerpo de la botella (plástico transparente con tinte verde)
-        fill(80, 180, 100, 60);
-        stroke(60, 140, 80);
-        strokeWeight(2);
-        
-        // Forma suave de botella
-        beginShape();
-        vertex(-11, 28);
-        vertex(-11, 2);
-        vertex(-10, -10);
-        vertex(-7, -26);
-        vertex(-6, -32);
-        vertex(6, -32);
-        vertex(7, -26);
-        vertex(10, -10);
-        vertex(11, 2);
-        vertex(11, 28);
-        endShape(CLOSE);
-        
-        // Base de la botella
-        fill(60, 140, 80, 100);
-        stroke(50, 120, 70);
-        strokeWeight(1.5);
-        ellipse(0, 28, 22, 6);
+        // Base
+        ctx.fill(60, 140, 80, 100);
+        ctx.ellipse(0, 28, 22, 6);
         
         // Tapa rosca (plástico verde)
         fill(80, 180, 100);

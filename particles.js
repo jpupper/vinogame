@@ -52,20 +52,20 @@ class ParticleSystem {
         }
     }
 
-    display() {
+    display(ctx = window) {
         // Display explosion particles
         for (let i = 0; i < this.explosionParticles.length; i++) {
-            this.explosionParticles[i].display();
+            this.explosionParticles[i].display(ctx);
         }
 
         // Display hover particles
         for (let i = 0; i < this.hoverParticles.length; i++) {
-            this.hoverParticles[i].display();
+            this.hoverParticles[i].display(ctx);
         }
         
         // Display energy particles
         for (let i = 0; i < this.energyParticles.length; i++) {
-            this.energyParticles[i].display();
+            this.energyParticles[i].display(ctx);
         }
     }
 }
@@ -109,9 +109,9 @@ class ExplosionParticle {
         this.glowPhase += this.glowSpeed;
     }
 
-    display() {
-        push();
-        translate(this.position.x, this.position.y);
+    display(ctx = window) {
+        ctx.push();
+        ctx.translate(this.position.x, this.position.y);
         
         // Calcular opacidad basada en lifespan
         let alpha = map(this.lifespan, 0, 400, 0, 255);
@@ -120,21 +120,21 @@ class ExplosionParticle {
         let glowIntensity = sin(this.glowPhase) * 0.3 + 0.7;
         let currentSize = this.size * glowIntensity;
         
-        noStroke();
+        ctx.noStroke();
         
         // Halo exterior
-        fill(red(this.color), green(this.color), blue(this.color), alpha * 0.3);
-        ellipse(0, 0, currentSize * 2, currentSize * 2);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), alpha * 0.3);
+        ctx.ellipse(0, 0, currentSize * 2, currentSize * 2);
         
         // Uva principal
-        fill(red(this.color), green(this.color), blue(this.color), alpha);
-        ellipse(0, 0, currentSize, currentSize * 1.1);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), alpha);
+        ctx.ellipse(0, 0, currentSize, currentSize * 1.1);
         
         // Brillo de uva
-        fill(255, 255, 255, alpha * 0.6);
-        ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
+        ctx.fill(255, 255, 255, alpha * 0.6);
+        ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
         
-        pop();
+        ctx.pop();
     }
 
     isDead() {
@@ -189,32 +189,32 @@ class HoverParticle {
         this.floatPhase += this.floatSpeed;
     }
 
-    display() {
-        push();
-        translate(this.position.x, this.position.y);
+    display(ctx = window) {
+        ctx.push();
+        ctx.translate(this.position.x, this.position.y);
         
         // Efecto de pulsación
         let pulseScale = sin(this.pulsePhase) * 0.2 + 1;
         let currentSize = this.size * pulseScale;
         
-        noStroke();
+        ctx.noStroke();
         
         // Halo exterior suave
-        fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.2);
-        ellipse(0, 0, currentSize * 2.5, currentSize * 2.5);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.2);
+        ctx.ellipse(0, 0, currentSize * 2.5, currentSize * 2.5);
         
-        fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.4);
-        ellipse(0, 0, currentSize * 1.8, currentSize * 1.8);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.4);
+        ctx.ellipse(0, 0, currentSize * 1.8, currentSize * 1.8);
         
         // Cuerpo principal
-        fill(red(this.color), green(this.color), blue(this.color), this.lifespan);
-        ellipse(0, 0, currentSize, currentSize);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan);
+        ctx.ellipse(0, 0, currentSize, currentSize);
         
         // Brillo interno
-        fill(255, 255, 255, this.lifespan * 0.7);
-        ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.4, currentSize * 0.4);
+        ctx.fill(255, 255, 255, this.lifespan * 0.7);
+        ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.4, currentSize * 0.4);
         
-        pop();
+        ctx.pop();
     }
 
     isDead() {
@@ -264,9 +264,9 @@ class EnergyParticle {
         this.wobblePhase += this.wobbleSpeed;
     }
 
-    display() {
-        push();
-        translate(this.position.x, this.position.y);
+    display(ctx = window) {
+        ctx.push();
+        ctx.translate(this.position.x, this.position.y);
         
         // Efecto de pulsación
         let pulseScale = sin(this.pulsePhase) * 0.15 + 1;
@@ -276,27 +276,27 @@ class EnergyParticle {
         let wobbleX = sin(this.wobblePhase) * 0.1 + 1;
         let wobbleY = cos(this.wobblePhase * 1.5) * 0.1 + 1;
         
-        noStroke();
+        ctx.noStroke();
         
         // Halo exterior difuso (múltiples capas para efecto translúcido)
         for (let i = 3; i > 0; i--) {
-            fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.15 * i / 3);
-            ellipse(0, 0, currentSize * (2 + i * 0.5) * wobbleX, currentSize * (2 + i * 0.5) * wobbleY);
+            ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.15 * i / 3);
+            ctx.ellipse(0, 0, currentSize * (2 + i * 0.5) * wobbleX, currentSize * (2 + i * 0.5) * wobbleY);
         }
         
         // Cuerpo principal translúcido
-        fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.7);
-        ellipse(0, 0, currentSize * wobbleX, currentSize * wobbleY);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.7);
+        ctx.ellipse(0, 0, currentSize * wobbleX, currentSize * wobbleY);
         
         // Brillo interno (múltiples puntos para efecto más orgánico)
-        fill(255, 255, 255, this.lifespan * 0.6);
-        ellipse(-currentSize * 0.15, -currentSize * 0.15, currentSize * 0.35, currentSize * 0.35);
+        ctx.fill(255, 255, 255, this.lifespan * 0.6);
+        ctx.ellipse(-currentSize * 0.15, -currentSize * 0.15, currentSize * 0.35, currentSize * 0.35);
         
         // Brillo secundario
-        fill(255, 255, 255, this.lifespan * 0.3);
-        ellipse(currentSize * 0.1, currentSize * 0.1, currentSize * 0.2, currentSize * 0.2);
+        ctx.fill(255, 255, 255, this.lifespan * 0.3);
+        ctx.ellipse(currentSize * 0.1, currentSize * 0.1, currentSize * 0.2, currentSize * 0.2);
         
-        pop();
+        ctx.pop();
     }
 
     isDead() {

@@ -108,78 +108,78 @@ class GameOverAnimation {
         }
     }
     
-    display() {
-        push();
+    display(ctx = window) {
+        ctx.push();
         
         // Fondo semitransparente
-        fill(0, 0, 0, 150);
-        rect(0, 0, width, height);
+        ctx.fill(0, 0, 0, 150);
+        ctx.rect(0, 0, width, height);
         
         // Dibujar partículas
         for (let p of this.particles) {
-            noStroke();
-            fill(red(p.color), green(p.color), blue(p.color), p.life);
-            ellipse(p.pos.x, p.pos.y, p.size);
+            ctx.noStroke();
+            ctx.fill(red(p.color), green(p.color), blue(p.color), p.life);
+            ctx.ellipse(p.pos.x, p.pos.y, p.size);
         }
         
         // Dibujar letras de "GAME OVER"
         for (let letter of this.letters) {
-            push();
-            translate(letter.currentX, letter.currentY);
-            rotate(letter.rotation);
+            ctx.push();
+            ctx.translate(letter.currentX, letter.currentY);
+            ctx.rotate(letter.rotation);
             
             // Sombra del texto
-            fill(0, 0, 0, 150);
-            textSize(letter.size);
-            textAlign(CENTER, CENTER);
-            text(letter.char, 5, 5);
+            ctx.fill(0, 0, 0, 150);
+            ctx.textSize(letter.size);
+            ctx.textAlign(CENTER, CENTER);
+            ctx.text(letter.char, 5, 5);
             
             // Texto en rojo con intensidad variable
-            fill(
+            ctx.fill(
                 letter.intensity * CONFIG.gameOver.text.color[0]/255, 
                 letter.intensity * CONFIG.gameOver.text.color[1]/255, 
                 letter.intensity * CONFIG.gameOver.text.color[2]/255
             );
-            textSize(letter.size);
-            textAlign(CENTER, CENTER);
-            text(letter.char, 0, 0);
+            ctx.textSize(letter.size);
+            ctx.textAlign(CENTER, CENTER);
+            ctx.text(letter.char, 0, 0);
             
-            pop();
+            ctx.pop();
         }
         
         // Mostrar puntuación final
         if (millis() - this.startTime > this.duration * 0.5) {
             const alpha = constrain(map(millis() - this.startTime, this.duration * 0.5, this.duration * 0.7, 0, 255), 0, 255);
             
-            textAlign(CENTER);
-            textSize(40);
+            ctx.textAlign(CENTER, CENTER);
+            ctx.textSize(40);
             
             // Sombra
-            fill(0, 0, 0, alpha * 0.7);
-            text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2 + 3, height * 0.7 + 3);
+            ctx.fill(0, 0, 0, alpha * 0.7);
+            ctx.text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2 + 3, height * 0.7 + 3);
             
             // Texto
-            fill(255, 255, 255, alpha);
-            text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2, height * 0.7);
+            ctx.fill(255, 255, 255, alpha);
+            ctx.text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2, height * 0.7);
             
             // Combo más alto
-            textSize(30);
-            fill(0, 0, 0, alpha * 0.7);
-            text(`Combo más alto: x${scoreSystem.highestCombo}`, width/2 + 2, height * 0.7 + 50 + 2);
+            ctx.textSize(30);
+            ctx.fill(0, 0, 0, alpha * 0.7);
+            ctx.text(`Combo más alto: x${scoreSystem.highestCombo}`, width/2 + 2, height * 0.7 + 50 + 2);
             
-            fill(255, 200, 0, alpha);
-            text(`Combo más alto: x${scoreSystem.highestCombo}`, width/2, height * 0.7 + 50);
+            ctx.fill(255, 200, 0, alpha);
+            ctx.text(`Combo más alto: x${scoreSystem.highestCombo}`, width/2, height * 0.7 + 50);
             
             // Mensaje para reiniciar
             if (millis() - this.startTime > this.duration * 0.8) {
                 const pulseAlpha = 127 + 127 * sin(frameCount * 0.1);
-                textSize(25);
-                fill(255, 255, 255, pulseAlpha);
-                text("Toca la pantalla para reiniciar", width/2, height * 0.85);
+                ctx.textSize(25);
+                ctx.fill(255, 255, 255, pulseAlpha);
+                ctx.text("Toca la pantalla para reiniciar", width/2, height * 0.85);
             }
         }
         
-        pop();
+        ctx.pop();
     }
     
     // Función de easing para animación más natural

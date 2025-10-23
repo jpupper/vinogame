@@ -27,8 +27,8 @@ const CONFIG = {
             completion: 15            // Completar secuencia
         },
         size: {
-            min: 3,                   // Tamaño mínimo de partícula
-            max: 8,                   // Tamaño máximo de partícula
+            min: 5,                   // Tamaño mínimo de partícula (aumentado)
+            max: 12,                  // Tamaño máximo de partícula (aumentado)
         },
         speed: {
             initial: {
@@ -45,9 +45,9 @@ const CONFIG = {
             variation: 50               // Variación aleatoria en los colores
         },
         lifespan: {
-            rising: 800,              // Duración de fase de subida (ms)
-            falling: 1000,            // Duración de fase de caída (ms)
-            attracting: 1200          // Duración de fase de atracción (ms)
+            rising: 1200,             // Duración de fase de subida (ms) - aumentado
+            falling: 1500,            // Duración de fase de caída (ms) - aumentado
+            attracting: 1800          // Duración de fase de atracción (ms) - aumentado
         }
     },
     

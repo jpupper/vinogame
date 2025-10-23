@@ -135,32 +135,6 @@ class DynamicBackground {
             
             pop();
         }
-        
-        // Halos de luz orgánicos sutiles (no compiten con las texturas)
-        noStroke();
-        
-        // Halo azul eléctrico
-        for (let i = 0; i < 60; i++) {
-            fill(80, 150, 255, map(i, 0, 60, 8, 0));
-            ellipse(width * 0.15, height * 0.2, (60 - i) * 4, (60 - i) * 4);
-        }
-        
-        // Halo morado vibrante
-        for (let i = 0; i < 60; i++) {
-            fill(180, 100, 255, map(i, 0, 60, 8, 0));
-            ellipse(width * 0.85, height * 0.8, (60 - i) * 4, (60 - i) * 4);
-        }
-        
-        // Efecto de partículas flotantes (como burbujas microscópicas)
-        for (let i = 0; i < 30; i++) {
-            const x = (noise(i * 0.1, frameCount * 0.001) * width);
-            const y = (noise(i * 0.1 + 100, frameCount * 0.001) * height);
-            const size = noise(i * 0.2) * 3 + 1;
-            const alpha = noise(i * 0.3, frameCount * 0.002) * 30 + 10;
-            
-            fill(150, 200, 255, alpha);
-            ellipse(x, y, size, size);
-        }
     }
     
     resize() {

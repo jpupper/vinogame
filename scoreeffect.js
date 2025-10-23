@@ -213,11 +213,9 @@ class ScoreSystem {
         }
     }
     
-    display() {
-        // No necesitamos push/pop aquí ya que estamos en el contexto de p5.js
-        
+    display(ctx = window) {
         // Mostrar puntuación principal con efecto
-        textAlign(RIGHT, TOP);
+        ctx.textAlign(RIGHT, TOP);
         
         // Aplicar efecto visual al score si está activo
         let scoreSize = CONFIG.score.size;
@@ -279,52 +277,52 @@ class ScoreSystem {
         );
         
         // Sombra de texto
-        textSize(scoreSize);
-        fill(0, 0, 0, 150);
-        text(`Score: ${Math.floor(this.displayScore)}`, width - 38, 42 + scoreOffset);
+        ctx.textSize(scoreSize);
+        ctx.fill(0, 0, 0, 150);
+        ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 38, 42 + scoreOffset);
         
         // Texto principal con color dinámico
-        fill(red(scoreColor), green(scoreColor), blue(scoreColor));
-        text(`Score: ${Math.floor(this.displayScore)}`, width - 40, 40 + scoreOffset);
+        ctx.fill(red(scoreColor), green(scoreColor), blue(scoreColor));
+        ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 40, 40 + scoreOffset);
         
         // Mostrar combo siempre (incluso si es 0)
         const comboY = 90;
         const comboSize = 30;
         
         // Calcular color basado en el tamaño del combo
-        colorMode(HSB, 100);
+        ctx.colorMode(HSB, 100);
         const hue = map(this.comboCount, 0, 10, 10, 100) % 100;
         const comboColor = this.comboCount > 0 ? color(hue, 80, 100) : color(0, 0, 70);
-        colorMode(RGB, 255);
+        ctx.colorMode(RGB, 255);
         
         // Sombra del combo
-        fill(0, 0, 0, 150);
-        textSize(comboSize);
-        text(`Combo x${this.comboCount}`, width - 38, comboY + 2);
+        ctx.fill(0, 0, 0, 150);
+        ctx.textSize(comboSize);
+        ctx.text(`Combo x${this.comboCount}`, width - 38, comboY + 2);
         
         // Texto del combo
-        fill(red(comboColor), green(comboColor), blue(comboColor));
-        text(`Combo x${this.comboCount}`, width - 40, comboY);
+        ctx.fill(red(comboColor), green(comboColor), blue(comboColor));
+        ctx.text(`Combo x${this.comboCount}`, width - 40, comboY);
         
         // Mostrar vidas
         const lifeSize = CONFIG.lives.size;
         const lifeY = CONFIG.lives.position.y;
         const lifeSpacing = CONFIG.lives.spacing;
         
-        textAlign(LEFT, TOP);
+        ctx.textAlign(LEFT, TOP);
         
         // Sombra del texto de vidas
-        fill(0, 0, 0, 150);
-        textSize(lifeSize);
-        text(`Vidas: `, 42, lifeY + 2);
+        ctx.fill(0, 0, 0, 150);
+        ctx.textSize(lifeSize);
+        ctx.text(`Vidas: `, 42, lifeY + 2);
         
         // Texto de vidas
-        fill(255, 100, 100);
-        text(`Vidas: `, 40, lifeY);
+        ctx.fill(255, 100, 100);
+        ctx.text(`Vidas: `, 40, lifeY);
         
         // Dibujar corazones para las vidas
         for (let i = 0; i < this.lives; i++) {
-            this.drawHeart(CONFIG.lives.position.x + i * lifeSpacing, lifeY + lifeSize/2, lifeSize);
+            this.drawHeart(CONFIG.lives.position.x + i * lifeSpacing, lifeY + lifeSize/2, lifeSize, ctx);
         }
         
         // Mostrar animaciones de puntuación con fases
@@ -332,9 +330,9 @@ class ScoreSystem {
             // Dibujar partículas de estela primero (detrás)
             if (anim.trailParticles) {
                 for (let tp of anim.trailParticles) {
-                    noStroke();
-                    fill(red(tp.color), green(tp.color), blue(tp.color), tp.alpha * 0.5);
-                    ellipse(tp.pos.x, tp.pos.y, tp.size, tp.size);
+                    ctx.noStroke();
+                    ctx.fill(red(tp.color), green(tp.color), blue(tp.color), tp.alpha * 0.5);
+                    ctx.ellipse(tp.pos.x, tp.pos.y, tp.size, tp.size);
                 }
             }
             
@@ -342,19 +340,19 @@ class ScoreSystem {
             for (let p of anim.particles) {
                 // Efecto de brillo
                 if (p.size > 5) {
-                    noStroke();
-                    fill(red(p.color), green(p.color), blue(p.color), p.alpha * 0.3);
-                    ellipse(p.pos.x, p.pos.y, p.size * 1.5, p.size * 1.5);
+                    ctx.noStroke();
+                    ctx.fill(red(p.color), green(p.color), blue(p.color), p.alpha * 0.3);
+                    ctx.ellipse(p.pos.x, p.pos.y, p.size * 1.5, p.size * 1.5);
                 }
                 
                 // Partícula principal
-                noStroke();
-                fill(red(p.color), green(p.color), blue(p.color), p.alpha);
-                ellipse(p.pos.x, p.pos.y, p.size, p.size);
+                ctx.noStroke();
+                ctx.fill(red(p.color), green(p.color), blue(p.color), p.alpha);
+                ctx.ellipse(p.pos.x, p.pos.y, p.size, p.size);
                 
                 // Brillo central
-                fill(255, 255, 255, p.alpha * 0.7);
-                ellipse(p.pos.x, p.pos.y, p.size * 0.4, p.size * 0.4);
+                ctx.fill(255, 255, 255, p.alpha * 0.7);
+                ctx.ellipse(p.pos.x, p.pos.y, p.size * 0.4, p.size * 0.4);
             }
             
             // Solo mostrar el texto si no está en fase de atracción
@@ -375,32 +373,32 @@ class ScoreSystem {
                 }
                 
                 // Sombra del texto
-                fill(0, 0, 0, anim.alpha * 0.7);
-                textAlign(CENTER, CENTER);
-                textSize(fontSize);
-                text(`${prefix}${anim.points}`, anim.x + 2, anim.y + 2);
+                ctx.fill(0, 0, 0, anim.alpha * 0.7);
+                ctx.textAlign(CENTER, CENTER);
+                ctx.textSize(fontSize);
+                ctx.text(`${prefix}${anim.points}`, anim.x + 2, anim.y + 2);
                 
                 // Texto principal
-                fill(red(pointColor), green(pointColor), blue(pointColor), anim.alpha);
-                text(`${prefix}${anim.points}`, anim.x, anim.y);
+                ctx.fill(red(pointColor), green(pointColor), blue(pointColor), anim.alpha);
+                ctx.text(`${prefix}${anim.points}`, anim.x, anim.y);
                 
                 // Mostrar combo si es relevante
                 if (anim.comboCount > 1 && anim.isPositive) {
                     const comboFontSize = fontSize * 0.5;
-                    fill(255, 255, 255, anim.alpha * 0.8);
-                    textSize(comboFontSize);
-                    text(`x${anim.comboCount}`, anim.x, anim.y + fontSize * 0.7);
+                    ctx.fill(255, 255, 255, anim.alpha * 0.8);
+                    ctx.textSize(comboFontSize);
+                    ctx.text(`x${anim.comboCount}`, anim.x, anim.y + fontSize * 0.7);
                 }
             }
         }
         
         // Mostrar animación de Game Over si el juego terminó
         if (this.gameOver && this.gameOverAnimation) {
-            this.gameOverAnimation.display();
+            this.gameOverAnimation.display(ctx);
         }
     }
     
-    drawHeart(x, y, size) {
+    drawHeart(x, y, size, ctx = window) {
         // Usar ancho y alto separados para el corazón (más ancho)
         const ancho = size * 1.5;
         const alto = size;
@@ -411,63 +409,63 @@ class ScoreSystem {
         const currentAncho = ancho * pulseScale;
         const currentAlto = alto * pulseScale;
         
-        push();
-        translate(x, y);
+        ctx.push();
+        ctx.translate(x, y);
         
         // Halo exterior brillante
         for (let i = 3; i > 0; i--) {
-            fill(255, 50, 100, 30 / i);
-            noStroke();
-            beginShape();
-            vertex(0, -currentAlto/4);
-            bezierVertex(currentAncho/4 * (1 + i * 0.1), -currentAlto/2 * (1 + i * 0.1), 
+            ctx.fill(255, 50, 100, 30 / i);
+            ctx.noStroke();
+            ctx.beginShape();
+            ctx.vertex(0, -currentAlto/4);
+            ctx.bezierVertex(currentAncho/4 * (1 + i * 0.1), -currentAlto/2 * (1 + i * 0.1), 
                         currentAncho/2 * (1 + i * 0.1), -currentAlto/4 * (1 + i * 0.1), 
                         0, currentAlto/2 * (1 + i * 0.1));
-            bezierVertex(-currentAncho/2 * (1 + i * 0.1), -currentAlto/4 * (1 + i * 0.1), 
+            ctx.bezierVertex(-currentAncho/2 * (1 + i * 0.1), -currentAlto/4 * (1 + i * 0.1), 
                         -currentAncho/4 * (1 + i * 0.1), -currentAlto/2 * (1 + i * 0.1), 
                         0, -currentAlto/4);
-            endShape(CLOSE);
+            ctx.endShape(CLOSE);
         }
         
         // Sombra del corazón
-        fill(0, 0, 0, 120);
-        noStroke();
-        beginShape();
-        vertex(2, -currentAlto/4 + 2);
-        bezierVertex(currentAncho/4 + 2, -currentAlto/2 + 2, currentAncho/2 + 2, -currentAlto/4 + 2, 2, currentAlto/2 + 2);
-        bezierVertex(-currentAncho/2 + 2, -currentAlto/4 + 2, -currentAncho/4 + 2, -currentAlto/2 + 2, 2, -currentAlto/4 + 2);
-        endShape(CLOSE);
+        ctx.fill(0, 0, 0, 120);
+        ctx.noStroke();
+        ctx.beginShape();
+        ctx.vertex(2, -currentAlto/4 + 2);
+        ctx.bezierVertex(currentAncho/4 + 2, -currentAlto/2 + 2, currentAncho/2 + 2, -currentAlto/4 + 2, 2, currentAlto/2 + 2);
+        ctx.bezierVertex(-currentAncho/2 + 2, -currentAlto/4 + 2, -currentAncho/4 + 2, -currentAlto/2 + 2, 2, -currentAlto/4 + 2);
+        ctx.endShape(CLOSE);
         
         // Corazón principal con gradiente simulado
         // Capa oscura (base)
-        fill(200, 30, 80);
-        noStroke();
-        beginShape();
-        vertex(0, -currentAlto/4);
-        bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2);
-        bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
-        endShape(CLOSE);
+        ctx.fill(200, 30, 80);
+        ctx.noStroke();
+        ctx.beginShape();
+        ctx.vertex(0, -currentAlto/4);
+        ctx.bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2);
+        ctx.bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
+        ctx.endShape(CLOSE);
         
         // Capa brillante (encima)
-        fill(255, 60, 120);
-        beginShape();
-        vertex(0, -currentAlto/4);
-        bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2 * 0.7);
-        bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
-        endShape(CLOSE);
+        ctx.fill(255, 60, 120);
+        ctx.beginShape();
+        ctx.vertex(0, -currentAlto/4);
+        ctx.bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2 * 0.7);
+        ctx.bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
+        ctx.endShape(CLOSE);
         
         // Múltiples brillos para efecto más orgánico
-        fill(255, 200, 220, 150);
-        ellipse(-currentAncho/5, -currentAlto/4, currentAncho/3, currentAlto/3);
+        ctx.fill(255, 200, 220, 150);
+        ctx.ellipse(-currentAncho/5, -currentAlto/4, currentAncho/3, currentAlto/3);
         
-        fill(255, 255, 255, 200);
-        ellipse(-currentAncho/4, -currentAlto/3.5, currentAncho/5, currentAlto/5);
+        ctx.fill(255, 255, 255, 200);
+        ctx.ellipse(-currentAncho/4, -currentAlto/3.5, currentAncho/5, currentAlto/5);
         
         // Brillo pulsante adicional
         const glowAlpha = sin(frameCount * 0.1 + x * 0.2) * 50 + 100;
-        fill(255, 150, 180, glowAlpha);
-        ellipse(0, 0, currentAncho/6, currentAlto/6);
+        ctx.fill(255, 150, 180, glowAlpha);
+        ctx.ellipse(0, 0, currentAncho/6, currentAlto/6);
         
-        pop();
+        ctx.pop();
     }
 }
