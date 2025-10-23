@@ -126,7 +126,7 @@ function draw() {
   targetEffectIntensity *= 0.95; // Decay automático
   
   // Calcular combo level (0-1) basado en el combo actual
-  let comboLevel = min(1.0, scoreSystem.currentCombo / 20.0); // Máximo en combo x20
+  let comboLevel = min(1.0, scoreSystem.comboCount / 20.0); // Máximo en combo x20
   
   // Calcular vignette basado en vidas restantes
   vignetteIntensity = map(scoreSystem.lives, 3, 0, 0, 1, true);
