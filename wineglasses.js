@@ -227,7 +227,7 @@ class Item {
         if (this.isBad) {
             // ===== ITEM MALO =====
             const pulseFactor = 1 + 0.15 * sin(this.pulsePhase * 2);
-            const rotation = this.pulsePhase * 0.5;
+            // const rotation = this.pulsePhase * 0.5; // ROTACIÓN ELIMINADA
             
             // Aura roja de peligro
             ctx.noStroke();
@@ -239,7 +239,7 @@ class Item {
             // Dibujar imagen de bicho
             if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
                 ctx.push();
-                ctx.rotate(rotation);
+                // ctx.rotate(rotation); // ROTACIÓN ELIMINADA
                 ctx.scale(pulseFactor);
                 ctx.tint(255, 100, 100); // Tinte rojizo
                 ctx.imageMode(CENTER);
@@ -251,7 +251,7 @@ class Item {
             const captureProgress = this.hoverTime / this.requiredHoverTime;
             const maxScale = CONFIG.wineGlasses.captureScale;
             const scaleFactor = 1.0 + captureProgress * (maxScale - 1.0);
-            const rotation = captureProgress * PI;
+            // const rotation = captureProgress * PI; // ROTACIÓN ELIMINADA
             const pulseFactor = this.isBeingHovered ? 1 + 0.05 * sin(this.pulsePhase * 4) : 1;
             
             // Glow dorado
@@ -271,7 +271,7 @@ class Item {
             // Dibujar imagen del item bueno
             if (goodItemImages.length > 0 && goodItemImages[this.imageIndex]) {
                 ctx.push();
-                ctx.rotate(rotation);
+                // ctx.rotate(rotation); // ROTACIÓN ELIMINADA
                 ctx.scale(scaleFactor * pulseFactor);
                 const brightness = 1.0 + captureProgress * 0.4;
                 ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
