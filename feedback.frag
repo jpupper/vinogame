@@ -77,52 +77,33 @@ void main() {
         currentColor = texture2D(u_texture, displacedUV);
     }
     
-    // Feedback: mezclar con el frame anterior
-    vec4 feedbackColor = texture2D(u_feedbackTexture, uv);
+    // Solo efectos de cursor (sin oscurecer la imagen base)
+    vec4 finalColor = vec4(0.0, 0.0, 0.0, 0.0); // Empezar con negro transparente
     
-    // Mezclar con feedback (persistencia para rastros)
-    vec4 finalColor = mix(feedbackColor * 0.98, currentColor, 0.2);
-    
-    // BRIGHTNESS BOOST en toda la imagen
-    finalColor.rgb *= 1.0 + u_effectIntensity * 0.3;
-    
-    // COLOR GRADING basado en combo
-    if (u_comboLevel > 0.05) {
-        // Shift hacia colores cálidos (dorado) con combo alto
-        vec3 warmTint = vec3(1.1, 1.05, 0.9);
-        finalColor.rgb = mix(finalColor.rgb, finalColor.rgb * warmTint, u_comboLevel * 0.3);
-        
-        // Aumentar saturación con combo
-        float luminance = dot(finalColor.rgb, vec3(0.299, 0.587, 0.114));
-        finalColor.rgb = mix(vec3(luminance), finalColor.rgb, 1.0 + u_comboLevel * 0.3);
-    }
-    
-    // Cambio de color y brillo cerca del cursor
+    // Solo agregar brillo cerca del cursor (MÁS SUTIL)
     if (influence > 0.0) {
-        // Agregar un tinte de color basado en la posición
+        // Agregar un tinte de color basado en la posición (más suave)
         vec3 tint = vec3(
             0.5 + 0.5 * sin(u_time * 0.5 + dist * 10.0),
             0.5 + 0.5 * sin(u_time * 0.7 + dist * 10.0 + 2.0),
             0.5 + 0.5 * sin(u_time * 0.3 + dist * 10.0 + 4.0)
         );
         
-        // Aumentar brillo en el área de influencia
-        float brightnessFactor = 1.15 + u_effectIntensity * 0.5;
-        finalColor.rgb = mix(finalColor.rgb, finalColor.rgb * tint * brightnessFactor, influence * 0.4);
-        
-        // BLOOM effect - brillo adicional en el centro
-        float centerGlow = smoothstep(0.02, 0.0, dist);
-        finalColor.rgb += vec3(centerGlow * (0.1 + u_effectIntensity * 0.4));
+        // BLOOM effect - brillo adicional en el centro (EXTREMADAMENTE SUTIL)
+        float centerGlow = smoothstep(0.05, 0.0, dist); // Radio muy pequeño
+        finalColor.rgb = tint * centerGlow * (0.08 + u_effectIntensity * 0.12); // Intensidad muy reducida
+        finalColor.a = centerGlow * 0.4; // Alpha muy reducido
     }
     
-    // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO
-    if (u_comboLevel > 0.1) {
-        // Crear patrón de ruido animado
-        vec2 noiseCoord = uv * 3.0 + vec2(u_time * 0.2, u_time * 0.15);
+    // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO (MÁS SUTIL)
+    float safeCombo = clamp(u_comboLevel, 0.0, 1.0);
+    if (safeCombo > 0.1) {
+        // Crear patrón de ruido animado (más lento)
+        vec2 noiseCoord = uv * 2.5 + vec2(u_time * 0.15, u_time * 0.12);
         float noisePattern = fbm(noiseCoord);
         
         // Segundo layer de ruido para más complejidad
-        vec2 noiseCoord2 = uv * 5.0 - vec2(u_time * 0.3, u_time * 0.25);
+        vec2 noiseCoord2 = uv * 4.0 - vec2(u_time * 0.2, u_time * 0.18);
         float noisePattern2 = fbm(noiseCoord2);
         
         // Combinar patrones
@@ -132,16 +113,17 @@ void main() {
         vec3 glowColor = mix(
             vec3(0.6, 0.3, 1.0),  // Morado
             vec3(1.0, 0.8, 0.2),  // Dorado
-            u_comboLevel
+            safeCombo
         );
         
-        // Aplicar brillo con el patrón de ruido
-        float glowIntensity = combinedNoise * u_comboLevel * 0.4;
+        // Aplicar brillo con el patrón de ruido (EXTREMADAMENTE SUTIL)
+        float glowIntensity = combinedNoise * safeCombo * 0.08; // Reducido de 0.2 a 0.08
         finalColor.rgb += glowColor * glowIntensity;
         
-        // Pulso adicional
-        float pulse = 0.5 + 0.5 * sin(u_time * 3.0);
-        finalColor.rgb += glowColor * u_comboLevel * 0.1 * pulse;
+        // Pulso adicional (EXTREMADAMENTE SUTIL)
+        float pulse = 0.5 + 0.5 * sin(u_time * 2.5);
+        finalColor.rgb += glowColor * safeCombo * 0.02 * pulse; // Reducido de 0.05 a 0.02
+        finalColor.a = max(finalColor.a, safeCombo * 0.15); // Alpha muy reducido
     }
     
     // VIGNETTE DINÁMICO (oscurece los bordes cuando tienes pocas vidas)

@@ -20,9 +20,10 @@ let juegoBuffer;
 let particulasBuffer;
 let feedbackBuffer;
 
-// Shader
-let feedbackShader;
-let shaderLoaded = false;
+// Shaders
+let feedbackShader;      // Shader para efectos de feedback/cursor
+let compositeShader;     // Shader para composición final (texturas + feedback + ondas)
+let shadersLoaded = false;
 
 // Sistema de efectos especiales
 let effectIntensity = 0;
@@ -44,20 +45,34 @@ let vignetteIntensity = 0;
 let motionBlurAmount = 0;
 
 function preload() {
-  // Cargar texturas de uvas (imágenes 1, 3, 6, 7, 8)
-  grapeTextures.push(loadImage('img/1.jpg'));  // Uvas verdes translúcidas
-  grapeTextures.push(loadImage('img/3.jpg'));  // Uvas moradas oscuras
-  grapeTextures.push(loadImage('img/6.png'));  // Gota azul
-  grapeTextures.push(loadImage('img/7.png'));  // Forma orgánica morada
-  grapeTextures.push(loadImage('img/8.jpg'));  // Células azules/moradas
+  // Arrays de paths para cargar imágenes
+  const grapeImagePaths = [
+    'img/1.jpg',   // Uvas verdes translúcidas
+    'img/3.jpg',   // Uvas moradas oscuras
+    'img/6.png',   // Gota azul
+    'img/7.png',   // Forma orgánica morada
+    'img/8.jpg'    // Células azules/moradas
+  ];
   
-  // Cargar texturas de fondo
-  backgroundTextures.push(loadImage('img/9.jpg'));  // Explosión de colores
-  backgroundTextures.push(loadImage('img/10.jpg')); // Líquido naranja
-  backgroundTextures.push(loadImage('img/2.jpg'));  // Patrón radial
+  const backgroundImagePaths = [
+    'img/9.jpg',   // Explosión de colores
+    'img/10.jpg',  // Líquido naranja
+    'img/2.jpg'    // Patrón radial
+  ];
   
-  // Cargar shader
+  // Cargar texturas de uvas desde array
+  for (let path of grapeImagePaths) {
+    grapeTextures.push(loadImage(path));
+  }
+  
+  // Cargar texturas de fondo desde array
+  for (let path of backgroundImagePaths) {
+    backgroundTextures.push(loadImage(path));
+  }
+  
+  // Cargar shaders
   feedbackShader = loadShader('feedback.vert', 'feedback.frag');
+  compositeShader = loadShader('composite.vert', 'composite.frag');
 }
 
 function setup() {
@@ -68,10 +83,10 @@ function setup() {
   shaderLoaded = true;
   
   // Crear buffers
-  fondoBuffer = createGraphics(width, height, WEBGL);
+  fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback simple
   juegoBuffer = createGraphics(width, height);
   particulasBuffer = createGraphics(width, height);
-  feedbackBuffer = createGraphics(width, height, WEBGL);
+  feedbackBuffer = createGraphics(width, height, WEBGL); // Composición final
   
   // Inicializar sistemas
   Pserver = new PointServer();
@@ -106,35 +121,17 @@ function draw() {
     }
   }
   
-  // ===== BUFFER DE FONDO =====
+  // ===== PASO 1: SHADER DE FEEDBACK (solo efectos de cursor) =====
+  // El feedback necesita las texturas de fondo como entrada
   fondoBuffer.push();
-  fondoBuffer.background(5, 5, 10);
+  fondoBuffer.shader(feedbackShader);
   
-  // Dibujar texturas rotantes en el buffer de fondo (escaladas x1.6 para más zoom)
+  // Pasar las texturas de fondo al feedback shader
   if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
-    fondoBuffer.imageMode(CENTER);
-    fondoBuffer.translate(0, 0);
-    fondoBuffer.rotate(dynamicBackground.textureRotation);
-    
-    // Textura actual
-    fondoBuffer.tint(255, 255, 255, 70 * (1 - dynamicBackground.transitionProgress));
-    fondoBuffer.image(backgroundTextures[dynamicBackground.currentTextureIndex], 0, 0, width * 1.6, height * 1.6);
-    
-    // Textura siguiente (fade in)
-    fondoBuffer.tint(255, 255, 255, 70 * dynamicBackground.transitionProgress);
-    fondoBuffer.image(backgroundTextures[dynamicBackground.nextTextureIndex], 0, 0, width * 1.6, height * 1.6);
+    feedbackShader.setUniform('u_texture', backgroundTextures[dynamicBackground.currentTextureIndex]);
   }
-  fondoBuffer.pop();
   
-  // ===== BUFFER DE PARTÍCULAS =====
-  particulasBuffer.clear();
-  particleSystem.update();
-  particleSystem.display(particulasBuffer);
-  
-  // Aplicar shader con feedback al fondo
-  feedbackBuffer.shader(feedbackShader);
-  feedbackShader.setUniform('u_texture', fondoBuffer);
-  feedbackShader.setUniform('u_feedbackTexture', feedbackBuffer);
+  feedbackShader.setUniform('u_feedbackTexture', fondoBuffer);
   feedbackShader.setUniform('u_particlesTexture', particulasBuffer);
   feedbackShader.setUniform('u_gameTexture', juegoBuffer);
   feedbackShader.setUniform('u_resolution', [width, height]);
@@ -143,7 +140,27 @@ function draw() {
   feedbackShader.setUniform('u_effectIntensity', effectIntensity);
   feedbackShader.setUniform('u_comboLevel', comboLevel);
   feedbackShader.setUniform('u_vignetteIntensity', vignetteIntensity);
-  feedbackBuffer.rect(0, 0, width, height);
+  fondoBuffer.rect(0, 0, width, height);
+  fondoBuffer.pop();
+  
+  // ===== BUFFER DE PARTÍCULAS =====
+  particulasBuffer.clear();
+  particleSystem.update();
+  particleSystem.display(particulasBuffer);
+  
+  // ===== PASO 2: SHADER DE COMPOSICIÓN (texturas + feedback + ondas) =====
+  if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
+    feedbackBuffer.shader(compositeShader);
+    compositeShader.setUniform('u_backgroundTexture1', backgroundTextures[dynamicBackground.currentTextureIndex]);
+    compositeShader.setUniform('u_backgroundTexture2', backgroundTextures[dynamicBackground.nextTextureIndex]);
+    compositeShader.setUniform('u_backgroundBlend', dynamicBackground.transitionProgress);
+    compositeShader.setUniform('u_backgroundRotation', dynamicBackground.textureRotation);
+    compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
+    compositeShader.setUniform('u_resolution', [width, height]);
+    compositeShader.setUniform('u_time', millis() / 1000.0);
+    compositeShader.setUniform('u_comboLevel', comboLevel);
+    feedbackBuffer.rect(0, 0, width, height);
+  }
   
   // ===== BUFFER DE JUEGO =====
   juegoBuffer.clear();
