@@ -48,6 +48,10 @@ let motionBlurAmount = 0;
 let waves = [];
 const MAX_WAVES = 5;
 
+// Sistema de Zoom Punch
+let zoomPunch = 1.0;
+let targetZoom = 1.0;
+
 function preload() {
   // Arrays de paths para cargar imágenes
   const grapeImagePaths = [
@@ -131,6 +135,10 @@ function draw() {
     let waveAge = currentTime - wave.startTime;
     return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
   });
+  
+  // Zoom punch desactivado
+  // zoomPunch = lerp(zoomPunch, targetZoom, 0.15);
+  // targetZoom = lerp(targetZoom, 1.0, 0.08);
   
   // ===== PASO 1: SHADER DE FEEDBACK (solo efectos de cursor) =====
   // El feedback necesita las texturas de fondo como entrada

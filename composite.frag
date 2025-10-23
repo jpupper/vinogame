@@ -23,16 +23,18 @@ void main() {
     
     // ===== CALCULAR DISTORSIÓN DE UVs =====
     vec2 displacement = vec2(0.0);
+    float chromaticAberration = 0.0; // Para separación RGB
     
     // FUERZA DE DISTORSIÓN (ajustable)
     const float WAVE_DISTORTION_STRENGTH = 0.05;  // 5% de distorsión máxima
     const float SINE_DISTORTION_STRENGTH = 0.002; // 0.2% de distorsión sutil
+    const float CHROMATIC_STRENGTH = 0.008;       // Separación RGB
     
     // Corregir aspect ratio para las ondas
     vec2 aspectUV = uv;
     aspectUV.x *= u_resolution.x / u_resolution.y;
     
-    // 1. DISTORSIÓN POR ONDAS EXPANSIVAS (más fuerte)
+    // 1. DISTORSIÓN POR ONDAS EXPANSIVAS (más fuerte + chromatic aberration)
     for (int i = 0; i < 5; i++) {
         if (u_waveActive[i] > 0.5) {
             // Posición de la onda (corregir aspect ratio)
@@ -59,6 +61,9 @@ void main() {
             
             // Aplicar distorsión (empuja hacia afuera) - MÁS FUERTE
             displacement += direction * distortionStrength * WAVE_DISTORTION_STRENGTH;
+            
+            // CHROMATIC ABERRATION: Acumular separación RGB
+            chromaticAberration += distortionStrength * waveIntensity;
         }
     }
     
@@ -87,9 +92,29 @@ void main() {
     // Escalar para zoom (1.6x)
     rotatedUV = rotatedUV / 1.6 + 0.5;
     
-    // Samplear ambas texturas CON UVs DISTORSIONADAS
-    vec4 bgTexture1 = texture2D(u_backgroundTexture1, rotatedUV);
-    vec4 bgTexture2 = texture2D(u_backgroundTexture2, rotatedUV);
+    // ===== CHROMATIC ABERRATION: Samplear RGB por separado =====
+    vec4 bgTexture1, bgTexture2;
+    
+    if (chromaticAberration > 0.01) {
+        // Separar canales RGB con chromatic aberration
+        float aberration = chromaticAberration * CHROMATIC_STRENGTH;
+        
+        // Textura 1
+        float r1 = texture2D(u_backgroundTexture1, rotatedUV + vec2(aberration, 0.0)).r;
+        float g1 = texture2D(u_backgroundTexture1, rotatedUV).g;
+        float b1 = texture2D(u_backgroundTexture1, rotatedUV - vec2(aberration, 0.0)).b;
+        bgTexture1 = vec4(r1, g1, b1, 1.0);
+        
+        // Textura 2
+        float r2 = texture2D(u_backgroundTexture2, rotatedUV + vec2(aberration, 0.0)).r;
+        float g2 = texture2D(u_backgroundTexture2, rotatedUV).g;
+        float b2 = texture2D(u_backgroundTexture2, rotatedUV - vec2(aberration, 0.0)).b;
+        bgTexture2 = vec4(r2, g2, b2, 1.0);
+    } else {
+        // Sin chromatic aberration
+        bgTexture1 = texture2D(u_backgroundTexture1, rotatedUV);
+        bgTexture2 = texture2D(u_backgroundTexture2, rotatedUV);
+    }
     
     // Mezclar texturas según blend
     vec4 backgroundColor = mix(bgTexture1, bgTexture2, u_backgroundBlend);
@@ -112,20 +137,57 @@ void main() {
     float centeredWave = (wavePattern - 0.5) * 2.0; // De 0,1 a -1,1
     
     // SUMAR ondas a la imagen (APENAS PERCEPTIBLE)
-    vec3 finalColor = backgroundColor.rgb *.2 + (centeredWave * waveIntensity)*5.2;
-    finalColor = backgroundColor.rgb *.02+backgroundColor.rgb*vec3(wavePattern)*.29;
+    vec3 finalColor = backgroundColor.rgb * 0.02 + backgroundColor.rgb * vec3(wavePattern) * 0.29;
+    
+    // ===== COLOR GRADING DINÁMICO (basado en combo) =====
+    float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);
+    
+    if (safeComboLevel > 0.05) {
+        // Combo bajo (0.05 - 0.4): Tinte morado/magenta
+        vec3 lowComboTint = vec3(1.1, 0.9, 1.2); // Morado sutil
+        
+        // Combo medio (0.4 - 0.7): Tinte naranja
+        vec3 midComboTint = vec3(1.2, 1.0, 0.8); // Naranja
+        
+        // Combo alto (0.7 - 1.0): Tinte dorado
+        vec3 highComboTint = vec3(1.3, 1.1, 0.7); // Dorado
+        
+        // Interpolar entre tintes según el nivel de combo
+        vec3 colorTint;
+        if (safeComboLevel < 0.4) {
+            // Bajo a medio
+            float t = (safeComboLevel - 0.05) / 0.35;
+            colorTint = mix(vec3(1.0), lowComboTint, t);
+        } else if (safeComboLevel < 0.7) {
+            // Medio a alto
+            float t = (safeComboLevel - 0.4) / 0.3;
+            colorTint = mix(lowComboTint, midComboTint, t);
+        } else {
+            // Alto a máximo
+            float t = (safeComboLevel - 0.7) / 0.3;
+            colorTint = mix(midComboTint, highComboTint, t);
+        }
+        
+        // Aplicar color grading
+        finalColor *= colorTint;
+        
+        // Aumentar saturación con combo alto
+        if (safeComboLevel > 0.5) {
+            float saturationBoost = (safeComboLevel - 0.5) * 0.6; // Hasta 30% más saturación
+            float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
+            finalColor = mix(vec3(luminance), finalColor, 1.0 + saturationBoost);
+        }
+    }
+    
     // ===== APLICAR FEEDBACK COMO EFECTO =====
     vec4 feedbackColor = texture2D(u_feedbackTexture, uv);
+    finalColor += feedbackColor.rgb * feedbackColor.a * 0.2;
     
-    // Usar el feedback para distorsionar/iluminar (MUCHO MÁS SUTIL)
-    finalColor += feedbackColor.rgb * feedbackColor.a * 0.2; // Reducido de 0.5 a 0.2
-    
-    // Brillo adicional con combo (MUCHO MÁS SUTIL)
-    float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);
-   // finalColor += vec3(safeComboLevel * 0.03); // Reducido de 0.08 a 0.03
+    // Brillo adicional con combo
+    finalColor += vec3(safeComboLevel * 0.03);
     
     // Asegurar que el color final nunca sea negativo
-    ///finalColor = max(finalColor, vec3(0.0));
+    finalColor = max(finalColor, vec3(0.0));
     
     gl_FragColor = vec4(finalColor, 1.0);
 }
