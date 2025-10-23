@@ -5,10 +5,34 @@ let particleSystem;
 let trailSystem;
 let dynamicBackground;
 let scoreSystem;
-let obstacleSystem;
+
+// Texturas de uvas
+let grapeTextures = [];
+let grapeTexturesLoaded = false;
+
+// Texturas de fondo
+let backgroundTextures = [];
+let backgroundTexturesLoaded = false;
+
+function preload() {
+  // Cargar texturas de uvas (imágenes 1, 3, 6, 7, 8)
+  grapeTextures.push(loadImage('img/1.jpg'));  // Uvas verdes translúcidas
+  grapeTextures.push(loadImage('img/3.jpg'));  // Uvas moradas oscuras
+  grapeTextures.push(loadImage('img/6.png'));  // Gota azul
+  grapeTextures.push(loadImage('img/7.png'));  // Forma orgánica morada
+  grapeTextures.push(loadImage('img/8.jpg'));  // Células azules/moradas
+  
+  // Cargar texturas de fondo
+  backgroundTextures.push(loadImage('img/9.jpg'));  // Explosión de colores
+  backgroundTextures.push(loadImage('img/10.jpg')); // Líquido naranja
+  backgroundTextures.push(loadImage('img/2.jpg'));  // Patrón radial
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(CONFIG.general.frameRate);
+  grapeTexturesLoaded = true;
+  backgroundTexturesLoaded = true;
   
   // Inicializar sistemas
   Pserver = new PointServer();
@@ -18,13 +42,15 @@ function setup() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
-  obstacleSystem = new ObstacleSystem();
 }
 
 function draw() {
   // Dibujar fondo dinámico primero
   dynamicBackground.update();
   dynamicBackground.display();
+  
+  // Mostrar FPS
+  displayFPS();
 
   // Actualizar y mostrar rastros
   trailSystem.update();
@@ -37,10 +63,6 @@ function draw() {
   // Actualizar y mostrar el servidor de puntos
   Pserver.display();
   Pserver.update();
-  
-  // Actualizar y mostrar obstáculos
-  obstacleSystem.update();
-  obstacleSystem.display();
   
   // Comprobar colisiones con copas de vino y items malos
   if (!scoreSystem.gameOver) {
@@ -60,19 +82,6 @@ function draw() {
       scoreSystem.loseLife();
       particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
       dynamicBackground.addRipple(bad.x, bad.y);
-      scoreSystem.resetCombo();
-    }
-    
-    // Comprobar colisiones con obstáculos
-    const collisionResult = obstacleSystem.checkCollisions(allPoints);
-    if (collisionResult.collision) {
-      // Penalizar al jugador
-      scoreSystem.addScore(-collisionResult.penalty, collisionResult.collisionPoint.x, collisionResult.collisionPoint.y);
-      
-      // Perder una vida
-      scoreSystem.loseLife();
-      
-      // Reiniciar combo
       scoreSystem.resetCombo();
     }
   }
@@ -132,11 +141,22 @@ function resetGame() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
-  obstacleSystem = new ObstacleSystem();
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   dynamicBackground.resize();
+}
+
+function displayFPS() {
+  const fps = frameRate();
+  push();
+  textAlign(LEFT, TOP);
+  textSize(20);
+  
+  // Texto principal
+  fill(100, 255, 100);
+  text(`FPS: ${fps.toFixed(1)}`, 40, 100);
+  pop();
 }
 

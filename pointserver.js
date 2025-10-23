@@ -4,12 +4,18 @@ class PointServer {
 		this.inputPoints = []; 
 		this.maxPoints = CONFIG.points.maxPoints;
 		
+		// Partículas pequeñas tipo uvas desde el cursor
+		this.cursorGrapes = [];
+		
 		// Inicializar con algunos puntos de ejemplo
 		//this.points.push(new LidarPoint(width/2, height*1/4, 0));
 		//this.points.push(new LidarPoint(width/2, height/2, 1));
 		//this.points.push(new LidarPoint(width/2, height*3/4, 2));
 	}
 	display() {
+		// Dibujar partículas de uvas primero (detrás)
+		this.displayCursorGrapes();
+		
 		// Dibujamos todos los puntos (LIDAR + input)
 		const allPoints = [...this.points, ...this.inputPoints];
 
@@ -67,11 +73,89 @@ class PointServer {
 		// Mouse tracking
 		if (mouseIsPressed) {
 			this.inputPoints.push(new LidarPoint(mouseX, mouseY, 0));
+			// Crear partículas de uvas pequeñas
+			if (frameCount % 3 === 0) {
+				this.createCursorGrape(mouseX, mouseY);
+			}
 		}
 
 		// Touch tracking
 		for (let i = 0; i < touches.length; i++) {
 			this.inputPoints.push(new LidarPoint(touches[i].x, touches[i].y,i));
+			// Crear partículas de uvas pequeñas
+			if (frameCount % 3 === 0) {
+				this.createCursorGrape(touches[i].x, touches[i].y);
+			}
+		}
+		
+		// Actualizar partículas de uvas
+		this.updateCursorGrapes();
+	}
+	
+	createCursorGrape(x, y) {
+		const angle = random(TWO_PI);
+		const distance = random(5, 15);
+		this.cursorGrapes.push({
+			pos: createVector(x + cos(angle) * distance, y + sin(angle) * distance),
+			vel: createVector(random(-0.5, 0.5), random(-1, -0.3)),
+			size: random(3, 8),
+			alpha: 255,
+			color: color(random(100, 255), random(50, 200), random(100, 255)),
+			glowPhase: random(TWO_PI)
+		});
+	}
+	
+	updateCursorGrapes() {
+		for (let i = this.cursorGrapes.length - 1; i >= 0; i--) {
+			const grape = this.cursorGrapes[i];
+			
+			// Movimiento flotante
+			grape.pos.add(grape.vel);
+			grape.vel.y -= 0.02; // Flotar hacia arriba
+			
+			// Desvanecer
+			grape.alpha -= 3;
+			grape.size *= 0.99;
+			
+			// Actualizar fase de brillo
+			grape.glowPhase += 0.1;
+			
+			// Eliminar si está muerta
+			if (grape.alpha <= 0 || grape.size < 1) {
+				this.cursorGrapes.splice(i, 1);
+			}
+		}
+		
+		// Limitar cantidad
+		if (this.cursorGrapes.length > 150) {
+			this.cursorGrapes.splice(0, this.cursorGrapes.length - 150);
+		}
+	}
+	
+	displayCursorGrapes() {
+		for (let grape of this.cursorGrapes) {
+			push();
+			translate(grape.pos.x, grape.pos.y);
+			
+			// Efecto de brillo pulsante
+			const glowIntensity = sin(grape.glowPhase) * 0.3 + 0.7;
+			const currentSize = grape.size * glowIntensity;
+			
+			noStroke();
+			
+			// Halo
+			fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha * 0.3);
+			ellipse(0, 0, currentSize * 2, currentSize * 2);
+			
+			// Uva principal
+			fill(red(grape.color), green(grape.color), blue(grape.color), grape.alpha);
+			ellipse(0, 0, currentSize, currentSize * 1.1);
+			
+			// Brillo
+			fill(255, 255, 255, grape.alpha * 0.6);
+			ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
+			
+			pop();
 		}
 	}
 

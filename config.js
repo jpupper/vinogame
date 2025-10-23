@@ -39,10 +39,10 @@ const CONFIG = {
             attraction: 0.15          // Fuerza de atracción hacia objetivos
         },
         colors: {
-            positive: [50, 200, 50],  // Color base para efectos positivos
-            negative: [200, 50, 50],  // Color base para efectos negativos
-            neutral: [150, 150, 255], // Color base para efectos neutrales
-            variation: 50             // Variación aleatoria en los colores
+            positive: [100, 255, 150],  // Color base para efectos positivos (verde lima)
+            negative: [255, 80, 150],   // Color base para efectos negativos (rosa/magenta)
+            neutral: [100, 200, 255],   // Color base para efectos neutrales (azul eléctrico)
+            variation: 50               // Variación aleatoria en los colores
         },
         lifespan: {
             rising: 800,              // Duración de fase de subida (ms)
@@ -55,29 +55,29 @@ const CONFIG = {
     trail: {
         maxLength: 20,                // Longitud máxima del rastro
         thickness: 8,                 // Grosor del rastro
-        opacity: 150,                 // Opacidad máxima (0-255)
+        opacity: 180,                 // Opacidad máxima (0-255) - más visible
         fadeSpeed: 5,                 // Velocidad de desvanecimiento
-        colorMode: 'rainbow',         // 'rainbow', 'fixed', 'gradient'
-        color: [255, 255, 255],       // Color fijo si colorMode es 'fixed'
-        gradient: {                   // Colores para modo gradiente
-            start: [255, 0, 0],
-            end: [0, 0, 255]
+        colorMode: 'gradient',        // 'rainbow', 'fixed', 'gradient'
+        color: [100, 200, 255],       // Color fijo si colorMode es 'fixed'
+        gradient: {                   // Colores para modo gradiente (azul a morado)
+            start: [100, 200, 255],   // Azul eléctrico
+            end: [200, 100, 255]      // Morado vibrante
         }
     },
     
     // FONDO DINÁMICO
     background: {
-        color: [15, 8, 25],           // Color RGB del fondo (morado oscuro de bodega)
+        color: [5, 5, 15],            // Color RGB del fondo (negro azulado profundo)
         grid: {
             size: 30,                 // Tamaño de la cuadrícula
             pointSizeRange: {         // Rango de tamaño de los puntos
-                min: 3,
-                max: 8
+                min: 2,
+                max: 10
             },
             colors: {                 // Colores de los puntos (modo HSB)
-                hueRange: [270, 320], // Rango de tonalidad (morados/magentas)
-                satRange: [40, 70],   // Rango de saturación
-                briRange: [15, 45]    // Rango de brillo
+                hueRange: [180, 280], // Rango de tonalidad (azules a morados vibrantes)
+                satRange: [60, 90],   // Rango de saturación (más saturado)
+                briRange: [30, 70]    // Rango de brillo (más brillante)
             },
             inertia: 0.2              // Factor de inercia para movimiento suave
         },
@@ -114,7 +114,7 @@ const CONFIG = {
                 min: 1000,
                 max: 3000
             },
-            color: [150, 80, 120]     // Color base de las ondas (morado/vino)
+            color: [100, 150, 255]    // Color base de las ondas (azul eléctrico)
         }
     },
     

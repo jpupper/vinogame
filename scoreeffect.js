@@ -73,7 +73,7 @@ class ScoreSystem {
             maxAge: 60,
             comboCount: this.comboCount,
             isPositive: points > 0,
-            phase: 'rising', // Fases: rising -> falling -> attracting
+            phase: 'rising', // Fases: rising -> falling
             phaseStartTime: millis(),
             phaseDuration: {
                 rising: CONFIG.particles.lifespan.rising,
@@ -162,11 +162,6 @@ class ScoreSystem {
                     anim.phase = 'falling';
                     anim.phaseStartTime = currentTime;
                 }
-            } else if (anim.phase === 'falling') {
-                if (currentTime - anim.phaseStartTime > anim.phaseDuration.falling) {
-                    anim.phase = 'attracting';
-                    anim.phaseStartTime = currentTime;
-                }
             }
             
             // Comportamiento según la fase
@@ -176,130 +171,38 @@ class ScoreSystem {
                 anim.y += anim.velocity.y;
                 anim.x += anim.velocity.x;
                 anim.velocity.y *= 0.95; // Desaceleración
-                anim.alpha = 255;
-                anim.scale = map(anim.age, 0, 20, 0.5, 1.5);
                 
-                // Actualizar partículas en fase de subida
+                // Actualizar partículas
                 for (let p of anim.particles) {
+                    p.vel.y *= 0.95;
                     p.pos.add(p.vel);
-                    p.vel.x *= 0.98;
-                    p.vel.y *= 0.98;
                 }
             } else if (anim.phase === 'falling') {
-                // Fase de caída con gravedad
+                // Fase de caída
+                const progress = (currentTime - anim.phaseStartTime) / anim.phaseDuration.falling;
+                
+                // Aplicar gravedad
                 anim.velocity.y += anim.gravity;
+                anim.x += anim.velocity.x;
                 anim.y += anim.velocity.y;
-                anim.x += anim.velocity.x * 0.5;
                 
-                // Actualizar partículas en fase de caída
+                // Actualizar partículas
                 for (let p of anim.particles) {
-                    p.vel.y += anim.gravity * 0.8;
-                    p.pos.add(p.vel);
-                    p.vel.x *= 0.98;
-                }
-            } else if (anim.phase === 'attracting') {
-                // Fase de atracción hacia el score
-                const progress = (currentTime - anim.phaseStartTime) / anim.phaseDuration.attracting;
-                
-                // Mover hacia la posición del score
-                const targetX = this.scorePosition.x;
-                const targetY = this.scorePosition.y;
-                
-                // Atracción con aceleración
-                const dx = targetX - anim.x;
-                const dy = targetY - anim.y;
-                const distance = sqrt(dx*dx + dy*dy);
-                
-                // Velocidad basada en la distancia
-                const speed = map(progress, 0, 1, 0.02, 0.2);
-                
-                anim.x += dx * speed;
-                anim.y += dy * speed;
-                
-                // Reducir tamaño a medida que se acerca
-                anim.scale = map(progress, 0, 1, 1, 0.2);
-                
-                // Actualizar partículas en fase de atracción
-                for (let p of anim.particles) {
-                    // Calcular punto de destino con ligera variación para crear efecto de "llenado"
-                    // Las partículas se distribuyen alrededor del score
-                    const scoreWidth = 240; // Ancho aproximado del texto "Score: XXX"
-                    const scoreHeight = 40; // Alto aproximado del texto
-                    
-                    // Destino con variación dentro del área del score
-                    const particleTargetX = targetX - random(0, scoreWidth);
-                    const particleTargetY = targetY + random(-scoreHeight/2, scoreHeight/2);
-                    
-                    const dx = particleTargetX - p.pos.x;
-                    const dy = particleTargetY - p.pos.y;
-                    const distance = sqrt(dx*dx + dy*dy);
-                    
-                    // Velocidad que aumenta dramáticamente al final para efecto de "absorción"
-                    let particleSpeed;
-                    if (progress < 0.7) {
-                        // Movimiento más lento al principio
-                        particleSpeed = map(progress, 0, 0.7, 0.01, 0.05);
-                    } else {
-                        // Aceleración dramática al final
-                        particleSpeed = map(progress, 0.7, 1, 0.05, CONFIG.particles.speed.attraction * 2);
-                    }
-                    
-                    // Añadir componente de movimiento circular/espiral
-                    const spiralFactor = map(progress, 0, 1, 0.2, 0.05);
-                    const spiralAngle = frameCount * 0.1 + p.initialOffset;
-                    p.vel.x = dx * particleSpeed + sin(spiralAngle) * spiralFactor;
-                    p.vel.y = dy * particleSpeed + cos(spiralAngle) * spiralFactor;
+                    p.vel.y += anim.gravity;
                     p.pos.add(p.vel);
                     
-                    // Efecto de estela para partículas
-                    if (frameCount % 2 === 0 && progress > 0.5) {
-                        anim.trailParticles.push({
-                            pos: p.pos.copy(),
-                            alpha: 150,
-                            size: p.size * 0.7,
-                            color: p.color
-                        });
-                    }
-                    
-                    // Reducir tamaño y ajustar opacidad
-                    p.size = map(progress, 0, 1, p.size, p.size * 0.5);
-                    
-                    // Mantener opacidad alta hasta el final para mejor visibilidad
-                    if (progress < 0.8) {
-                        p.alpha = 255;
-                    } else {
-                        p.alpha = map(progress, 0.8, 1, 255, 0);
-                    }
+                    // Reducir tamaño gradualmente
+                    p.size *= 0.99;
                 }
                 
-                // Actualizar partículas de estela
-                for (let i = anim.trailParticles.length - 1; i >= 0; i--) {
-                    const trail = anim.trailParticles[i];
-                    trail.alpha -= 15;
-                    trail.size *= 0.95;
-                    
-                    if (trail.alpha <= 0 || trail.size < 0.5) {
-                        anim.trailParticles.splice(i, 1);
-                    }
-                }
-                
-                // Desvanecer cuando está cerca del objetivo
-                if (distance < 50) {
-                    anim.alpha = map(distance, 50, 10, 255, 0);
-                }
-                
-                // Efecto de "llenado" en el score cuando las partículas llegan
-                if (progress > 0.7) {
-                    // Activar un efecto adicional en el score
-                    const energyBoost = map(progress, 0.7, 1, 0, anim.isPositive ? 10 : 5);
-                    this.scoreEffect.intensity += energyBoost * 0.01;
-                    this.scoreEffect.duration = CONFIG.score.effectDuration * 1.5; // Extender duración
-                }
+                // Desvanecer
+                anim.alpha = map(progress, 0, 1, 255, 0);
+                anim.scale = map(progress, 0, 1, 1, 0.5);
             }
             
             // Eliminar animaciones completadas
-            if (anim.phase === 'attracting' && 
-                currentTime - anim.phaseStartTime > anim.phaseDuration.attracting) {
+            if (anim.phase === 'falling' && 
+                currentTime - anim.phaseStartTime > anim.phaseDuration.falling) {
                 this.scoreAnimations.splice(i, 1);
             }
         }
@@ -489,17 +392,6 @@ class ScoreSystem {
                     text(`x${anim.comboCount}`, anim.x, anim.y + fontSize * 0.7);
                 }
             }
-            
-            // Efectos adicionales según la fase
-            if (anim.phase === 'attracting') {
-                // Dibujar línea de atracción hacia el score
-                const progress = (millis() - anim.phaseStartTime) / anim.phaseDuration.attracting;
-                if (progress < 0.7) { // Solo mostrar líneas al principio de la atracción
-                    stroke(anim.isPositive ? color(100, 255, 100, 100) : color(255, 100, 100, 100));
-                    strokeWeight(1);
-                    line(anim.x, anim.y, this.scorePosition.x, this.scorePosition.y);
-                }
-            }
         }
         
         // Mostrar animación de Game Over si el juego terminó
@@ -509,34 +401,72 @@ class ScoreSystem {
     }
     
     drawHeart(x, y, size) {
-        // Usar ancho y alto separados para el corazón
-        const ancho = size * 1.2; // Un poco más ancho que alto
+        // Usar ancho y alto separados para el corazón (más ancho)
+        const ancho = size * 1.5;
         const alto = size;
+        
+        // Efecto de pulsación
+        const pulseScale = sin(frameCount * 0.05 + x * 0.1) * 0.1 + 1;
+        const currentSize = size * pulseScale;
+        const currentAncho = ancho * pulseScale;
+        const currentAlto = alto * pulseScale;
         
         push();
         translate(x, y);
         
+        // Halo exterior brillante
+        for (let i = 3; i > 0; i--) {
+            fill(255, 50, 100, 30 / i);
+            noStroke();
+            beginShape();
+            vertex(0, -currentAlto/4);
+            bezierVertex(currentAncho/4 * (1 + i * 0.1), -currentAlto/2 * (1 + i * 0.1), 
+                        currentAncho/2 * (1 + i * 0.1), -currentAlto/4 * (1 + i * 0.1), 
+                        0, currentAlto/2 * (1 + i * 0.1));
+            bezierVertex(-currentAncho/2 * (1 + i * 0.1), -currentAlto/4 * (1 + i * 0.1), 
+                        -currentAncho/4 * (1 + i * 0.1), -currentAlto/2 * (1 + i * 0.1), 
+                        0, -currentAlto/4);
+            endShape(CLOSE);
+        }
+        
         // Sombra del corazón
-        fill(0, 0, 0, 100);
+        fill(0, 0, 0, 120);
         noStroke();
         beginShape();
-        vertex(0, -alto/4);
-        bezierVertex(ancho/4, -alto/2, ancho/2, -alto/4, 0, alto/2);
-        bezierVertex(-ancho/2, -alto/4, -ancho/4, -alto/2, 0, -alto/4);
+        vertex(2, -currentAlto/4 + 2);
+        bezierVertex(currentAncho/4 + 2, -currentAlto/2 + 2, currentAncho/2 + 2, -currentAlto/4 + 2, 2, currentAlto/2 + 2);
+        bezierVertex(-currentAncho/2 + 2, -currentAlto/4 + 2, -currentAncho/4 + 2, -currentAlto/2 + 2, 2, -currentAlto/4 + 2);
         endShape(CLOSE);
         
-        // Corazón
-        fill(CONFIG.lives.color[0], CONFIG.lives.color[1], CONFIG.lives.color[2]);
+        // Corazón principal con gradiente simulado
+        // Capa oscura (base)
+        fill(200, 30, 80);
         noStroke();
         beginShape();
-        vertex(0, -alto/4);
-        bezierVertex(ancho/4, -alto/2, ancho/2, -alto/4, 0, alto/2);
-        bezierVertex(-ancho/2, -alto/4, -ancho/4, -alto/2, 0, -alto/4);
+        vertex(0, -currentAlto/4);
+        bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2);
+        bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
         endShape(CLOSE);
         
-        // Brillo
-        fill(255, 255, 255, 100);
-        ellipse(-ancho/5, -alto/5, ancho/4, alto/4);
+        // Capa brillante (encima)
+        fill(255, 60, 120);
+        beginShape();
+        vertex(0, -currentAlto/4);
+        bezierVertex(currentAncho/4, -currentAlto/2, currentAncho/2, -currentAlto/4, 0, currentAlto/2 * 0.7);
+        bezierVertex(-currentAncho/2, -currentAlto/4, -currentAncho/4, -currentAlto/2, 0, -currentAlto/4);
+        endShape(CLOSE);
+        
+        // Múltiples brillos para efecto más orgánico
+        fill(255, 200, 220, 150);
+        ellipse(-currentAncho/5, -currentAlto/4, currentAncho/3, currentAlto/3);
+        
+        fill(255, 255, 255, 200);
+        ellipse(-currentAncho/4, -currentAlto/3.5, currentAncho/5, currentAlto/5);
+        
+        // Brillo pulsante adicional
+        const glowAlpha = sin(frameCount * 0.1 + x * 0.2) * 50 + 100;
+        fill(255, 150, 180, glowAlpha);
+        ellipse(0, 0, currentAncho/6, currentAlto/6);
         
         pop();
     }
