@@ -1,3 +1,11 @@
+// Imagen de uva (se carga globalmente)
+let grapeImage = null;
+
+// Cargar imagen de uva
+function loadGrapeImage() {
+    grapeImage = loadImage('img/uva_roja.png');
+}
+
 // Sistema de copas de vino que caen
 class WineGlassSystem {
     constructor() {
@@ -192,27 +200,98 @@ class WineGlass {
         ctx.push();
         ctx.translate(this.x, this.y);
         
-        // Efecto de pulso si está siendo hovereado
-        const pulseFactor = this.isBeingHovered ? 1 + 0.1 * sin(this.pulsePhase * 3) : 1;
+        // Calcular progreso de captura (0 a 1)
+        const captureProgress = this.hoverTime / this.requiredHoverTime;
         
-        // Aura si está siendo hovereado
-        if (this.isBeingHovered) {
+        // ANIMACIÓN ÉPICA DE CAPTURA
+        // Escala: crece de 1.0 a 1.5 mientras la agarrás
+        const scaleFactor = 1.0 + captureProgress * 0.5;
+        
+        // Rotación: gira mientras la agarrás
+        const rotation = captureProgress * TWO_PI * 2; // 2 vueltas completas
+        
+        // Pulso adicional si está siendo hovereada
+        const pulseFactor = this.isBeingHovered ? 1 + 0.08 * sin(this.pulsePhase * 4) : 1;
+        
+        // GLOW ÉPICO - múltiples capas que crecen con el progreso
+        if (this.isBeingHovered || captureProgress > 0) {
             ctx.noStroke();
-            for (let i = 3; i > 0; i--) {
-                ctx.fill(255, 255, 0, 30);
-                ctx.ellipse(0, 0, this.size * (1.3 + i * 0.1) * pulseFactor);
+            
+            // Glow exterior (más grande)
+            for (let i = 5; i > 0; i--) {
+                const glowSize = this.size * (1.5 + i * 0.15 + captureProgress * 0.5) * pulseFactor * scaleFactor;
+                const glowAlpha = (30 - i * 3) * (0.5 + captureProgress * 0.5);
+                
+                // Color shift: amarillo -> naranja -> dorado según progreso
+                const r = 255;
+                const g = 255 - captureProgress * 100;
+                const b = 0 + captureProgress * 50;
+                
+                ctx.fill(r, g, b, glowAlpha);
+                ctx.ellipse(0, 0, glowSize);
+            }
+            
+            // Partículas orbitando
+            if (captureProgress > 0.2) {
+                this.drawOrbitingParticles(ctx, captureProgress, scaleFactor);
             }
         }
         
-        // Dibujar copa
-        this.drawGlass(pulseFactor, ctx);
+        // Dibujar imagen de uva con todas las transformaciones
+        if (grapeImage) {
+            ctx.push();
+            
+            // Aplicar rotación
+            ctx.rotate(rotation);
+            
+            // Aplicar escala
+            ctx.scale(scaleFactor * pulseFactor);
+            
+            // Tinte de color según progreso (más brillante)
+            const brightness = 1.0 + captureProgress * 0.5;
+            ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
+            
+            // Dibujar imagen
+            ctx.imageMode(CENTER);
+            ctx.image(grapeImage, 0, 0, this.size, this.size);
+            
+            ctx.pop();
+        } else {
+            // Fallback: dibujar copa si la imagen no cargó
+            this.drawGlass(pulseFactor, ctx);
+        }
         
-        // Barra de progreso de hover
-        if (this.hoverTime > 0) {
+        // Barra de progreso (más sutil)
+        if (this.hoverTime > 0 && captureProgress < 0.95) {
             this.drawProgressBar(ctx);
         }
         
         ctx.pop();
+    }
+    
+    // Dibujar partículas orbitando alrededor de la uva
+    drawOrbitingParticles(ctx, progress, scale) {
+        const particleCount = floor(progress * 8); // Hasta 8 partículas
+        const orbitRadius = this.size * 0.8 * scale;
+        
+        ctx.noStroke();
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * TWO_PI + this.pulsePhase * 2;
+            const x = cos(angle) * orbitRadius;
+            const y = sin(angle) * orbitRadius;
+            
+            // Tamaño de partícula
+            const particleSize = 4 + progress * 4;
+            
+            // Color dorado brillante
+            ctx.fill(255, 220, 100, 200);
+            ctx.ellipse(x, y, particleSize);
+            
+            // Núcleo más brillante
+            ctx.fill(255, 255, 200, 255);
+            ctx.ellipse(x, y, particleSize * 0.5);
+        }
     }
 
     drawGlass(pulseFactor, ctx = window) {

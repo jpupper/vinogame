@@ -63,9 +63,11 @@ function preload() {
   ];
   
   const backgroundImagePaths = [
-    'img/9.jpg',   // Explosión de colores
-    'img/10.jpg',  // Líquido naranja
-    'img/2.jpg'    // Patrón radial
+    'img/fondo1.jpg',
+    'img/fondo2.jpg',
+    'img/fondo3.jpg',
+    'img/fondo4.jpg',
+    'img/fondo5.jpg'
   ];
   
   // Cargar texturas de uvas desde array
@@ -81,6 +83,9 @@ function preload() {
   // Cargar shaders
   feedbackShader = loadShader('feedback.vert', 'feedback.frag');
   compositeShader = loadShader('composite.vert', 'composite.frag');
+  
+  // Cargar imagen de uva
+  loadGrapeImage();
 }
 
 function setup() {
@@ -203,6 +208,30 @@ function draw() {
     compositeShader.setUniform('u_wavePositions', wavePositions);
     compositeShader.setUniform('u_waveTimes', waveTimes);
     compositeShader.setUniform('u_waveActive', waveActive);
+    
+    // Pasar posiciones de uvas al composite shader (para distorsión gravitacional)
+    let grapePositions = [];
+    let grapeProgress = [];
+    let grapeActive = [];
+    
+    const MAX_GRAPES = 10;
+    const grapes = wineGlassSystem.glasses; // Obtener todas las uvas/copas
+    
+    for (let i = 0; i < MAX_GRAPES; i++) {
+      if (i < grapes.length) {
+        grapePositions.push(grapes[i].x / width, grapes[i].y / height);
+        grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
+        grapeActive.push(1.0);
+      } else {
+        grapePositions.push(0, 0);
+        grapeProgress.push(0);
+        grapeActive.push(0.0);
+      }
+    }
+    
+    compositeShader.setUniform('u_grapePositions', grapePositions);
+    compositeShader.setUniform('u_grapeProgress', grapeProgress);
+    compositeShader.setUniform('u_grapeActive', grapeActive);
     
     feedbackBuffer.rect(0, 0, width, height);
   }

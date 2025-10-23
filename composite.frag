@@ -15,6 +15,11 @@ uniform vec2 u_wavePositions[5];
 uniform float u_waveTimes[5];
 uniform float u_waveActive[5];
 
+// UVAS (para distorsión gravitacional)
+uniform vec2 u_grapePositions[10];      // Posiciones de hasta 10 uvas
+uniform float u_grapeProgress[10];      // Progreso de captura (0-1)
+uniform float u_grapeActive[10];        // Si la uva está activa
+
 varying vec2 vTexCoord;
 
 void main() {
@@ -70,7 +75,43 @@ void main() {
     // Deshacer corrección de aspect ratio
     displacement.x /= u_resolution.x / u_resolution.y;
     
-    // 2. DISTORSIÓN POR ONDAS SINUSOIDALES (muy sutil)
+    // 2. DISTORSIÓN GRAVITACIONAL POR UVAS
+    const float GRAVITY_STRENGTH = 0.015; // Fuerza de la distorsión gravitacional
+    
+    for (int i = 0; i < 10; i++) {
+        if (u_grapeActive[i] > 0.5) {
+            // Posición de la uva (corregir aspect ratio)
+            vec2 grapePos = u_grapePositions[i];
+            grapePos.x *= u_resolution.x / u_resolution.y;
+            
+            // Distancia a la uva
+            float grapeDist = distance(aspectUV, grapePos);
+            
+            // Radio de influencia (más grande si está siendo capturada)
+            float influenceRadius = 0.15 + u_grapeProgress[i] * 0.1;
+            
+            // Fuerza gravitacional (inversa al cuadrado de la distancia)
+            float gravityForce = 1.0 / (1.0 + grapeDist * grapeDist * 20.0);
+            gravityForce *= smoothstep(influenceRadius, 0.0, grapeDist);
+            
+            // Aumentar fuerza con el progreso de captura
+            gravityForce *= (1.0 + u_grapeProgress[i] * 2.0);
+            
+            // Dirección hacia la uva
+            vec2 direction = normalize(grapePos - aspectUV);
+            
+            // Aplicar distorsión gravitacional (atrae hacia la uva)
+            displacement += direction * gravityForce * GRAVITY_STRENGTH;
+            
+            // Chromatic aberration en la zona de influencia
+            chromaticAberration += gravityForce * u_grapeProgress[i];
+        }
+    }
+    
+    // Deshacer corrección de aspect ratio para distorsión de uvas
+    displacement.x /= u_resolution.x / u_resolution.y;
+    
+    // 3. DISTORSIÓN POR ONDAS SINUSOIDALES (muy sutil)
     float sineWave1 = sin(uv.x * 25.0 + u_time * 0.2) * SINE_DISTORTION_STRENGTH;
     float sineWave2 = sin(uv.y * 20.0 - u_time * 0.8) * SINE_DISTORTION_STRENGTH;
     displacement += vec2(sineWave2, sineWave1); // Cruzadas para efecto más interesante
@@ -78,19 +119,9 @@ void main() {
     // Aplicar distorsión a las UVs
     vec2 distortedUV = uv + displacement;
     
-    // ===== DIBUJAR TEXTURAS DE FONDO ROTADAS =====
-    vec2 centeredUV = distortedUV - 0.5;
-    
-    // Aplicar rotación
-    float cosR = cos(u_backgroundRotation);
-    float sinR = sin(u_backgroundRotation);
-    vec2 rotatedUV = vec2(
-        centeredUV.x * cosR - centeredUV.y * sinR,
-        centeredUV.x * sinR + centeredUV.y * cosR
-    );
-    
-    // Escalar para zoom (1.6x)
-    rotatedUV = rotatedUV / 1.6 + 0.5;
+    // ===== DIBUJAR TEXTURAS DE FONDO (SIN ROTACIÓN) =====
+    // Usar directamente las UVs distorsionadas sin rotación ni zoom
+    vec2 finalUV = distortedUV;
     
     // ===== CHROMATIC ABERRATION: Samplear RGB por separado =====
     vec4 bgTexture1, bgTexture2;
@@ -100,20 +131,20 @@ void main() {
         float aberration = chromaticAberration * CHROMATIC_STRENGTH;
         
         // Textura 1
-        float r1 = texture2D(u_backgroundTexture1, rotatedUV + vec2(aberration, 0.0)).r;
-        float g1 = texture2D(u_backgroundTexture1, rotatedUV).g;
-        float b1 = texture2D(u_backgroundTexture1, rotatedUV - vec2(aberration, 0.0)).b;
+        float r1 = texture2D(u_backgroundTexture1, finalUV + vec2(aberration, 0.0)).r;
+        float g1 = texture2D(u_backgroundTexture1, finalUV).g;
+        float b1 = texture2D(u_backgroundTexture1, finalUV - vec2(aberration, 0.0)).b;
         bgTexture1 = vec4(r1, g1, b1, 1.0);
         
         // Textura 2
-        float r2 = texture2D(u_backgroundTexture2, rotatedUV + vec2(aberration, 0.0)).r;
-        float g2 = texture2D(u_backgroundTexture2, rotatedUV).g;
-        float b2 = texture2D(u_backgroundTexture2, rotatedUV - vec2(aberration, 0.0)).b;
+        float r2 = texture2D(u_backgroundTexture2, finalUV + vec2(aberration, 0.0)).r;
+        float g2 = texture2D(u_backgroundTexture2, finalUV).g;
+        float b2 = texture2D(u_backgroundTexture2, finalUV - vec2(aberration, 0.0)).b;
         bgTexture2 = vec4(r2, g2, b2, 1.0);
     } else {
         // Sin chromatic aberration
-        bgTexture1 = texture2D(u_backgroundTexture1, rotatedUV);
-        bgTexture2 = texture2D(u_backgroundTexture2, rotatedUV);
+        bgTexture1 = texture2D(u_backgroundTexture1, finalUV);
+        bgTexture2 = texture2D(u_backgroundTexture2, finalUV);
     }
     
     // Mezclar texturas según blend
@@ -137,7 +168,7 @@ void main() {
     float centeredWave = (wavePattern - 0.5) * 2.0; // De 0,1 a -1,1
     
     // SUMAR ondas a la imagen (APENAS PERCEPTIBLE)
-    vec3 finalColor = backgroundColor.rgb * 0.02 + backgroundColor.rgb * vec3(wavePattern) * 0.29;
+    vec3 finalColor = backgroundColor.rgb * 0.2 + backgroundColor.rgb * vec3(wavePattern) * 0.29;
     
     // ===== COLOR GRADING DINÁMICO (basado en combo) =====
     float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);
@@ -185,6 +216,34 @@ void main() {
     
     // Brillo adicional con combo
     finalColor += vec3(safeComboLevel * 0.03);
+    
+    // ===== BLOOM/GLOW EFFECT =====
+    // Detectar áreas brillantes
+    float brightness = dot(finalColor, vec3(0.299, 0.587, 0.114));
+    
+    if (brightness > 0.6) {
+        // Samplear píxeles vecinos para crear bloom
+        vec3 bloom = vec3(0.0);
+        float bloomRadius = 0.003 + safeComboLevel * 0.002; // Radio crece con combo
+        
+        // 8 direcciones
+        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, 0.0)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, 0.0)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(0.0, bloomRadius)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(0.0, -bloomRadius)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, bloomRadius)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, bloomRadius)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, -bloomRadius)).rgb;
+        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, -bloomRadius)).rgb;
+        
+        bloom /= 8.0;
+        
+        // Aplicar bloom solo a áreas brillantes
+        float bloomStrength = (brightness - 0.6) * 2.5; // 0 a 1
+        bloomStrength *= (0.3 + safeComboLevel * 0.4); // Más fuerte con combo
+        
+        finalColor += bloom * bloomStrength;
+    }
     
     // Asegurar que el color final nunca sea negativo
     finalColor = max(finalColor, vec3(0.0));
