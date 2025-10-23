@@ -12,6 +12,11 @@ uniform float u_effectIntensity;      // Intensidad de efectos especiales (0-1)
 uniform float u_comboLevel;            // Nivel de combo (0-1)
 uniform float u_vignetteIntensity;     // Intensidad del vignette (0-1)
 
+// ONDAS EXPANSIVAS (hasta 5 ondas simultáneas)
+uniform vec2 u_wavePositions[5];       // Posiciones de las ondas
+uniform float u_waveTimes[5];          // Tiempo de inicio de cada onda
+uniform float u_waveActive[5];         // Si la onda está activa (1.0 = sí, 0.0 = no)
+
 varying vec2 vTexCoord;
 
 // Función de ruido 2D
@@ -65,34 +70,57 @@ void main() {
     // Aplicar desplazamiento
     vec2 displacedUV = uv + displacement;
     
-    // CHROMATIC ABERRATION (separación RGB)
-    float aberrationAmount = influence * 0.01 * u_effectIntensity;
-    vec4 currentColor;
-    if (u_effectIntensity > 0.1) {
-        float r = texture2D(u_texture, displacedUV + vec2(aberrationAmount, 0.0)).r;
-        float g = texture2D(u_texture, displacedUV).g;
-        float b = texture2D(u_texture, displacedUV - vec2(aberrationAmount, 0.0)).b;
-        currentColor = vec4(r, g, b, 1.0);
-    } else {
-        currentColor = texture2D(u_texture, displacedUV);
-    }
+    // ===== FEEDBACK LOOP: Acumular solo efectos (no la imagen base) =====
+    vec4 previousFrame = texture2D(u_feedbackTexture, uv);
+    vec4 finalColor = previousFrame * 0.92; // Decay del feedback (92% del frame anterior)
     
-    // Solo efectos de cursor (sin oscurecer la imagen base)
-    vec4 finalColor = vec4(0.0, 0.0, 0.0, 0.0); // Empezar con negro transparente
-    
-    // Solo agregar brillo cerca del cursor (MÁS SUTIL)
+    // ===== BRILLO DEL CURSOR =====
     if (influence > 0.0) {
-        // Agregar un tinte de color basado en la posición (más suave)
+        // Tinte de color animado
         vec3 tint = vec3(
             0.5 + 0.5 * sin(u_time * 0.5 + dist * 10.0),
             0.5 + 0.5 * sin(u_time * 0.7 + dist * 10.0 + 2.0),
             0.5 + 0.5 * sin(u_time * 0.3 + dist * 10.0 + 4.0)
         );
         
-        // BLOOM effect - brillo adicional en el centro (EXTREMADAMENTE SUTIL)
-        float centerGlow = smoothstep(0.05, 0.0, dist); // Radio muy pequeño
-        finalColor.rgb = tint * centerGlow * (0.08 + u_effectIntensity * 0.12); // Intensidad muy reducida
-        finalColor.a = centerGlow * 0.4; // Alpha muy reducido
+        // BLOOM effect en el centro
+        float centerGlow = smoothstep(0.05, 0.0, dist);
+        finalColor.rgb += tint * centerGlow * (0.3 + u_effectIntensity * 0.4);
+        finalColor.a = max(finalColor.a, centerGlow * 0.8);
+    }
+    
+    // ===== ONDAS EXPANSIVAS =====
+    for (int i = 0; i < 5; i++) {
+        if (u_waveActive[i] > 0.5) {
+            // Posición de la onda (corregir aspect ratio)
+            vec2 wavePos = u_wavePositions[i];
+            wavePos.x *= u_resolution.x / u_resolution.y;
+            
+            // Distancia a la onda
+            float waveDist = distance(aspectUV, wavePos);
+            
+            // Tiempo desde que empezó la onda
+            float waveTime = u_time - u_waveTimes[i];
+            
+            // Radio de la onda (expande con el tiempo)
+            float waveRadius = waveTime * 0.5; // Velocidad de expansión
+            
+            // Grosor de la onda
+            float waveThickness = 0.03;
+            
+            // Intensidad de la onda (fade out con el tiempo)
+            float waveIntensity = smoothstep(2.0, 0.0, waveTime); // Dura 2 segundos
+            
+            // Dibujar el anillo de la onda
+            float ring = smoothstep(waveThickness, 0.0, abs(waveDist - waveRadius));
+            
+            // Color de la onda (dorado MUY SUTIL)
+            vec3 waveColor = vec3(1.0, 0.8, 0.3);
+            
+            // Agregar la onda al buffer (MUCHO MÁS SUTIL - casi invisible)
+            finalColor.rgb += waveColor * ring * waveIntensity * 0.1; // Reducido de 0.8 a 0.1
+            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.15); // Alpha muy reducido
+        }
     }
     
     // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO (MÁS SUTIL)

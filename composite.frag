@@ -10,14 +10,71 @@ uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_comboLevel;                // Nivel de combo (0-1)
 
+// ONDAS EXPANSIVAS (para distorsión)
+uniform vec2 u_wavePositions[5];
+uniform float u_waveTimes[5];
+uniform float u_waveActive[5];
+
 varying vec2 vTexCoord;
 
 void main() {
     // Coordenadas UV
     vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
     
+    // ===== CALCULAR DISTORSIÓN DE UVs =====
+    vec2 displacement = vec2(0.0);
+    
+    // FUERZA DE DISTORSIÓN (ajustable)
+    const float WAVE_DISTORTION_STRENGTH = 0.05;  // 5% de distorsión máxima
+    const float SINE_DISTORTION_STRENGTH = 0.002; // 0.2% de distorsión sutil
+    
+    // Corregir aspect ratio para las ondas
+    vec2 aspectUV = uv;
+    aspectUV.x *= u_resolution.x / u_resolution.y;
+    
+    // 1. DISTORSIÓN POR ONDAS EXPANSIVAS (más fuerte)
+    for (int i = 0; i < 5; i++) {
+        if (u_waveActive[i] > 0.5) {
+            // Posición de la onda (corregir aspect ratio)
+            vec2 wavePos = u_wavePositions[i];
+            wavePos.x *= u_resolution.x / u_resolution.y;
+            
+            // Distancia a la onda
+            float waveDist = distance(aspectUV, wavePos);
+            
+            // Tiempo desde que empezó la onda
+            float waveTime = u_time - u_waveTimes[i];
+            
+            // Radio de la onda (expande con el tiempo)
+            float waveRadius = waveTime * 0.5;
+            
+            // Intensidad de la onda (fade out con el tiempo)
+            float waveIntensity = smoothstep(2.0, 0.0, waveTime);
+            
+            // Distorsión radial desde el centro de la onda (área más amplia)
+            float distortionStrength = smoothstep(0.15, 0.0, abs(waveDist - waveRadius)) * waveIntensity;
+            
+            // Dirección de la distorsión (desde el centro de la onda)
+            vec2 direction = normalize(aspectUV - wavePos);
+            
+            // Aplicar distorsión (empuja hacia afuera) - MÁS FUERTE
+            displacement += direction * distortionStrength * WAVE_DISTORTION_STRENGTH;
+        }
+    }
+    
+    // Deshacer corrección de aspect ratio
+    displacement.x /= u_resolution.x / u_resolution.y;
+    
+    // 2. DISTORSIÓN POR ONDAS SINUSOIDALES (muy sutil)
+    float sineWave1 = sin(uv.x * 25.0 + u_time * 0.2) * SINE_DISTORTION_STRENGTH;
+    float sineWave2 = sin(uv.y * 20.0 - u_time * 0.8) * SINE_DISTORTION_STRENGTH;
+    displacement += vec2(sineWave2, sineWave1); // Cruzadas para efecto más interesante
+    
+    // Aplicar distorsión a las UVs
+    vec2 distortedUV = uv + displacement;
+    
     // ===== DIBUJAR TEXTURAS DE FONDO ROTADAS =====
-    vec2 centeredUV = uv - 0.5;
+    vec2 centeredUV = distortedUV - 0.5;
     
     // Aplicar rotación
     float cosR = cos(u_backgroundRotation);
@@ -30,7 +87,7 @@ void main() {
     // Escalar para zoom (1.6x)
     rotatedUV = rotatedUV / 1.6 + 0.5;
     
-    // Samplear ambas texturas
+    // Samplear ambas texturas CON UVs DISTORSIONADAS
     vec4 bgTexture1 = texture2D(u_backgroundTexture1, rotatedUV);
     vec4 bgTexture2 = texture2D(u_backgroundTexture2, rotatedUV);
     

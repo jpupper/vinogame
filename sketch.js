@@ -44,6 +44,10 @@ let vignetteIntensity = 0;
 // Motion Blur
 let motionBlurAmount = 0;
 
+// Sistema de Ondas Expansivas
+let waves = [];
+const MAX_WAVES = 5;
+
 function preload() {
   // Arrays de paths para cargar imágenes
   const grapeImagePaths = [
@@ -121,6 +125,13 @@ function draw() {
     }
   }
   
+  // Actualizar ondas expansivas (limpiar ondas viejas)
+  let currentTime = millis() / 1000.0;
+  waves = waves.filter(wave => {
+    let waveAge = currentTime - wave.startTime;
+    return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
+  });
+  
   // ===== PASO 1: SHADER DE FEEDBACK (solo efectos de cursor) =====
   // El feedback necesita las texturas de fondo como entrada
   fondoBuffer.push();
@@ -140,6 +151,26 @@ function draw() {
   feedbackShader.setUniform('u_effectIntensity', effectIntensity);
   feedbackShader.setUniform('u_comboLevel', comboLevel);
   feedbackShader.setUniform('u_vignetteIntensity', vignetteIntensity);
+  
+  // Pasar ondas expansivas al shader
+  let wavePositions = [];
+  let waveTimes = [];
+  let waveActive = [];
+  for (let i = 0; i < MAX_WAVES; i++) {
+    if (i < waves.length && waves[i].active) {
+      wavePositions.push(waves[i].x, waves[i].y);
+      waveTimes.push(waves[i].startTime);
+      waveActive.push(1.0);
+    } else {
+      wavePositions.push(0, 0);
+      waveTimes.push(0);
+      waveActive.push(0.0);
+    }
+  }
+  feedbackShader.setUniform('u_wavePositions', wavePositions);
+  feedbackShader.setUniform('u_waveTimes', waveTimes);
+  feedbackShader.setUniform('u_waveActive', waveActive);
+  
   fondoBuffer.rect(0, 0, width, height);
   fondoBuffer.pop();
   
@@ -159,6 +190,12 @@ function draw() {
     compositeShader.setUniform('u_resolution', [width, height]);
     compositeShader.setUniform('u_time', millis() / 1000.0);
     compositeShader.setUniform('u_comboLevel', comboLevel);
+    
+    // Pasar ondas expansivas al composite shader (para distorsión de UVs)
+    compositeShader.setUniform('u_wavePositions', wavePositions);
+    compositeShader.setUniform('u_waveTimes', waveTimes);
+    compositeShader.setUniform('u_waveActive', waveActive);
+    
     feedbackBuffer.rect(0, 0, width, height);
   }
   
@@ -187,6 +224,9 @@ function draw() {
       scoreSystem.addScore(collected.points, collected.x, collected.y);
       particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
       dynamicBackground.addRipple(collected.x, collected.y);
+      
+      // ⭐ CREAR ONDA EXPANSIVA ⭐
+      createWave(collected.x, collected.y);
       
       // ACTIVAR EFECTOS ESPECIALES
       targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
@@ -322,6 +362,23 @@ function resetGame() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
+  waves = []; // Limpiar ondas
+}
+
+// Función para crear una onda expansiva
+function createWave(x, y) {
+  // Limitar a MAX_WAVES ondas simultáneas
+  if (waves.length >= MAX_WAVES) {
+    waves.shift(); // Eliminar la onda más vieja
+  }
+  
+  // Agregar nueva onda
+  waves.push({
+    x: x / width,        // Normalizar a 0-1
+    y: y / height,       // Normalizar a 0-1
+    startTime: millis() / 1000.0,
+    active: true
+  });
 }
 
 function windowResized() {
