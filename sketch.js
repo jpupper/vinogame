@@ -17,11 +17,31 @@ let backgroundTexturesLoaded = false;
 // Buffers
 let fondoBuffer;
 let juegoBuffer;
+let particulasBuffer;
 let feedbackBuffer;
 
 // Shader
 let feedbackShader;
 let shaderLoaded = false;
+
+// Sistema de efectos especiales
+let effectIntensity = 0;
+let targetEffectIntensity = 0;
+
+// Screen Shake
+let shakeAmount = 0;
+let shakeDecay = 0.9;
+
+// Slow Motion
+let timeScale = 1.0;
+let targetTimeScale = 1.0;
+let slowMotionDuration = 0;
+
+// Vignette
+let vignetteIntensity = 0;
+
+// Motion Blur
+let motionBlurAmount = 0;
 
 function preload() {
   // Cargar texturas de uvas (imágenes 1, 3, 6, 7, 8)
@@ -50,6 +70,7 @@ function setup() {
   // Crear buffers
   fondoBuffer = createGraphics(width, height, WEBGL);
   juegoBuffer = createGraphics(width, height);
+  particulasBuffer = createGraphics(width, height);
   feedbackBuffer = createGraphics(width, height, WEBGL);
   
   // Inicializar sistemas
@@ -65,6 +86,25 @@ function setup() {
 function draw() {
   // Actualizar sistemas
   dynamicBackground.update();
+  
+  // Actualizar intensidad de efectos (smooth lerp)
+  effectIntensity = lerp(effectIntensity, targetEffectIntensity, 0.1);
+  targetEffectIntensity *= 0.95; // Decay automático
+  
+  // Calcular combo level (0-1) basado en el combo actual
+  let comboLevel = min(1.0, scoreSystem.currentCombo / 20.0); // Máximo en combo x20
+  
+  // Calcular vignette basado en vidas restantes
+  vignetteIntensity = map(scoreSystem.lives, 3, 0, 0, 1, true);
+  
+  // Actualizar time scale (slow motion)
+  timeScale = lerp(timeScale, targetTimeScale, 0.1);
+  if (slowMotionDuration > 0) {
+    slowMotionDuration--;
+    if (slowMotionDuration <= 0) {
+      targetTimeScale = 1.0;
+    }
+  }
   
   // ===== BUFFER DE FONDO =====
   fondoBuffer.push();
@@ -86,13 +126,23 @@ function draw() {
   }
   fondoBuffer.pop();
   
+  // ===== BUFFER DE PARTÍCULAS =====
+  particulasBuffer.clear();
+  particleSystem.update();
+  particleSystem.display(particulasBuffer);
+  
   // Aplicar shader con feedback al fondo
   feedbackBuffer.shader(feedbackShader);
   feedbackShader.setUniform('u_texture', fondoBuffer);
   feedbackShader.setUniform('u_feedbackTexture', feedbackBuffer);
+  feedbackShader.setUniform('u_particlesTexture', particulasBuffer);
+  feedbackShader.setUniform('u_gameTexture', juegoBuffer);
   feedbackShader.setUniform('u_resolution', [width, height]);
   feedbackShader.setUniform('u_mouse', [mouseX, mouseY]);
   feedbackShader.setUniform('u_time', millis() / 1000.0);
+  feedbackShader.setUniform('u_effectIntensity', effectIntensity);
+  feedbackShader.setUniform('u_comboLevel', comboLevel);
+  feedbackShader.setUniform('u_vignetteIntensity', vignetteIntensity);
   feedbackBuffer.rect(0, 0, width, height);
   
   // ===== BUFFER DE JUEGO =====
@@ -120,6 +170,27 @@ function draw() {
       scoreSystem.addScore(collected.points, collected.x, collected.y);
       particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
       dynamicBackground.addRipple(collected.x, collected.y);
+      
+      // ACTIVAR EFECTOS ESPECIALES
+      targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
+      
+      // PARTICLE BURST ESPECIAL en combos milestone
+      if (scoreSystem.currentCombo % 5 === 0 && scoreSystem.currentCombo >= 5) {
+        // Explosión masiva de partículas
+        for (let i = 0; i < 50; i++) {
+          particleSystem.createExplosion(
+            collected.x + random(-50, 50), 
+            collected.y + random(-50, 50), 
+            color(255, 200 + random(-50, 50), 0) // Dorado
+          );
+        }
+      }
+      
+      // SLOW MOTION en combos altos (x10, x15, x20)
+      if (scoreSystem.currentCombo === 10 || scoreSystem.currentCombo === 15 || scoreSystem.currentCombo === 20) {
+        targetTimeScale = 0.5; // 50% velocidad
+        slowMotionDuration = 120; // 2 segundos a 60fps
+      }
     }
     
     // Procesar items malos recolectados
@@ -129,6 +200,12 @@ function draw() {
       particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
       dynamicBackground.addRipple(bad.x, bad.y);
       scoreSystem.resetCombo();
+      
+      // ACTIVAR EFECTOS ESPECIALES (más intenso para items malos)
+      targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
+      
+      // SCREEN SHAKE al perder vida
+      shakeAmount = 15;
     }
   }
   
@@ -142,7 +219,19 @@ function draw() {
   
   // ===== COMPOSICIÓN FINAL =====
   push();
-  translate(-width/2, -height/2);
+  
+  // SCREEN SHAKE
+  if (shakeAmount > 0) {
+    translate(
+      random(-shakeAmount, shakeAmount) - width/2,
+      random(-shakeAmount, shakeAmount) - height/2
+    );
+    shakeAmount *= shakeDecay;
+    if (shakeAmount < 0.1) shakeAmount = 0;
+  } else {
+    translate(-width/2, -height/2);
+  }
+  
   imageMode(CORNER);
   
   // Dibujar fondo con shader
@@ -153,6 +242,19 @@ function draw() {
   
   // FPS (directo en canvas principal)
   displayFPS();
+  
+  // INDICADOR DE SLOW MOTION
+  if (timeScale < 0.9) {
+    push();
+    fill(100, 200, 255, 150 * (1 - timeScale));
+    noStroke();
+    textAlign(CENTER, CENTER);
+    textSize(40);
+    textStyle(BOLD);
+    text('SLOW MOTION', width/2, 80);
+    textStyle(NORMAL);
+    pop();
+  }
   
   pop();
   

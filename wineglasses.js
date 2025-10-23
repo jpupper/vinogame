@@ -162,8 +162,10 @@ class WineGlass {
     }
 
     update() {
-        this.y += this.speed;
-        this.pulsePhase += 0.05;
+        // Usar timeScale global si existe, sino usar 1.0
+        const ts = (typeof timeScale !== 'undefined') ? timeScale : 1.0;
+        this.y += this.speed * ts;
+        this.pulsePhase += 0.05 * ts;
         
         // NO resetear hover - mantener el progreso aunque sueltes
         this.isBeingHovered = false;
@@ -305,6 +307,7 @@ class WineGlass {
 class WineBottle extends WineGlass {
     constructor(x) {
         super(x);
+        this.y = -50; // Asegurar que siempre empiece arriba
         this.size = CONFIG.wineGlasses.bottleSize * CONFIG.wineGlasses.globalSize;
         this.points = CONFIG.wineGlasses.bottlePoints;
         this.wineType = random(['white', 'red', 'rose']);
@@ -509,8 +512,10 @@ class BadItem {
     }
 
     update() {
-        this.y += this.speed;
-        this.pulsePhase += 0.05;
+        // Usar timeScale global si existe, sino usar 1.0
+        const ts = (typeof timeScale !== 'undefined') ? timeScale : 1.0;
+        this.y += this.speed * ts;
+        this.pulsePhase += 0.05 * ts;
     }
 
     isOffScreen() {

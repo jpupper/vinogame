@@ -27,8 +27,8 @@ const CONFIG = {
             completion: 15            // Completar secuencia
         },
         size: {
-            min: 5,                   // Tamaño mínimo de partícula (aumentado)
-            max: 12,                  // Tamaño máximo de partícula (aumentado)
+            min: 8,                   // Tamaño mínimo de partícula (más grande)
+            max: 18,                  // Tamaño máximo de partícula (más grande)
         },
         speed: {
             initial: {
@@ -39,15 +39,15 @@ const CONFIG = {
             attraction: 0.15          // Fuerza de atracción hacia objetivos
         },
         colors: {
-            positive: [100, 255, 150],  // Color base para efectos positivos (verde lima)
+            positive: [150, 100, 255],  // Color base para efectos positivos (morado uva)
             negative: [255, 80, 150],   // Color base para efectos negativos (rosa/magenta)
             neutral: [100, 200, 255],   // Color base para efectos neutrales (azul eléctrico)
             variation: 50               // Variación aleatoria en los colores
         },
         lifespan: {
-            rising: 1200,             // Duración de fase de subida (ms) - aumentado
-            falling: 1500,            // Duración de fase de caída (ms) - aumentado
-            attracting: 1800          // Duración de fase de atracción (ms) - aumentado
+            rising: 1800,             // Duración de fase de subida (ms) - mucho más tiempo
+            falling: 2200,            // Duración de fase de caída (ms) - mucho más tiempo
+            attracting: 2500          // Duración de fase de atracción (ms) - mucho más tiempo
         }
     },
     
