@@ -799,18 +799,65 @@ class ControlPanel {
         const closeBtn = document.getElementById('closeModalBtn');
         const typeButtons = document.querySelectorAll('.asset-type-btn');
         const hiddenInput = document.getElementById('hiddenFileInput');
+        let selectedType = null;
+
         if (openBtn && modal) {
             openBtn.addEventListener('click', () => { modal.style.display = 'block'; });
         }
         if (closeBtn && modal) {
-            closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+            closeBtn.addEventListener('click', () => { modal.style.display = 'none'; selectedType = null; });
         }
         if (typeButtons && hiddenInput) {
+            hiddenInput.accept = 'image/*';
             typeButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Por ahora solo cerramos el modal; la carga se implementará luego
-                    modal.style.display = 'none';
+                    const t = btn.getAttribute('data-type');
+                    if (!t) return;
+                    selectedType = t;
+                    hiddenInput.value = '';
+                    hiddenInput.click();
                 });
+            });
+
+            hiddenInput.addEventListener('change', async () => {
+                const files = Array.from(hiddenInput.files || []);
+                if (!files.length || !selectedType) { modal.style.display = 'none'; return; }
+
+                const addDataUrl = (dataURL) => {
+                    if (selectedType === 'objects') {
+                        window.goodItemImagePaths = (window.goodItemImagePaths || []).concat([dataURL]);
+                        this.currentAssets.objects = window.goodItemImagePaths.slice();
+                    } else if (selectedType === 'badItems') {
+                        window.badItemImagePaths = (window.badItemImagePaths || []).concat([dataURL]);
+                        this.currentAssets.badItems = window.badItemImagePaths.slice();
+                    } else if (selectedType === 'backgrounds') {
+                        window.backgroundImagePaths = (window.backgroundImagePaths || []).concat([dataURL]);
+                        this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
+                    }
+                };
+
+                const readers = files.map(file => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsDataURL(file);
+                }));
+
+                try {
+                    const urls = await Promise.all(readers);
+                    urls.forEach(addDataUrl);
+                    this.reloadGameImagesFromPaths();
+                    this.saveAssetsToLocalStorage();
+                    this.loadCurrentAssets();
+                    this.showSaveNotification('✅ Asset(s) cargado(s)');
+                } catch (e) {
+                    console.log('Error al leer archivos:', e);
+                    this.showSaveNotification('❌ Error al cargar asset(s)');
+                } finally {
+                    modal.style.display = 'none';
+                    selectedType = null;
+                    hiddenInput.value = '';
+                }
             });
         }
     }
