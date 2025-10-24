@@ -312,13 +312,14 @@ class ControlPanel {
         this.setupEventListeners();
         this.setupTabNavigation();
         this.setupAssetManagement();
+        this.loadAssetsFromLocalStorage(); // Primero intenta restaurar desde almacenamiento
         this.setupGalleryNavigation();
         this.setupSaveChanges();
         this.setupAssetUploadModal();
         this.loadCurrentAssets();
-        this.loadAssetsFromLocalStorage(); // Cargar assets guardados
         this.updateValues();
         this.startMetricsUpdate();
+        this.startAssetsAutoRefresh();
     }
     
     setupEventListeners() {
@@ -604,8 +605,145 @@ class ControlPanel {
 
     // === Stubs de Assets para evitar errores y desbloquear métricas ===
     setupAssetManagement() {
-        // Inicialización mínima para evitar errores si no hay lógica de assets todavía
-        this.currentAssets = this.currentAssets || { objects: [], badItems: [], backgrounds: [] };
+        // Inicialización de referencias y listas
+        this.objectsGrid = document.getElementById('currentObjectsGrid');
+        this.badItemsGrid = document.getElementById('currentBadItemsGrid');
+        this.backgroundsGrid = document.getElementById('currentBackgroundsGrid');
+        this.currentAssets = {
+            objects: (window.goodItemImagePaths || []),
+            badItems: (window.badItemImagePaths || []),
+            backgrounds: (window.backgroundImagePaths || [])
+        };
+    }
+
+    loadAssetsFromLocalStorage() {
+        try {
+            const raw = localStorage.getItem('vinogame_assets');
+            if (raw) {
+                const saved = JSON.parse(raw);
+                if (saved && Array.isArray(saved.objects) && Array.isArray(saved.badItems) && Array.isArray(saved.backgrounds)) {
+                    window.goodItemImagePaths = saved.objects;
+                    window.badItemImagePaths = saved.badItems;
+                    window.backgroundImagePaths = saved.backgrounds;
+                    this.currentAssets.objects = window.goodItemImagePaths;
+                    this.currentAssets.badItems = window.badItemImagePaths;
+                    this.currentAssets.backgrounds = window.backgroundImagePaths;
+                    this.reloadGameImagesFromPaths();
+                }
+            }
+        } catch (e) {
+            console.log('No se pudo cargar assets desde localStorage:', e);
+        }
+    }
+
+    loadCurrentAssets() {
+        const renderGrid = (gridElem, list, category) => {
+            if (!gridElem) return;
+            gridElem.innerHTML = '';
+            list.forEach((path, idx) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                const img = document.createElement('img');
+                img.src = path;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                const del = document.createElement('button');
+                del.textContent = '×';
+                del.className = 'remove-btn';
+                del.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeAsset(category, idx);
+                });
+                item.appendChild(img);
+                item.appendChild(del);
+                gridElem.appendChild(item);
+            });
+        };
+        renderGrid(this.objectsGrid, this.currentAssets.objects, 'objects');
+        renderGrid(this.badItemsGrid, this.currentAssets.badItems, 'badItems');
+        renderGrid(this.backgroundsGrid, this.currentAssets.backgrounds, 'backgrounds');
+    }
+    
+    startAssetsAutoRefresh() {
+        let tries = 0;
+        this._assetsRefreshTimer = setInterval(() => {
+            const g = window.goodItemImagePaths || [];
+            const b = window.badItemImagePaths || [];
+            const bg = window.backgroundImagePaths || [];
+            const loadedTotal = g.length + b.length + bg.length;
+            const currentTotal = (this.currentAssets.objects?.length || 0) +
+                                (this.currentAssets.badItems?.length || 0) +
+                                (this.currentAssets.backgrounds?.length || 0);
+            if (loadedTotal !== currentTotal) {
+                this.currentAssets.objects = g;
+                this.currentAssets.badItems = b;
+                this.currentAssets.backgrounds = bg;
+                this.loadCurrentAssets();
+            }
+            tries++;
+            if (tries >= 10) {
+                clearInterval(this._assetsRefreshTimer);
+            }
+        }, 1000);
+    }
+    
+    removeAsset(category, index) {
+        const lists = this.currentAssets;
+        if (!lists[category] || index < 0 || index >= lists[category].length) return;
+        lists[category].splice(index, 1);
+        // Sincronizar arrays globales de rutas
+        if (category === 'objects') {
+            window.goodItemImagePaths = lists.objects;
+        } else if (category === 'badItems') {
+            window.badItemImagePaths = lists.badItems;
+        } else if (category === 'backgrounds') {
+            window.backgroundImagePaths = lists.backgrounds;
+        }
+        // Reconstruir imágenes del juego
+        this.reloadGameImagesFromPaths();
+        // Guardar y re-renderizar
+        this.saveAssetsToLocalStorage();
+        this.loadCurrentAssets();
+    }
+
+    reloadGameImagesFromPaths() {
+        if (typeof loadImage !== 'function') return;
+        // Reconstruir buenos
+        if (window.goodItemImages) {
+            window.goodItemImages.length = 0;
+            (window.goodItemImagePaths || []).forEach(p => window.goodItemImages.push(loadImage(p)));
+        }
+        // Reconstruir malos
+        if (window.badItemImages) {
+            window.badItemImages.length = 0;
+            (window.badItemImagePaths || []).forEach(p => window.badItemImages.push(loadImage(p)));
+        }
+        // Reconstruir fondos
+        if (window.backgroundTextures) {
+            window.backgroundTextures.length = 0;
+            (window.backgroundImagePaths || []).forEach(p => window.backgroundTextures.push(loadImage(p)));
+            window.backgroundTexturesLoaded = window.backgroundTextures.length > 0;
+        }
+        // Ajustar índices del fondo dinámico
+        if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
+            dynamicBackground.currentTextureIndex = 0;
+            dynamicBackground.nextTextureIndex = (window.backgroundTextures && window.backgroundTextures.length > 1) ? 1 : 0;
+        }
+    }
+
+    saveAssetsToLocalStorage() {
+        try {
+            const payload = {
+                objects: this.currentAssets.objects,
+                badItems: this.currentAssets.badItems,
+                backgrounds: this.currentAssets.backgrounds,
+            };
+            localStorage.setItem('vinogame_assets', JSON.stringify(payload));
+            this.showSaveNotification('✅ Assets guardados');
+        } catch (e) {
+            console.log('No se pudo guardar assets:', e);
+        }
     }
 
     setupGalleryNavigation() {
@@ -669,15 +807,6 @@ class ControlPanel {
                 });
             });
         }
-    }
-
-    loadCurrentAssets() {
-        // No-op por ahora: evitamos errores de llamada
-        // Se puede implementar renderizado de grillas si es necesario
-    }
-
-    loadAssetsFromLocalStorage() {
-        // No-op por ahora: futura implementación para restaurar assets
     }
 
     // Configuración de navegación por pestañas

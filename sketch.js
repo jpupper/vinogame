@@ -18,16 +18,22 @@ let grapeTexturesLoaded = false;
 let backgroundTextures = [];
 let backgroundTexturesLoaded = false;
 
-// Imágenes de items buenos y malos (desde wineglasses.js)
+// Imágenes y rutas de items buenos y malos (desde wineglasses.js)
 // Estos arrays son dinámicos y pueden ser modificados por el panel de control
 let goodItemImages = [];
 let badItemImages = [];
+let goodItemImagePaths = [];
+let badItemImagePaths = [];
+let backgroundImagePaths = [];
 
 // Hacer los arrays accesibles globalmente para el panel de control
 if (typeof window !== 'undefined') {
     window.goodItemImages = goodItemImages;
     window.badItemImages = badItemImages;
     window.backgroundTextures = backgroundTextures;
+    window.goodItemImagePaths = goodItemImagePaths;
+    window.badItemImagePaths = badItemImagePaths;
+    window.backgroundImagePaths = backgroundImagePaths;
 }
 
 // Fuente para texto WEBGL
@@ -73,15 +79,15 @@ let targetZoom = 1.0;
 
 function preload() {
   // Arrays de paths para cargar imágenes
-  const backgroundImages = [
+  const grapePaths = [
     'img/objetos/uva_verde.png',   // Uvas verdes
     'img/objetos/uva_roja.png',    // Uvas rojas
     'img/objetos/uva_roja2.png',   // Uvas rojas 2
     'img/objetos/uva.png',         // Uva genérica
     'img/objetos/gota.png'         // Gota
-];
-
-const backgroundImagesPaths = [
+  ];
+  
+  const bgPaths = [
     'img/background/fondo1.jpg',
     'img/background/fondo2.jpg',
     'img/background/fondo3.jpg',
@@ -90,35 +96,53 @@ const backgroundImagesPaths = [
   ];
   
   // Cargar texturas de uvas desde array
-  for (let path of backgroundImages) {
+  for (let path of grapePaths) {
     grapeTextures.push(loadImage(path));
   }
   
-  // Cargar texturas de fondo desde array
-  for (let path of backgroundImagesPaths) {
+  // Cargar texturas de fondo desde array y exportar rutas
+  backgroundImagePaths.length = 0;
+  for (let path of bgPaths) {
+    backgroundImagePaths.push(path);
     backgroundTextures.push(loadImage(path));
   }
   
-  // Cargar imágenes de objetos buenos (desde wineglasses.js)
-  goodItemImages.push(loadImage('img/objetos/uva_roja.png'));
-  goodItemImages.push(loadImage('img/objetos/uva_roja2.png'));
-  goodItemImages.push(loadImage('img/objetos/uva_verde.png'));
-  goodItemImages.push(loadImage('img/objetos/uva.png'));
-  goodItemImages.push(loadImage('img/objetos/hoja.png'));
-  goodItemImages.push(loadImage('img/objetos/copa.png'));
-  goodItemImages.push(loadImage('img/objetos/copa2.png'));
-  goodItemImages.push(loadImage('img/objetos/botella.png'));
-  goodItemImages.push(loadImage('img/objetos/destapador.png'));
-  goodItemImages.push(loadImage('img/objetos/destapador2.png'));
+  // Cargar imágenes de objetos buenos y exportar rutas
+  const goodPaths = [
+    'img/objetos/uva_roja.png',
+    'img/objetos/uva_roja2.png',
+    'img/objetos/uva_verde.png',
+    'img/objetos/uva.png',
+    'img/objetos/hoja.png',
+    'img/objetos/copa.png',
+    'img/objetos/copa2.png',
+    'img/objetos/botella.png',
+    'img/objetos/destapador.png',
+    'img/objetos/destapador2.png'
+  ];
+  goodItemImagePaths.length = 0;
+  goodItemImages.length = 0;
+  for (let path of goodPaths) {
+    goodItemImagePaths.push(path);
+    goodItemImages.push(loadImage(path));
+  }
   
-  // Cargar imágenes de objetos malos (desde wineglasses.js)
-  badItemImages.push(loadImage('img/malos/bicho1.png'));
-  badItemImages.push(loadImage('img/malos/bicho2.png'));
-  badItemImages.push(loadImage('img/malos/bicho3.png'));
-  badItemImages.push(loadImage('img/malos/bicho4.png'));
-  badItemImages.push(loadImage('img/malos/bicho5.png'));
-  badItemImages.push(loadImage('img/malos/bicho6.png'));
-  badItemImages.push(loadImage('img/malos/bicho7.png'));
+  // Cargar imágenes de objetos malos y exportar rutas
+  const badPaths = [
+    'img/malos/bicho1.png',
+    'img/malos/bicho2.png',
+    'img/malos/bicho3.png',
+    'img/malos/bicho4.png',
+    'img/malos/bicho5.png',
+    'img/malos/bicho6.png',
+    'img/malos/bicho7.png'
+  ];
+  badItemImagePaths.length = 0;
+  badItemImages.length = 0;
+  for (let path of badPaths) {
+    badItemImagePaths.push(path);
+    badItemImages.push(loadImage(path));
+  }
   
   // Cargar shaders
   feedbackShader = loadShader('feedback.vert', 'feedback.frag');
