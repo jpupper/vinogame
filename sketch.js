@@ -5,7 +5,7 @@ let particleSystem;
 let trailSystem;
 let dynamicBackground;
 let scoreSystem;
-let barrelIndicator;
+let medidorIndicator; // antes: barrelIndicator
 
 // Texturas de uvas
 let grapeTextures = [];
@@ -121,9 +121,9 @@ const backgroundImagesPaths = [
   feedbackShader = loadShader('feedback.vert', 'feedback.frag');
   compositeShader = loadShader('composite.vert', 'composite.frag');
   
-  // Crear e inicializar barril
-  barrelIndicator = new BarrelIndicator();
-  barrelIndicator.loadAssets();
+  // Crear e inicializar medidor
+  medidorIndicator = new MedidorIndicator();
+  medidorIndicator.loadAssets();
 }
 
 function setup() {
@@ -150,7 +150,7 @@ function setup() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
-  barrelIndicator.setup();
+  medidorIndicator.setup();
 }
 
 function draw() {
@@ -194,7 +194,8 @@ function draw() {
   
   // Pasar las texturas de fondo al feedback shader
   if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
-    feedbackShader.setUniform('u_texture', backgroundTextures[dynamicBackground.currentTextureIndex]);
+    const safeIndex = dynamicBackground.currentTextureIndex < backgroundTextures.length ? dynamicBackground.currentTextureIndex : 0;
+    feedbackShader.setUniform('u_texture', backgroundTextures[safeIndex]);
   }
   
   feedbackShader.setUniform('u_feedbackTexture', fondoBuffer);
@@ -235,47 +236,96 @@ function draw() {
   particleSystem.display(particulasBuffer);
   
   // ===== PASO 2: SHADER DE COMPOSICIÓN (texturas + feedback + ondas) =====
-  if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
-    feedbackBuffer.shader(compositeShader);
-    compositeShader.setUniform('u_backgroundTexture1', backgroundTextures[dynamicBackground.currentTextureIndex]);
-    compositeShader.setUniform('u_backgroundTexture2', backgroundTextures[dynamicBackground.nextTextureIndex]);
-    compositeShader.setUniform('u_backgroundBlend', dynamicBackground.transitionProgress);
-    compositeShader.setUniform('u_backgroundRotation', dynamicBackground.textureRotation);
-    compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
-    compositeShader.setUniform('u_resolution', [width, height]);
-    compositeShader.setUniform('u_time', millis() / 1000.0);
-    compositeShader.setUniform('u_comboLevel', comboLevel);
-    
-    // Pasar ondas expansivas al composite shader (para distorsión de UVs)
-    compositeShader.setUniform('u_wavePositions', wavePositions);
-    compositeShader.setUniform('u_waveTimes', waveTimes);
-    compositeShader.setUniform('u_waveActive', waveActive);
-    
-    // Pasar posiciones de uvas al composite shader (para distorsión gravitacional)
-    let grapePositions = [];
-    let grapeProgress = [];
-    let grapeActive = [];
-    
-    const MAX_GRAPES = 10;
-    const grapes = wineGlassSystem.glasses; // Obtener todas las uvas/copas
-    
-    for (let i = 0; i < MAX_GRAPES; i++) {
-      if (i < grapes.length) {
-        grapePositions.push(grapes[i].x / width, grapes[i].y / height);
-        grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
-        grapeActive.push(1.0);
+  if (backgroundTexturesLoaded) {
+    const len = backgroundTextures.length;
+    if (len > 0) {
+      feedbackBuffer.shader(compositeShader);
+      // Selección segura de texturas
+      let tex1, tex2;
+      if (len === 1) {
+        tex1 = backgroundTextures[0];
+        tex2 = backgroundTextures[0];
       } else {
-        grapePositions.push(0, 0);
-        grapeProgress.push(0);
-        grapeActive.push(0.0);
+        const idx1 = (dynamicBackground.currentTextureIndex < len) ? dynamicBackground.currentTextureIndex : 0;
+        const idx2 = (dynamicBackground.nextTextureIndex < len) ? dynamicBackground.nextTextureIndex : idx1;
+        tex1 = backgroundTextures[idx1] || backgroundTextures[0];
+        tex2 = backgroundTextures[idx2] || backgroundTextures[0];
       }
+      // Robustez: si hay 1 textura, usarla en ambos uniforms; si 0, usar un negro
+      if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
+        let tex1 = backgroundTextures[dynamicBackground.currentTextureIndex || 0];
+        let tex2 = tex1;
+        let blend = 0.0;
+        if (backgroundTextures.length > 1) {
+          tex2 = backgroundTextures[dynamicBackground.nextTextureIndex || 0];
+          blend = dynamicBackground.transitionProgress || 0.0;
+        }
+        compositeShader.setUniform('u_backgroundTexture1', tex1);
+        compositeShader.setUniform('u_backgroundTexture2', tex2);
+        compositeShader.setUniform('u_backgroundBlend', blend);
+      }
+      compositeShader.setUniform('u_backgroundRotation', dynamicBackground.textureRotation);
+      compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
+      compositeShader.setUniform('u_resolution', [width, height]);
+      compositeShader.setUniform('u_time', millis() / 1000.0);
+      compositeShader.setUniform('u_comboLevel', comboLevel);
+      
+      // Pasar ondas expansivas al composite shader (para distorsión de UVs)
+      compositeShader.setUniform('u_wavePositions', wavePositions);
+      compositeShader.setUniform('u_waveTimes', waveTimes);
+      compositeShader.setUniform('u_waveActive', waveActive);
+      
+      // Pasar posiciones de uvas al composite shader (para distorsión gravitacional)
+      let grapePositions = [];
+      let grapeProgress = [];
+      let grapeActive = [];
+      
+      const MAX_GRAPES = 10;
+      const grapes = wineGlassSystem.glasses; // Obtener todas las uvas/copas
+      
+      for (let i = 0; i < MAX_GRAPES; i++) {
+        if (i < grapes.length) {
+          grapePositions.push(grapes[i].x / width, grapes[i].y / height);
+          grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
+          grapeActive.push(1.0);
+        } else {
+          grapePositions.push(0, 0);
+          grapeProgress.push(0);
+          grapeActive.push(0.0);
+        }
+      }
+      
+      compositeShader.setUniform('u_grapePositions', grapePositions);
+      compositeShader.setUniform('u_grapeProgress', grapeProgress);
+      compositeShader.setUniform('u_grapeActive', grapeActive);
+
+      // Pasar posiciones de items malos para halos rojos
+      let badPositions = [];
+      let badActive = [];
+      const MAX_BAD = 10;
+      const bads = wineGlassSystem.badItems;
+      for (let i = 0; i < MAX_BAD; i++) {
+        if (i < bads.length) {
+          badPositions.push(bads[i].x / width, bads[i].y / height);
+          badActive.push(1.0);
+        } else {
+          badPositions.push(0, 0);
+          badActive.push(0.0);
+        }
+      }
+      compositeShader.setUniform('u_badPositions', badPositions);
+      compositeShader.setUniform('u_badActive', badActive);
+      
+      feedbackBuffer.rect(0, 0, width, height);
+    } else {
+      // Sin texturas: dibujar fondo negro sólido en feedbackBuffer
+      feedbackBuffer.clear();
+      feedbackBuffer.push();
+      feedbackBuffer.noStroke();
+      feedbackBuffer.fill(0);
+      feedbackBuffer.rect(0, 0, width, height);
+      feedbackBuffer.pop();
     }
-    
-    compositeShader.setUniform('u_grapePositions', grapePositions);
-    compositeShader.setUniform('u_grapeProgress', grapeProgress);
-    compositeShader.setUniform('u_grapeActive', grapeActive);
-    
-    feedbackBuffer.rect(0, 0, width, height);
   }
   
   // ===== BUFFER DE JUEGO =====
@@ -353,9 +403,9 @@ function draw() {
   scoreSystem.update();
   scoreSystem.display(juegoBuffer);
   
-  // Actualizar barril con nivel de combo
-  barrelIndicator.update(comboLevel);
-  barrelIndicator.display(juegoBuffer);
+  // Actualizar medidor con nivel de combo
+  medidorIndicator.update(comboLevel);
+  medidorIndicator.display(juegoBuffer);
   
   // INDICADOR DE SLOW MOTION (en juegoBuffer)
   if (timeScale < 0.9) {

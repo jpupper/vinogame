@@ -20,6 +20,10 @@ uniform vec2 u_grapePositions[10];      // Posiciones de hasta 10 uvas
 uniform float u_grapeProgress[10];      // Progreso de captura (0-1)
 uniform float u_grapeActive[10];        // Si la uva está activa
 
+// ITEMS MALOS (para halos rojos)
+uniform vec2 u_badPositions[10];
+uniform float u_badActive[10];
+
 varying vec2 vTexCoord;
 
 void main() {
@@ -169,6 +173,35 @@ void main() {
     
     // SUMAR ondas a la imagen (APENAS PERCEPTIBLE)
     vec3 finalColor = backgroundColor.rgb * 0.2 + backgroundColor.rgb * vec3(wavePattern) * 0.29;
+
+    // ===== HALOS EN SHADER =====
+    // Aspect ratio corregido para distancia radial
+    vec2 arUV = uv;
+    arUV.x *= u_resolution.x / u_resolution.y;
+
+    // Halos dorados para positivos (usando u_grapeActive/Positions)
+    for (int i = 0; i < 10; i++) {
+        if (u_grapeActive[i] > 0.5) {
+            vec2 pos = u_grapePositions[i];
+            pos.x *= u_resolution.x / u_resolution.y;
+            float d = distance(arUV, pos);
+            float halo = smoothstep(0.12, 0.02, d);
+            vec3 gold = vec3(1.0, 0.85, 0.2);
+            finalColor += gold * halo * 0.35;
+        }
+    }
+
+    // Halos rojos para negativos
+    for (int i = 0; i < 10; i++) {
+        if (u_badActive[i] > 0.5) {
+            vec2 posB = u_badPositions[i];
+            posB.x *= u_resolution.x / u_resolution.y;
+            float dB = distance(arUV, posB);
+            float haloB = smoothstep(0.14, 0.03, dB);
+            vec3 redHalo = vec3(1.0, 0.2, 0.2);
+            finalColor += redHalo * haloB * 0.27;
+        }
+    }
     
     // ===== COLOR GRADING DINÁMICO (basado en combo) =====
     float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);

@@ -204,13 +204,6 @@ class Item {
             // ===== ITEM MALO =====
             const pulseFactor = 1 + 0.15 * sin(this.pulsePhase * 2);
             
-            // Aura roja de peligro
-            ctx.noStroke();
-            for (let i = 3; i > 0; i--) {
-                ctx.fill(255, 0, 0, 30 + i * 10);
-                ctx.ellipse(0, 0, this.size * (1.3 + i * 0.15) * pulseFactor);
-            }
-            
             // Dibujar imagen de bicho o círculo si no hay imágenes
             if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
                 ctx.push();
@@ -231,20 +224,6 @@ class Item {
             const maxScale = CONFIG.wineGlasses.captureScale;
             const scaleFactor = 1.0 + captureProgress * (maxScale - 1.0);
             const pulseFactor = this.isBeingHovered ? 1 + 0.05 * sin(this.pulsePhase * 4) : 1;
-            
-            // Glow dorado
-            if (this.isBeingHovered || captureProgress > 0) {
-                ctx.noStroke();
-                for (let i = 3; i > 0; i--) {
-                    const glowSize = this.size * (1.2 + i * 0.1 + captureProgress * 0.3) * pulseFactor * scaleFactor;
-                    const glowAlpha = (15 - i * 3) * (0.3 + captureProgress * 0.4);
-                    const r = 255;
-                    const g = 255 - captureProgress * 100;
-                    const b = 0 + captureProgress * 50;
-                    ctx.fill(r, g, b, glowAlpha);
-                    ctx.ellipse(0, 0, glowSize);
-                }
-            }
             
             // Dibujar imagen del item bueno o círculo si no hay imágenes
             if (goodItemImages.length > 0 && goodItemImages[this.imageIndex]) {
