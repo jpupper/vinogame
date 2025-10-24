@@ -127,6 +127,10 @@ const backgroundImagesPaths = [
   // Crear e inicializar medidor
   medidorIndicator = new MedidorIndicator();
   medidorIndicator.loadAssets();
+  // Trofeo: cargar imagen de copa y exponer global
+  if (typeof window !== 'undefined') {
+    window.trophyImage = loadImage('img/copa/copa.png');
+  }
 }
 
 function setup() {

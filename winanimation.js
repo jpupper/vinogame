@@ -139,6 +139,26 @@ class WinAnimation {
             ctx.pop();
         }
 
+        // Trofeo: dibujar imagen de copa animada sobre el texto
+        if (typeof window !== 'undefined' && window.trophyImage) {
+            ctx.push();
+            const t = constrain((millis() - this.startTime) / this.duration, 0, 1);
+            const intro = this.easeOutElastic(constrain((t - 0.1) * 3, 0, 1));
+            const img = window.trophyImage;
+            const aspect = img.height > 0 && img.width > 0 ? (img.height / img.width) : 1;
+            const baseSize = min(width, height) * 0.18; // tamaño base
+            const w = baseSize * intro;
+            const h = w * aspect;
+            ctx.imageMode(CENTER);
+            ctx.noStroke();
+            // Sombra ligera detrás del trofeo
+            ctx.fill(0, 0, 0, 100 * intro);
+            ctx.ellipse(width/2 + 5, height * 0.35 + 5, w * 0.9, h * 0.9);
+            // Imagen del trofeo
+            ctx.image(img, width/2, height * 0.35, w, h);
+            ctx.pop();
+        }
+
         // Mostrar puntuación final y combo
         if (millis() - this.startTime > this.duration * 0.5) {
             const alpha = constrain(map(millis() - this.startTime, this.duration * 0.5, this.duration * 0.7, 0, 255), 0, 255);

@@ -745,6 +745,7 @@
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
             <button class="tab-button" data-tab="assets">🎨 Assets</button>
+            <button class="tab-button" data-tab="stats">📊 STATS</button>
         </div>
         
         <!-- Pestaña de Controles -->
@@ -785,6 +786,15 @@
                 <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
             </div>
 
+            <div class="control-group">
+                <label for="hoverTimeSlider">
+                    Tiempo de agarre (hover)
+                    <span class="value-display" id="hoverTimeValue">1000 ms</span>
+                </label>
+                <input type="range" id="hoverTimeSlider" min="200" max="3000" step="50" value="1000">
+                <div class="help-text">Tiempo necesario para capturar un objeto bueno</div>
+            </div>
+            
             <div class="control-group">
                 <label for="winComboSlider">
                     Combo para GANAR
@@ -827,20 +837,7 @@
                 </div>
             </div>
             
-            <!-- Métricas en Tiempo Real -->
-            <div class="metrics-section">
-                <h4>📊 Métricas en Tiempo Real</h4>
-                
-                <div class="metric-item">
-                    <label>Objetos Cayendo</label>
-                    <span class="metric-value" id="fallingObjectsCount">0</span>
-                </div>
-                
-                <div class="metric-item">
-                    <label>FPS</label>
-                    <span class="metric-value" id="fpsCounter">60</span>
-                </div>
-            </div>
+            <!-- Métricas removidas del tab de Controles: ahora se muestran en STATS -->
             
             <!-- Botón de Guardar Cambios -->
             <div class="save-section">
@@ -891,6 +888,25 @@
                     <div class="current-assets-grid" id="currentBackgroundsGrid">
                         <!-- Los assets actuales se cargarán aquí dinámicamente -->
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña de STATS -->
+        <div class="tab-content" id="stats-tab">
+            <div class="metrics-section">
+                <h4>📊 Estadísticas</h4>
+                <div class="metric-item">
+                    <label>FPS</label>
+                    <span class="metric-value" id="statsFpsCounter">0</span>
+                </div>
+                <div class="metric-item">
+                    <label>Objetos Cayendo</label>
+                    <span class="metric-value" id="statsFallingObjectsCount">0</span>
+                </div>
+                <div class="metric-item">
+                    <label>Cantidad de Puntos</label>
+                    <span class="metric-value" id="statsPointsCount">0</span>
                 </div>
             </div>
         </div>

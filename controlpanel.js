@@ -11,11 +11,12 @@ class ControlPanel {
         this.configData = null;
         
         // Elementos de métricas
-        this.fallingObjectsCount = null;
-        this.fpsCounter = null;
-        this.lastFrameTime = Date.now();
         this.frameCount = 0;
         this.fps = 60;
+        // STATS tab metrics
+        this.statsFpsCounter = null;
+        this.statsFallingObjectsCount = null;
+        this.statsPointsCount = null;
         
         // Elementos de pestañas
         this.tabButtons = null;
@@ -81,14 +82,14 @@ class ControlPanel {
                 lives: { current: 3, default: 3 },
                 objectSize: { current: 100, default: 100 },
                 spawnRate: { current: 2000, default: 2000 },
-                winComboThreshold: { current: 20, default: 20 }
+                winComboThreshold: { current: 20, default: 20 },
+                hoverTime: { current: 1000, default: 1000 }
             }
         };
     }
     
     applyConfiguration() {
         if (!this.configData || !this.configData.gameSettings) return;
-        
         const settings = this.configData.gameSettings;
         
         // Aplicar configuraciones a los controles
@@ -121,6 +122,12 @@ class ControlPanel {
             this.winComboSlider.value = settings.winComboThreshold.current;
             this.winComboValue.textContent = settings.winComboThreshold.current;
             this.updateWinComboThreshold(settings.winComboThreshold.current);
+        }
+        // Nuevo: tiempo de agarre
+        if (this.hoverTimeSlider && settings.hoverTime) {
+            this.hoverTimeSlider.value = settings.hoverTime.current;
+            this.hoverTimeValue.textContent = settings.hoverTime.current + ' ms';
+            this.updateHoverTime(settings.hoverTime.current);
         }
 
         // Halos buenos
@@ -157,6 +164,7 @@ class ControlPanel {
         this.configData.gameSettings.objectSize.current = parseInt(this.objectSizeSlider.value);
         this.configData.gameSettings.spawnRate.current = parseInt(this.spawnRateSlider.value);
         if (this.winComboSlider) this.configData.gameSettings.winComboThreshold.current = parseInt(this.winComboSlider.value);
+        if (this.hoverTimeSlider) this.configData.gameSettings.hoverTime.current = parseInt(this.hoverTimeSlider.value);
         
         // Halos
         if (this.goodHaloSizeSlider) this.configData.gameSettings.goodHaloSize.current = parseFloat(this.goodHaloSizeSlider.value);
@@ -270,10 +278,14 @@ class ControlPanel {
         // Nuevo: umbral de combo para ganar
         this.winComboSlider = document.getElementById('winComboSlider');
         this.winComboValue = document.getElementById('winComboValue');
+        // Nuevo: slider de tiempo de agarre
+        this.hoverTimeSlider = document.getElementById('hoverTimeSlider');
+        this.hoverTimeValue = document.getElementById('hoverTimeValue');
         
-        // Elementos de métricas
-        this.fallingObjectsCount = document.getElementById('fallingObjectsCount');
-        this.fpsCounter = document.getElementById('fpsCounter');
+        // STATS tab metrics
+        this.statsFpsCounter = document.getElementById('statsFpsCounter');
+        this.statsFallingObjectsCount = document.getElementById('statsFallingObjectsCount');
+        this.statsPointsCount = document.getElementById('statsPointsCount');
         
         // Elementos de pestañas
         this.tabButtons = document.querySelectorAll('.tab-button');
@@ -365,6 +377,16 @@ class ControlPanel {
             });
         }
 
+        // Nuevo: control del tiempo de agarre
+        if (this.hoverTimeSlider) {
+            this.hoverTimeSlider.addEventListener('input', (event) => {
+                const value = parseInt(event.target.value);
+                this.hoverTimeValue.textContent = value + ' ms';
+                this.updateHoverTime(value);
+                this.saveConfiguration();
+            });
+        }
+        
         // Eventos de halos
         if (this.goodHaloSizeSlider) {
             this.goodHaloSizeSlider.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
@@ -492,6 +514,24 @@ class ControlPanel {
         console.log('Umbral de combo para ganar actualizado:', v);
     }
 
+    // Nuevo: actualizar tiempo de agarre en juego y items actuales
+    updateHoverTime(value) {
+        const v = parseInt(value);
+        if (isNaN(v)) return;
+        if (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
+            CONFIG.wineGlasses.hoverTime = v;
+        }
+        if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem && wineGlassSystem.glasses) {
+            for (let i = 0; i < wineGlassSystem.glasses.length; i++) {
+                const item = wineGlassSystem.glasses[i];
+                if (item && !item.isBad) {
+                    item.requiredHoverTime = v;
+                }
+            }
+        }
+        console.log('Tiempo de agarre actualizado:', v + 'ms');
+    }
+
     // Getters auxiliares
     getCurrentFallSpeed() {
         return this.fallSpeedSlider ? parseFloat(this.fallSpeedSlider.value) : 2.25;
@@ -509,13 +549,35 @@ class ControlPanel {
     }
     
     updateMetrics() {
-        // Actualizar contador de objetos que caen
-        if (this.fallingObjectsCount && typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
-            const totalObjects = wineGlassSystem.glasses.length + wineGlassSystem.badItems.length;
-            this.fallingObjectsCount.textContent = totalObjects;
+
+        // FPS solo en STATS: prioriza p5.frameRate(), fallback por frameCount
+        if (typeof frameRate === 'function') {
+            const fpsVal = Math.round(frameRate());
+            if (this.statsFpsCounter) this.statsFpsCounter.textContent = fpsVal;
+        } else {
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            if (typeof frameCount !== 'undefined') {
+                const prevFrames = this._prevFrameCount || frameCount;
+                const prevTime = this._prevFpsTime || now;
+                const framesElapsed = frameCount - prevFrames;
+                const timeElapsed = now - prevTime;
+                if (timeElapsed > 0) {
+                    const fpsCalc = Math.round((framesElapsed / timeElapsed) * 1000);
+                    if (this.statsFpsCounter) this.statsFpsCounter.textContent = fpsCalc;
+                }
+                this._prevFrameCount = frameCount;
+                this._prevFpsTime = now;
+            }
         }
-        
-        // FPS removido del panel
+        // STATS: Objetos cayendo
+        if (this.statsFallingObjectsCount && typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+            const totalStatsObjects = wineGlassSystem.glasses.length + wineGlassSystem.badItems.length;
+            this.statsFallingObjectsCount.textContent = totalStatsObjects;
+        }
+        // STATS: Cantidad de puntos del PointServer
+        if (this.statsPointsCount && typeof Pserver !== 'undefined' && Pserver && typeof Pserver.getAllPoints === 'function') {
+            this.statsPointsCount.textContent = Pserver.getAllPoints().length;
+        }
     }
 
     // === Halos: exponer valores al juego ===
@@ -538,6 +600,84 @@ class ControlPanel {
 
         window.goodHaloSettings = { size: goodSize, strength: goodStrength, color: this.hexToVec3(goodColorHex) };
         window.badHaloSettings = { size: badSize, strength: badStrength, color: this.hexToVec3(badColorHex) };
+    }
+
+    // === Stubs de Assets para evitar errores y desbloquear métricas ===
+    setupAssetManagement() {
+        // Inicialización mínima para evitar errores si no hay lógica de assets todavía
+        this.currentAssets = this.currentAssets || { objects: [], badItems: [], backgrounds: [] };
+    }
+
+    setupGalleryNavigation() {
+        if (!this.galleryNavButtons || !this.gallerySections) return;
+        this.galleryNavButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.galleryNavButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const category = btn.getAttribute('data-category');
+                if (!category) return;
+                if (category === 'all') {
+                    this.gallerySections.forEach(sec => sec.style.display = 'block');
+                } else {
+                    this.gallerySections.forEach(sec => {
+                        const show = (category === 'objects' && sec.id === 'objects-gallery') ||
+                                     (category === 'badItems' && sec.id === 'badItems-gallery') ||
+                                     (category === 'backgrounds' && sec.id === 'backgrounds-gallery');
+                        sec.style.display = show ? 'block' : 'none';
+                    });
+                }
+            });
+        });
+    }
+
+    setupSaveChanges() {
+        this.saveChangesBtn = document.getElementById('saveChangesBtn');
+        this.saveStatus = document.getElementById('saveStatus');
+        if (this.saveChangesBtn) {
+            this.saveChangesBtn.addEventListener('click', () => {
+                try {
+                    this.saveConfiguration();
+                    this.showSaveNotification('✅ Configuración guardada');
+                    if (this.saveStatus) {
+                        this.saveStatus.textContent = 'Guardado';
+                        setTimeout(() => { this.saveStatus.textContent = ''; }, 1500);
+                    }
+                } catch (e) {
+                    this.showSaveNotification('❌ Error al guardar');
+                }
+            });
+        }
+    }
+
+    setupAssetUploadModal() {
+        const openBtn = document.getElementById('addAssetBtn');
+        const modal = document.getElementById('assetUploadModal');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const typeButtons = document.querySelectorAll('.asset-type-btn');
+        const hiddenInput = document.getElementById('hiddenFileInput');
+        if (openBtn && modal) {
+            openBtn.addEventListener('click', () => { modal.style.display = 'block'; });
+        }
+        if (closeBtn && modal) {
+            closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        }
+        if (typeButtons && hiddenInput) {
+            typeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Por ahora solo cerramos el modal; la carga se implementará luego
+                    modal.style.display = 'none';
+                });
+            });
+        }
+    }
+
+    loadCurrentAssets() {
+        // No-op por ahora: evitamos errores de llamada
+        // Se puede implementar renderizado de grillas si es necesario
+    }
+
+    loadAssetsFromLocalStorage() {
+        // No-op por ahora: futura implementación para restaurar assets
     }
 
     // Configuración de navegación por pestañas
