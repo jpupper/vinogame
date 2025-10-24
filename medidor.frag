@@ -37,7 +37,7 @@ void main() {
     float insideLiquid = step(uv.y, liquidSurface);
 
     // Color violeta brillante
-    vec3 violet = vec3(0.75, 0.25, 0.95);
+    vec3 violet = vec3(0.75, 0.25, 0.95)*.8;
     // Variación de brillo con ondas ascendentes
     float rising = sin(uv.y * 28.0 - u_time * 2.6) * 0.5 + 0.5;
     vec3 violetAnimated = violet * (0.65 + rising * 0.35);
@@ -53,7 +53,7 @@ void main() {
     vec3 finalRGB = glassColor.rgb + violetMasked;
 
 
-    float auxFillLevel = 0.8;
+    float auxFillLevel = u_fillLevel;
 
     auxFillLevel = mapr(auxFillLevel, 0.5, 1.0);
     finalRGB = mix(violetMasked, glassColor.rgb, step(auxFillLevel, 1.-uv.y));
