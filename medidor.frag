@@ -2,15 +2,16 @@ precision mediump float;
 
 uniform sampler2D u_glassTexture; // copa-vacia base
 uniform sampler2D u_glassMask;    // máscara de la copa
-uniform float u_fillLevel;        // nivel de combo (0-1)
+uniform float u_fillLevel;        // nivel de combo normalizado (0-1)
+uniform float u_comboCount;       // combo actual (0..N)
+uniform float u_comboMax;         // umbral para ganar (N)
 uniform float u_time;             // tiempo para animación
 uniform vec2 u_resolution;        // tamaño del buffer
 
 varying vec2 vTexCoord;
 float mapr(float _value,float _low2,float _high2) {
 	float val = _low2 + (_high2 - _low2) * (_value - 0.) / (1.0 - 0.);
-    //float val = 0.1;
-	return val;
+    return val;
 }
 void main() {
     // p5.js invierte Y en vTexCoord, corregimos
@@ -24,7 +25,21 @@ void main() {
 
     // Superficie/altura de la onda basada en fill level
     // uv.y va de 0 (top) a 1 (bottom); queremos llenar desde abajo
-    float baseFill = clamp(u_fillLevel, 0.0, 1.0);
+
+    
+    // Mezcla adicional según nivel de llenado (normalizado)
+    float auxFillLevel = u_fillLevel;
+    
+    float minY = 0.48;
+    float maxY =0.0;
+
+
+
+    // Mapear el fillLevel para que use todo el rango de la copa
+    // auxFillLevel ya viene normalizado (0-1) desde medidor.js
+    float baseFill = mix(minY,maxY,auxFillLevel);
+
+
     float surface = 1.0 - baseFill; // más alto cuando fill es bajo
 
     // Onda violeta (sinusoidales, similar al barril)
@@ -34,9 +49,9 @@ void main() {
     float waveOffset = waveX1 + waveX2 + waveY;
 
     float liquidSurface = surface + waveOffset;
-    float insideLiquid = step(uv.y, liquidSurface);
+    float insideLiquid = step(1.0-uv.y, liquidSurface);
 
-    // Color violeta brillante
+
     vec3 violet = vec3(0.75, 0.25, 0.95)*.8;
     // Variación de brillo con ondas ascendentes
     float rising = sin(uv.y * 28.0 - u_time * 2.6) * 0.5 + 0.5;
@@ -49,15 +64,9 @@ void main() {
     // Aplicar máscara: solo se ve dentro de la copa
     vec3 violetMasked = violetAnimated * maskA * insideLiquid;
 
-    // Sumar dibujo violeta a la copa
-    vec3 finalRGB = glassColor.rgb + violetMasked;
-
-
-    float auxFillLevel = u_fillLevel;
-
-    auxFillLevel = mapr(auxFillLevel, 0.5, 1.0);
-    finalRGB = mix(violetMasked, glassColor.rgb, step(auxFillLevel, 1.-uv.y));
+    vec3 finalRGB = mix(glassColor.rgb, violetMasked,liquidSurface);
+    
     float finalA = max(glassColor.a, maskA * insideLiquid);
 
-    gl_FragColor = vec4(finalRGB, glassColor.a);
+    gl_FragColor = vec4(finalRGB,finalA);
 }

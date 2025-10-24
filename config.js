@@ -127,6 +127,7 @@ const CONFIG = {
         size: 40,                     // Tamaño de fuente base
         comboMultiplier: 0.2,         // Multiplicador por nivel de combo (20%)
         effectDuration: 800,          // Duración del efecto visual (ms)
+        winComboThreshold: 20,        // Combo necesario para ganar (configurable)
         colors: {
             normal: [255, 255, 255],  // Color normal del score
             positive: [255, 255, 255], // Base para efectos positivos
@@ -206,6 +207,28 @@ const CONFIG = {
         text: {
             size: 0.15,               // Tamaño relativo a la altura de la pantalla
             color: [255, 0, 0],       // Color del texto (rojo)
+            spacing: 0.07             // Espaciado relativo al ancho de la pantalla
+        }
+    },
+    
+    // ANIMACIÓN DE VICTORIA
+    win: {
+        duration: 5000,               // Duración total de la animación (ms)
+        particles: {
+            count: 120,               // Número de partículas doradas
+            size: {                   // Tamaño de las partículas
+                min: 4,
+                max: 14
+            },
+            speed: {                  // Velocidad de las partículas
+                min: 2,
+                max: 8
+            },
+            color: [255, 215, 0]      // Color base (dorado)
+        },
+        text: {
+            size: 0.15,               // Tamaño relativo a la altura de la pantalla
+            color: [255, 215, 0],     // Color del texto (dorado)
             spacing: 0.07             // Espaciado relativo al ancho de la pantalla
         }
     },

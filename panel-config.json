@@ -39,6 +39,14 @@
       "default": 2000,
       "unit": "ms",
       "description": "Frecuencia de aparición de nuevos objetos"
+    },
+    "winComboThreshold": {
+      "current": 20,
+      "min": 5,
+      "max": 50,
+      "step": 1,
+      "default": 20,
+      "description": "Cantidad de aciertos consecutivos para ganar"
     }
   },
   "panelSettings": {

@@ -165,7 +165,7 @@ function draw() {
   targetEffectIntensity *= 0.95; // Decay automático
   
   // Calcular combo level (0-1) basado en el combo actual
-  let comboLevel = min(1.0, scoreSystem.comboCount / 20.0); // Máximo en combo x20
+  let comboLevel = min(1.0, scoreSystem.comboCount / CONFIG.score.winComboThreshold); // Escala según umbral configurable
   
   // Calcular vignette basado en vidas restantes
   vignetteIntensity = map(scoreSystem.lives, 3, 0, 0, 1, true);
@@ -359,7 +359,7 @@ function draw() {
   Pserver.update();
   
   // Comprobar colisiones con copas de vino y items malos
-  if (!scoreSystem.gameOver) {
+  if (!scoreSystem.gameOver && !scoreSystem.win) {
     const allPoints = Pserver.getAllPoints();
     const collisions = wineGlassSystem.checkCollisions(allPoints);
     
@@ -418,8 +418,8 @@ function draw() {
   scoreSystem.update();
   scoreSystem.display(juegoBuffer);
   
-  // Actualizar medidor con nivel de combo
-  medidorIndicator.update(comboLevel);
+  // Actualizar medidor con combo actual y umbral
+  medidorIndicator.update(scoreSystem.comboCount, CONFIG.score.winComboThreshold);
   medidorIndicator.display(juegoBuffer);
   
   // Indicadores de debug (FPS, cantidad de puntos)
@@ -485,8 +485,8 @@ function keyPressed() {
 
 // Touch event handlers for p5.js
 function touchStarted() {
-  // Reiniciar el juego si está en estado de Game Over
-  if (scoreSystem && scoreSystem.gameOver) {
+  // Reiniciar el juego si está en estado de Game Over o Victoria
+  if (scoreSystem && (scoreSystem.gameOver || scoreSystem.win)) {
     resetGame();
   }
   return false; // Prevent default
@@ -502,22 +502,35 @@ function touchEnded() {
 
 function mousePressed() {
   // Reiniciar el juego si está en estado de Game Over
-  if (scoreSystem && scoreSystem.gameOver) {
+  if (scoreSystem && (scoreSystem.gameOver || scoreSystem.win)) {
     resetGame();
   }
 }
 
 function resetGame() {
-  // Reiniciar todos los sistemas
+  // Reiniciar todos los sistemas sin recargar assets
   Pserver = new PointServer();
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
   trailSystem = new TrailSystem();
-  dynamicBackground = new DynamicBackground();
-  scoreSystem = new ScoreSystem();
-  medidorIndicator = new MedidorIndicator();
-  medidorIndicator.loadAssets();
-  medidorIndicator.setup();
+  
+  // Reiniciar sistemas existentes en lugar de crear nuevos
+  if (scoreSystem) {
+    scoreSystem.reset();
+  } else {
+    scoreSystem = new ScoreSystem();
+  }
+  
+  // Mantener el fondo existente si ya está inicializado
+  if (!dynamicBackground) {
+    dynamicBackground = new DynamicBackground();
+  }
+  
+  // Solo crear nueva instancia del medidor si es necesario
+  if (!medidorIndicator) {
+    medidorIndicator = new MedidorIndicator();
+    medidorIndicator.setup();
+  }
 }
 
 function createWave(x, y) {

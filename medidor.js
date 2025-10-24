@@ -10,7 +10,7 @@ class BarrelIndicator {
         this.position = { x: 0, y: 0 };
         this.size = { w: 120, h: 100 }; // Tamaño del barril
     }
-    
+
     loadAssets() {
         this.barrelImage = loadImage('img/objetos/barril.png');
         this.barrelShader = loadShader('barrel.vert', 'barrel.frag');
@@ -25,10 +25,11 @@ class BarrelIndicator {
         this.position.x = width - 180; // A la derecha
         this.position.y = 150; // Debajo del texto de combo
     }
-    
-    update(comboLevel) {
-        // comboLevel va de 0 a 1 (basado en combo / 20)
-        this.targetFillLevel = comboLevel;
+
+    update(comboCount, comboMax) {
+        // comboCount va de 0 a comboMax (configurable)
+        const maxVal = comboMax > 0 ? comboMax : 1;
+        this.targetFillLevel = constrain(comboCount / maxVal, 0, 1);
         
         // Smooth lerp hacia el target
         this.fillLevel = lerp(this.fillLevel, this.targetFillLevel, 0.1);
@@ -66,6 +67,8 @@ class MedidorIndicator {
         this.medidorBuffer = null;   // Buffer WEBGL para renderizar el medidor
         this.fillLevel = 0;
         this.targetFillLevel = 0;
+        this.comboCount = 0;
+        this.comboMax = 1;
         this.position = { x: 0, y: 0 };
         this.size = { w: 140, h: 140 }; // Tamaño del medidor (ajustado a copa)
     }
@@ -85,8 +88,13 @@ class MedidorIndicator {
         this.position.y = 150;
     }
 
-    update(comboLevel) {
-        this.targetFillLevel = comboLevel; // comboLevel va de 0 a 1
+    update(comboCount, comboMax) {
+        // Guardar valores crudos
+        this.comboCount = Math.max(0, comboCount || 0);
+        this.comboMax = Math.max(1, comboMax || 1);
+        
+        // Mapear a 0..1 para shader
+        this.targetFillLevel = constrain(this.comboCount / this.comboMax, 0, 1);
         this.fillLevel = lerp(this.fillLevel, this.targetFillLevel, 0.12);
     }
 
@@ -100,7 +108,9 @@ class MedidorIndicator {
         // Uniforms
         this.medidorShader.setUniform('u_glassTexture', this.glassImage);
         this.medidorShader.setUniform('u_glassMask', this.glassMask);
-        this.medidorShader.setUniform('u_fillLevel', this.fillLevel);
+        this.medidorShader.setUniform('u_fillLevel', this.fillLevel); // normalizado 0..1
+        this.medidorShader.setUniform('u_comboCount', this.comboCount); // crudo 0..N
+        this.medidorShader.setUniform('u_comboMax', this.comboMax);     // máximo N
         this.medidorShader.setUniform('u_time', millis() / 1000.0);
         this.medidorShader.setUniform('u_resolution', [this.size.w, this.size.h]);
 

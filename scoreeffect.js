@@ -10,6 +10,10 @@ class ScoreSystem {
         this.lives = CONFIG.lives.initial; // Sistema de vidas
         this.gameOver = false; // Estado de juego terminado
         this.gameOverAnimation = null; // Animación de Game Over
+        // Estado de victoria
+        this.win = false;
+        this.winAnimation = null;
+        // Partículas y efectos
         this.scoreParticles = []; // Partículas que fluyen hacia el score
         this.scorePosition = createVector(
             width - CONFIG.score.position.x, 
@@ -25,8 +29,8 @@ class ScoreSystem {
     }
     
     addScore(points, x, y) {
-        // Si el juego terminó, no sumar más puntos
-        if (this.gameOver) return;
+        // Si el juego terminó o ganaste, no sumar más puntos
+        if (this.gameOver || this.win) return;
         
         // Calcular puntos con bonificación por combo
         let totalPoints = points;
@@ -39,6 +43,13 @@ class ScoreSystem {
             // Actualizar combo más alto
             if (this.comboCount > this.highestCombo) {
                 this.highestCombo = this.comboCount;
+            }
+            
+            // Chequear condición de victoria por combo
+            const threshold = (CONFIG && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
+            if (this.comboCount >= threshold && !this.win) {
+                this.win = true;
+                this.winAnimation = new WinAnimation();
             }
             
             // Aplicar bonificación por combo (más generosa)
@@ -126,6 +137,29 @@ class ScoreSystem {
         this.comboCount = 0;
     }
     
+    reset() {
+        // Reiniciar completamente el sistema de puntuación
+        this.score = 0;
+        this.displayScore = 0;
+        this.scoreAnimations = [];
+        this.comboCount = 0;
+        this.comboTimer = 0;
+        this.highestCombo = 0;
+        this.lives = CONFIG.lives.initial;
+        this.gameOver = false;
+        this.gameOverAnimation = null;
+        this.win = false;
+        this.winAnimation = null;
+        this.scoreParticles = [];
+        this.scoreEffect = {
+            active: false,
+            startTime: 0,
+            duration: CONFIG.score.effectDuration,
+            isPositive: true,
+            intensity: 0
+        };
+    }
+    
     loseLife() {
         // Perder una vida cuando se golpea un obstáculo
         if (this.gameOver) return;
@@ -210,6 +244,11 @@ class ScoreSystem {
         // Actualizar animación de Game Over si existe
         if (this.gameOverAnimation) {
             this.gameOverAnimation.update();
+        }
+        
+        // Actualizar animación de Victoria si existe
+        if (this.winAnimation) {
+            this.winAnimation.update();
         }
     }
     
@@ -395,6 +434,11 @@ class ScoreSystem {
         // Mostrar animación de Game Over si el juego terminó
         if (this.gameOver && this.gameOverAnimation) {
             this.gameOverAnimation.display(ctx);
+        }
+        
+        // Mostrar animación de Victoria si ganaste
+        if (this.win && this.winAnimation) {
+            this.winAnimation.display(ctx);
         }
     }
     

@@ -80,7 +80,8 @@ class ControlPanel {
                 fallSpeed: { current: 2.25, default: 2.25 },
                 lives: { current: 3, default: 3 },
                 objectSize: { current: 100, default: 100 },
-                spawnRate: { current: 2000, default: 2000 }
+                spawnRate: { current: 2000, default: 2000 },
+                winComboThreshold: { current: 20, default: 20 }
             }
         };
     }
@@ -113,6 +114,13 @@ class ControlPanel {
             this.spawnRateSlider.value = settings.spawnRate.current;
             this.spawnRateValue.textContent = (settings.spawnRate.current / 1000).toFixed(1) + 's';
             this.updateSpawnRate(settings.spawnRate.current);
+        }
+
+        // Umbral de combo para ganar
+        if (this.winComboSlider && settings.winComboThreshold) {
+            this.winComboSlider.value = settings.winComboThreshold.current;
+            this.winComboValue.textContent = settings.winComboThreshold.current;
+            this.updateWinComboThreshold(settings.winComboThreshold.current);
         }
 
         // Halos buenos
@@ -148,6 +156,7 @@ class ControlPanel {
         this.configData.gameSettings.lives.current = parseInt(this.livesSlider.value);
         this.configData.gameSettings.objectSize.current = parseInt(this.objectSizeSlider.value);
         this.configData.gameSettings.spawnRate.current = parseInt(this.spawnRateSlider.value);
+        if (this.winComboSlider) this.configData.gameSettings.winComboThreshold.current = parseInt(this.winComboSlider.value);
         
         // Halos
         if (this.goodHaloSizeSlider) this.configData.gameSettings.goodHaloSize.current = parseFloat(this.goodHaloSizeSlider.value);
@@ -258,6 +267,10 @@ class ControlPanel {
         this.spawnRateSlider = document.getElementById('spawnRateSlider');
         this.spawnRateValue = document.getElementById('spawnRateValue');
         
+        // Nuevo: umbral de combo para ganar
+        this.winComboSlider = document.getElementById('winComboSlider');
+        this.winComboValue = document.getElementById('winComboValue');
+        
         // Elementos de métricas
         this.fallingObjectsCount = document.getElementById('fallingObjectsCount');
         this.fpsCounter = document.getElementById('fpsCounter');
@@ -338,6 +351,16 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.spawnRateValue.textContent = (value / 1000).toFixed(1) + 's';
                 this.updateSpawnRate(value);
+                this.saveConfiguration(); // Auto-guardar
+            });
+        }
+
+        // Control del umbral de combo para ganar
+        if (this.winComboSlider) {
+            this.winComboSlider.addEventListener('input', (event) => {
+                const value = parseInt(event.target.value);
+                this.winComboValue.textContent = value;
+                this.updateWinComboThreshold(value);
                 this.saveConfiguration(); // Auto-guardar
             });
         }
@@ -448,6 +471,25 @@ class ControlPanel {
         }
         
         console.log('Velocidad de aparición actualizada:', rate + 'ms');
+    }
+
+    // Nuevo: actualizar umbral de combo para ganar en tiempo real
+    updateWinComboThreshold(value) {
+        const v = parseInt(value);
+        if (isNaN(v)) return;
+        if (typeof CONFIG !== 'undefined' && CONFIG.score) {
+            CONFIG.score.winComboThreshold = v;
+        }
+        // Si el juego ya está corriendo, el cálculo de comboLevel usa CONFIG.score.winComboThreshold
+        // y se actualizará automáticamente en draw().
+        // Además, si el combo actual ya supera el nuevo umbral, dispara victoria inmediatamente.
+        if (typeof scoreSystem !== 'undefined' && scoreSystem && !scoreSystem.win) {
+            if (scoreSystem.comboCount >= v) {
+                scoreSystem.win = true;
+                scoreSystem.winAnimation = new WinAnimation();
+            }
+        }
+        console.log('Umbral de combo para ganar actualizado:', v);
     }
 
     // Getters auxiliares
