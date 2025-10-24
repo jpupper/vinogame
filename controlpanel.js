@@ -609,11 +609,11 @@ class ControlPanel {
         this.objectsGrid = document.getElementById('currentObjectsGrid');
         this.badItemsGrid = document.getElementById('currentBadItemsGrid');
         this.backgroundsGrid = document.getElementById('currentBackgroundsGrid');
-        this.currentAssets = {
-            objects: (window.goodItemImagePaths || []),
-            badItems: (window.badItemImagePaths || []),
-            backgrounds: (window.backgroundImagePaths || [])
-        };
+        // Usar copias para detectar cambios posteriores (preload llena luego)
+        const g = Array.isArray(window.goodItemImagePaths) ? window.goodItemImagePaths.slice() : [];
+        const b = Array.isArray(window.badItemImagePaths) ? window.badItemImagePaths.slice() : [];
+        const bg = Array.isArray(window.backgroundImagePaths) ? window.backgroundImagePaths.slice() : [];
+        this.currentAssets = { objects: g, badItems: b, backgrounds: bg };
     }
 
     loadAssetsFromLocalStorage() {
@@ -625,9 +625,9 @@ class ControlPanel {
                     window.goodItemImagePaths = saved.objects;
                     window.badItemImagePaths = saved.badItems;
                     window.backgroundImagePaths = saved.backgrounds;
-                    this.currentAssets.objects = window.goodItemImagePaths;
-                    this.currentAssets.badItems = window.badItemImagePaths;
-                    this.currentAssets.backgrounds = window.backgroundImagePaths;
+                    this.currentAssets.objects = window.goodItemImagePaths.slice();
+                    this.currentAssets.badItems = window.badItemImagePaths.slice();
+                    this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
                     this.reloadGameImagesFromPaths();
                 }
             }
@@ -665,27 +665,29 @@ class ControlPanel {
         renderGrid(this.backgroundsGrid, this.currentAssets.backgrounds, 'backgrounds');
     }
     
+/* startAssetsAutoRefresh (old) removed */
+    
     startAssetsAutoRefresh() {
         let tries = 0;
         this._assetsRefreshTimer = setInterval(() => {
-            const g = window.goodItemImagePaths || [];
-            const b = window.badItemImagePaths || [];
-            const bg = window.backgroundImagePaths || [];
-            const loadedTotal = g.length + b.length + bg.length;
-            const currentTotal = (this.currentAssets.objects?.length || 0) +
-                                (this.currentAssets.badItems?.length || 0) +
-                                (this.currentAssets.backgrounds?.length || 0);
-            if (loadedTotal !== currentTotal) {
-                this.currentAssets.objects = g;
-                this.currentAssets.badItems = b;
-                this.currentAssets.backgrounds = bg;
+            const g = Array.isArray(window.goodItemImagePaths) ? window.goodItemImagePaths : [];
+            const b = Array.isArray(window.badItemImagePaths) ? window.badItemImagePaths : [];
+            const bg = Array.isArray(window.backgroundImagePaths) ? window.backgroundImagePaths : [];
+            const loadedSig = g.join('|') + '|' + b.join('|') + '|' + bg.join('|');
+            const currentSig = (this.currentAssets.objects || []).join('|') + '|' +
+                               (this.currentAssets.badItems || []).join('|') + '|' +
+                               (this.currentAssets.backgrounds || []).join('|');
+            if (loadedSig !== currentSig) {
+                this.currentAssets.objects = g.slice();
+                this.currentAssets.badItems = b.slice();
+                this.currentAssets.backgrounds = bg.slice();
                 this.loadCurrentAssets();
             }
             tries++;
             if (tries >= 10) {
                 clearInterval(this._assetsRefreshTimer);
             }
-        }, 1000);
+        }, 800);
     }
     
     removeAsset(category, index) {
@@ -766,6 +768,10 @@ class ControlPanel {
                 }
             });
         });
+        // Estado inicial: mostrar todas las secciones y marcar "All" activo
+        const allBtn = document.querySelector('.gallery-nav-btn[data-category="all"]');
+        if (allBtn) allBtn.classList.add('active');
+        this.gallerySections.forEach(sec => sec.style.display = 'block');
     }
 
     setupSaveChanges() {
