@@ -10,9 +10,565 @@
             padding: 0;
             overflow: hidden;
             background-color: #000;
+            font-family: 'Arial', sans-serif;
         }
         canvas {
             display: block;
+        }
+        
+        /* Panel de Control Oculto */
+        #controlPanel {
+            position: fixed;
+            top: 20px;
+            right: -420px; /* Inicialmente completamente oculto */
+            width: 380px; /* Ancho aumentado para mejor visualización */
+            max-width: 90vw; /* Responsive para pantallas pequeñas */
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            z-index: 1000;
+            transition: right 0.3s ease-in-out;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-height: 90vh; /* Limitar altura máxima */
+            overflow-y: auto; /* Scroll vertical si es necesario */
+        }
+        
+        #controlPanel.visible {
+            right: 20px;
+        }
+        
+        #controlPanel h3 {
+            color: #fff;
+            margin: 0 0 20px 0;
+            text-align: center;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            color: #fff;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #4ecdc4;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+            margin-left: 10px;
+            text-shadow: 0 0 5px rgba(78, 205, 196, 0.5);
+        }
+        
+        .help-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .panel-toggle-hint {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            z-index: 999;
+            transition: opacity 0.3s ease;
+        }
+        
+        .panel-toggle-hint.hidden {
+            opacity: 0;
+        }
+        
+        /* Estilos para métricas en tiempo real */
+        .metrics-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .metrics-section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            text-align: center;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+        
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric-item label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            margin: 0;
+        }
+        
+        .metric-value {
+            color: #4ecdc4;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(78, 205, 196, 0.5);
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        /* Estilos para sistema de pestañas */
+        .tab-navigation {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px 8px 0 0;
+            margin-right: 2px;
+        }
+        
+        .tab-button:last-child {
+            margin-right: 0;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Estilos para sección de assets */
+        .assets-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .assets-section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+        
+        .asset-upload-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .upload-label {
+            cursor: pointer;
+            display: inline-block;
+        }
+        
+        .upload-label input[type="file"] {
+            display: none;
+        }
+        
+        .upload-button {
+            display: inline-block;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+            text-align: center;
+            min-width: 150px;
+        }
+        
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        .upload-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .upload-info small {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+        }
+        
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .preview-item:hover {
+            border-color: #4ecdc4;
+            transform: scale(1.05);
+        }
+        
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .assets-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .validation-message {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .validation-message.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
+        }
+        
+        .validation-message.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #4ecdc4;
+        }
+        
+        /* Estilos para la galería */
+        .gallery-navigation {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gallery-nav-btn {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .gallery-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+        
+        .gallery-nav-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .gallery-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .gallery-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gallery-section h3 {
+            margin: 0 0 15px 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .current-assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .current-asset-item {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .current-asset-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .current-asset-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .asset-name {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        
+        .asset-actions {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+        
+        .asset-action-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .replace-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+        
+        .replace-btn:hover {
+            background: linear-gradient(135deg, #44a08d 0%, #4ecdc4 100%);
+            transform: scale(1.05);
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+        }
+        
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #ee5a52 0%, #ff6b6b 100%);
+            transform: scale(1.05);
+        }
+        
+        .gallery-section.hidden {
+            display: none;
+        }
+        
+        /* Estilos para el botón de guardar cambios */
+        .save-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        
+        .save-changes-btn {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .save-changes-btn:hover {
+            background: linear-gradient(135deg, #44a08d 0%, #4ecdc4 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        .save-changes-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(78, 205, 196, 0.3);
+        }
+        
+        .save-changes-btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .save-status {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .save-status.show {
+            opacity: 1;
+        }
+        
+        .save-status.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #4ecdc4;
+        }
+        
+        .save-status.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
         }
     </style>
     <script src="p5.min2.js"></script>
@@ -27,6 +583,7 @@
     <script src="wineglasses.js?v=14"></script>
     <script src="barrel.js?v=14"></script>
     <script src="sketch.js?v=14"></script>
+    <script src="controlpanel.js?v=14"></script>
     <script>
         // Forzar recarga sin caché
         console.log('Forzando recarga de scripts v14 - ' + new Date().toISOString());
@@ -47,5 +604,170 @@
     </script>
 </head>
 <body>
+    <!-- Hint para mostrar el panel -->
+    <div class="panel-toggle-hint" id="panelHint">Presiona 'P' para abrir panel de control</div>
+    
+    <!-- Panel de Control Oculto -->
+    <div id="controlPanel">
+        <h3>🎮 Panel de Control</h3>
+        
+        <!-- Navegación por Pestañas -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
+            <button class="tab-button" data-tab="assets">🎨 Assets</button>
+            <button class="tab-button" data-tab="gallery">🖼️ Galería</button>
+        </div>
+        
+        <!-- Pestaña de Controles -->
+        <div class="tab-content active" id="controls-tab">
+            <div class="control-group">
+                <label for="fallSpeedSlider">
+                    Velocidad de Caída
+                    <span class="value-display" id="fallSpeedValue">2.25</span>
+                </label>
+                <input type="range" id="fallSpeedSlider" min="0.5" max="5" step="0.25" value="2.25">
+                <div class="help-text">Controla qué tan rápido caen los objetos</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="livesSlider">
+                    Cantidad de Vidas
+                    <span class="value-display" id="livesValue">3</span>
+                </label>
+                <input type="range" id="livesSlider" min="1" max="10" step="1" value="3">
+                <div class="help-text">Número de vidas disponibles en el juego</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="objectSizeSlider">
+                    Tamaño de Objetos
+                    <span class="value-display" id="objectSizeValue">100px</span>
+                </label>
+                <input type="range" id="objectSizeSlider" min="50" max="200" step="10" value="100">
+                <div class="help-text">Controla el tamaño de los objetos que caen</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="spawnRateSlider">
+                    Frecuencia de Caída
+                    <span class="value-display" id="spawnRateValue">2.0s</span>
+                </label>
+                <input type="range" id="spawnRateSlider" min="500" max="5000" step="100" value="2000">
+                <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
+            </div>
+            
+            <!-- Métricas en Tiempo Real -->
+            <div class="metrics-section">
+                <h4>📊 Métricas en Tiempo Real</h4>
+                
+                <div class="metric-item">
+                    <label>Objetos Cayendo</label>
+                    <span class="metric-value" id="fallingObjectsCount">0</span>
+                </div>
+                
+                <div class="metric-item">
+                    <label>Tamaño de Objetos</label>
+                    <span class="metric-value" id="objectSize">100px</span>
+                </div>
+            </div>
+            
+            <!-- Botón de Guardar Cambios -->
+            <div class="save-section">
+                <button class="save-changes-btn" id="saveChangesBtn">
+                    💾 Guardar Cambios
+                </button>
+                <div class="save-status" id="saveStatus"></div>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Assets -->
+        <div class="tab-content" id="assets-tab">
+            <div class="assets-section">
+                <h4>🖼️ Gestión de Fondos</h4>
+                <div class="asset-upload-group">
+                    <label class="upload-label">
+                        <input type="file" id="backgroundUpload" accept="image/*" multiple>
+                        <span class="upload-button">📁 Cargar Fondos</span>
+                    </label>
+                    <div class="upload-info">
+                        <small>Tamaño requerido: 1920x1080 píxeles</small>
+                        <small>Formatos: JPG, PNG, WebP</small>
+                    </div>
+                    <div class="preview-grid" id="backgroundPreview"></div>
+                </div>
+            </div>
+            
+            <div class="assets-section">
+                <h4>🍇 Gestión de Objetos</h4>
+                <div class="asset-upload-group">
+                    <label class="upload-label">
+                        <input type="file" id="objectUpload" accept="image/*" multiple>
+                        <span class="upload-button">📁 Cargar Objetos</span>
+                    </label>
+                    <div class="upload-info">
+                        <small>Tamaño requerido: 512x512 píxeles</small>
+                        <small>Formatos: JPG, PNG, WebP</small>
+                    </div>
+                    <div class="preview-grid" id="objectPreview"></div>
+                </div>
+            </div>
+            
+            <div class="assets-section">
+                <h4>🐛 Gestión de Items Malos</h4>
+                <div class="asset-upload-group">
+                    <label class="upload-label">
+                        <input type="file" id="badItemUpload" accept="image/*" multiple>
+                        <span class="upload-button">📁 Cargar Items Malos</span>
+                    </label>
+                    <div class="upload-info">
+                        <small>Tamaño requerido: 512x512 píxeles</small>
+                        <small>Formatos: JPG, PNG, WebP</small>
+                    </div>
+                    <div class="preview-grid" id="badItemPreview"></div>
+                </div>
+            </div>
+            
+            <div class="assets-actions">
+                <button class="action-button" id="resetAssets">🔄 Restaurar Originales</button>
+                <button class="action-button" id="exportAssets">💾 Exportar Assets</button>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Galería -->
+        <div class="tab-content" id="gallery-tab">
+            <div class="gallery-navigation">
+                <button class="gallery-nav-btn active" data-category="all">🎯 Todos</button>
+                <button class="gallery-nav-btn" data-category="objects">🍷 Objetos</button>
+                <button class="gallery-nav-btn" data-category="badItems">👾 Personajes Malos</button>
+                <button class="gallery-nav-btn" data-category="backgrounds">🌄 Fondos</button>
+            </div>
+            
+            <div class="gallery-content">
+                <!-- Sección de Objetos -->
+                <div class="gallery-section" id="objects-gallery">
+                    <h3>🍷 Objetos del Juego</h3>
+                    <div class="current-assets-grid" id="currentObjectsGrid">
+                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Sección de Personajes Malos -->
+                <div class="gallery-section" id="badItems-gallery">
+                    <h3>👾 Personajes Malos</h3>
+                    <div class="current-assets-grid" id="currentBadItemsGrid">
+                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Sección de Fondos -->
+                <div class="gallery-section" id="backgrounds-gallery">
+                    <h3>🌄 Fondos</h3>
+                    <div class="current-assets-grid" id="currentBackgroundsGrid">
+                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

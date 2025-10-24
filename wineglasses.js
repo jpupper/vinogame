@@ -3,26 +3,27 @@ let goodItemImages = [];
 let badItemImages = [];
 
 // Cargar imágenes de items buenos
-function loadGrapeImage() {
-    goodItemImages.push(loadImage('img/uva_roja.png'));
-    goodItemImages.push(loadImage('img/uva_roja2.png'));
-    goodItemImages.push(loadImage('img/uva_verde.png'));
-    goodItemImages.push(loadImage('img/uva.png'));
-    goodItemImages.push(loadImage('img/hoja.png'));
-    goodItemImages.push(loadImage('img/copa.png'));
-    goodItemImages.push(loadImage('img/copa2.png'));
-    goodItemImages.push(loadImage('img/botella.png'));
-    goodItemImages.push(loadImage('img/destapador.png'));
-    goodItemImages.push(loadImage('img/destapador2.png'));
+function preload() {
+    // Cargar imágenes de objetos buenos
+    goodItemImages.push(loadImage('img/objetos/uva_roja.png'));
+    goodItemImages.push(loadImage('img/objetos/uva_roja2.png'));
+    goodItemImages.push(loadImage('img/objetos/uva_verde.png'));
+    goodItemImages.push(loadImage('img/objetos/uva.png'));
+    goodItemImages.push(loadImage('img/objetos/hoja.png'));
+    goodItemImages.push(loadImage('img/objetos/copa.png'));
+    goodItemImages.push(loadImage('img/objetos/copa2.png'));
+    goodItemImages.push(loadImage('img/objetos/botella.png'));
+    goodItemImages.push(loadImage('img/objetos/destapador.png'));
+    goodItemImages.push(loadImage('img/objetos/destapador2.png'));
     
-    // Cargar imágenes de items malos (bichos)
-    badItemImages.push(loadImage('img/bicho1.png'));
-    badItemImages.push(loadImage('img/bicho2.png'));
-    badItemImages.push(loadImage('img/bicho3.png'));
-    badItemImages.push(loadImage('img/bicho4.png'));
-    badItemImages.push(loadImage('img/bicho5.png'));
-    badItemImages.push(loadImage('img/bicho6.png'));
-    badItemImages.push(loadImage('img/bicho7.png'));
+    // Cargar imágenes de objetos malos
+    badItemImages.push(loadImage('img/malos/bicho1.png'));
+    badItemImages.push(loadImage('img/malos/bicho2.png'));
+    badItemImages.push(loadImage('img/malos/bicho3.png'));
+    badItemImages.push(loadImage('img/malos/bicho4.png'));
+    badItemImages.push(loadImage('img/malos/bicho5.png'));
+    badItemImages.push(loadImage('img/malos/bicho6.png'));
+    badItemImages.push(loadImage('img/malos/bicho7.png'));
 }
 
 // Sistema de copas de vino que caen

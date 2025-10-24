@@ -12,7 +12,7 @@ class BarrelIndicator {
     }
     
     loadAssets() {
-        this.barrelImage = loadImage('img/barril.png');
+        this.barrelImage = loadImage('img/objetos/barril.png');
         this.barrelShader = loadShader('barrel.vert', 'barrel.frag');
     }
     

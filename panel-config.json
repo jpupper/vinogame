@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2024-01-01",
+    "lastModified": "2024-01-01",
+    "description": "Configuraciones del panel de control para RGB Madness"
+  },
+  "gameSettings": {
+    "fallSpeed": {
+      "current": 2.25,
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.25,
+      "default": 2.25,
+      "description": "Multiplicador de velocidad de caída de objetos"
+    },
+    "lives": {
+      "current": 3,
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 3,
+      "description": "Número de vidas del jugador"
+    },
+    "objectSize": {
+      "current": 100,
+      "min": 50,
+      "max": 200,
+      "step": 10,
+      "default": 100,
+      "unit": "px",
+      "description": "Tamaño de los objetos que caen"
+    },
+    "spawnRate": {
+      "current": 2000,
+      "min": 500,
+      "max": 5000,
+      "step": 100,
+      "default": 2000,
+      "unit": "ms",
+      "description": "Frecuencia de aparición de nuevos objetos"
+    }
+  },
+  "panelSettings": {
+    "isVisible": false,
+    "activationKey": "P",
+    "animationDuration": 300,
+    "position": "right",
+    "theme": "dark"
+  },
+  "metrics": {
+    "updateInterval": 100,
+    "displayFormat": {
+      "fallingObjects": "count",
+      "objectSize": "px"
+    }
+  },
+  "presets": {
+    "easy": {
+      "fallSpeed": 1.5,
+      "lives": 5,
+      "objectSize": 120,
+      "spawnRate": 3000,
+      "description": "Configuración fácil para principiantes"
+    },
+    "normal": {
+      "fallSpeed": 2.25,
+      "lives": 3,
+      "objectSize": 100,
+      "spawnRate": 2000,
+      "description": "Configuración estándar del juego"
+    },
+    "hard": {
+      "fallSpeed": 3.5,
+      "lives": 2,
+      "objectSize": 80,
+      "spawnRate": 1200,
+      "description": "Configuración difícil para expertos"
+    },
+    "extreme": {
+      "fallSpeed": 5.0,
+      "lives": 1,
+      "objectSize": 60,
+      "spawnRate": 800,
+      "description": "Configuración extrema para maestros"
+    }
+  },
+  "statistics": {
+    "totalGamesPlayed": 0,
+    "bestScore": 0,
+    "averageScore": 0,
+    "totalPlayTime": 0,
+    "configChanges": 0,
+    "lastPlayed": null
+  }
+}

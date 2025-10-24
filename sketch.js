@@ -55,29 +55,29 @@ let targetZoom = 1.0;
 
 function preload() {
   // Arrays de paths para cargar imágenes
-  const grapeImagePaths = [
+  const backgroundImages = [
     'img/1.jpg',   // Uvas verdes translúcidas
     'img/3.jpg',   // Uvas moradas oscuras
     'img/6.png',   // Gota azul
     'img/7.png',   // Forma orgánica morada
     'img/8.jpg'    // Células azules/moradas
-  ];
-  
-  const backgroundImagePaths = [
-    'img/fondo1.jpg',
-    'img/fondo2.jpg',
-    'img/fondo3.jpg',
-    'img/fondo4.jpg',
-    'img/fondo5.jpg'
+];
+
+const backgroundImagesPaths = [
+    'img/background/fondo1.jpg',
+    'img/background/fondo2.jpg',
+    'img/background/fondo3.jpg',
+    'img/background/fondo4.jpg',
+    'img/background/fondo5.jpg'
   ];
   
   // Cargar texturas de uvas desde array
-  for (let path of grapeImagePaths) {
+  for (let path of backgroundImages) {
     grapeTextures.push(loadImage(path));
   }
   
   // Cargar texturas de fondo desde array
-  for (let path of backgroundImagePaths) {
+  for (let path of backgroundImagesPaths) {
     backgroundTextures.push(loadImage(path));
   }
   
