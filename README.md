@@ -1,22 +1,40 @@
-# RGB Madness
+# VinoGame
 
-Un juego interactivo donde debes seleccionar la flor con la menor distancia de color respecto al color activo.
+Juego interactivo con p5.js donde recolectas copas de vino evitando obstáculos, con efectos de halo configurables y un panel de control.
 
 ## Cómo jugar
 
-1. Toca el botón "START" para comenzar el juego
-2. Selecciona las flores que tengan colores más cercanos al color activo (mostrado en los círculos)
-3. Evita seleccionar flores con colores muy diferentes, ya que perderás puntos
-4. El juego termina cuando la vida llega a cero
+- Mantén presionado o toca para crear puntos que interactúan con los objetos.
+- Recolecta copas de vino pasando el puntero sobre ellas el tiempo requerido.
+- Evita los ítems malos para no perder vidas.
+- El juego termina cuando las vidas llegan a cero.
 
-## Características
+## Controles
 
-- Soporte para pantalla completa
-- Soporte para múltiples puntos de toque (multitouch)
-- Efectos visuales dinámicos
-- Sistema de puntuación basado en la distancia de color
+- Tecla `P`: abrir/cerrar el panel de control.
+- Tecla `D`: activar/desactivar el modo debug (muestra FPS, puntos y visualiza los puntos del servidor).
 
-## Tecnologías utilizadas
+## Panel de control
+
+- Ajustes de dificultad: `fallSpeed`, `lives` y otros parámetros.
+- Controles de halo:
+  - Buen ítem: tamaño, fuerza y color del halo.
+  - Mal ítem: tamaño, fuerza y color del halo.
+- Los valores del halo se guardan en `localStorage` y se aplican en tiempo real.
+
+## Shaders
+
+- `composite.frag`: compone el fondo, el juego y efectos; recibe uniforms de halo configurables para buenos y malos (`u_goodHaloSize`, `u_goodHaloStrength`, `u_goodHaloColor`, `u_badHaloSize`, `u_badHaloStrength`, `u_badHaloColor`).
+- `feedback.frag`: efectos de feedback y ondas.
+- `medidor.*`: renderiza el medidor de combo dentro de una copa.
+
+## Modo Debug
+
+- Muestra `FPS` y cantidad de puntos.
+- Dibuja el `PointServer` (conexiones y puntos) para calibración.
+- El panel ha sido simplificado; el contador de FPS fue removido.
+
+## Tecnologías
 
 - p5.js
 - HTML5
@@ -24,8 +42,8 @@ Un juego interactivo donde debes seleccionar la flor con la menor distancia de c
 
 ## Instalación
 
-No se requiere instalación. Solo abre el archivo `index.html` en un navegador web moderno.
+No se requiere instalación: abre `index.html` en un navegador moderno. Para desarrollo, puedes servir la carpeta con un server estático.
 
-## Notas
+## Créditos
 
-Este juego fue adaptado de Processing a p5.js para funcionar en navegadores web.
+Adaptado a p5.js para navegadores; incluye shaders personalizados y sistema de puntuación con efectos visuales.

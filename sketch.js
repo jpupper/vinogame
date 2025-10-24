@@ -7,6 +7,9 @@ let dynamicBackground;
 let scoreSystem;
 let medidorIndicator; // antes: barrelIndicator
 
+// Modo debug
+let isDebug = false;
+
 // Texturas de uvas
 let grapeTextures = [];
 let grapeTexturesLoaded = false;
@@ -315,6 +318,16 @@ function draw() {
       }
       compositeShader.setUniform('u_badPositions', badPositions);
       compositeShader.setUniform('u_badActive', badActive);
+
+      // Uniforms de halos configurables desde el panel
+      const goodHalo = (typeof window !== 'undefined' && window.getGoodHaloSettings) ? window.getGoodHaloSettings() : { size: 0.12, strength: 0.35, color: [1.0, 0.85, 0.2] };
+      const badHalo = (typeof window !== 'undefined' && window.getBadHaloSettings) ? window.getBadHaloSettings() : { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
+      compositeShader.setUniform('u_goodHaloSize', goodHalo.size);
+      compositeShader.setUniform('u_goodHaloStrength', goodHalo.strength);
+      compositeShader.setUniform('u_goodHaloColor', goodHalo.color);
+      compositeShader.setUniform('u_badHaloSize', badHalo.size);
+      compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
+      compositeShader.setUniform('u_badHaloColor', badHalo.color);
       
       feedbackBuffer.rect(0, 0, width, height);
     } else {
@@ -339,8 +352,10 @@ function draw() {
   wineGlassSystem.update();
   wineGlassSystem.display(juegoBuffer);
 
-  // Actualizar y mostrar el servidor de puntos (en juegoBuffer)
-  Pserver.display(juegoBuffer);
+  // Mostrar el servidor de puntos solo en modo debug (elipses)
+  if (isDebug) {
+    Pserver.display(juegoBuffer);
+  }
   Pserver.update();
   
   // Comprobar colisiones con copas de vino y items malos
@@ -407,27 +422,19 @@ function draw() {
   medidorIndicator.update(comboLevel);
   medidorIndicator.display(juegoBuffer);
   
-  // INDICADOR DE SLOW MOTION (en juegoBuffer)
-  if (timeScale < 0.9) {
+  // Indicadores de debug (FPS, cantidad de puntos)
+  if (isDebug) {
+    const fps = frameRate();
+    const pointsCount = Pserver.getAllPoints().length;
     juegoBuffer.push();
-    juegoBuffer.fill(100, 200, 255, 150 * (1 - timeScale));
-    juegoBuffer.noStroke();
-    juegoBuffer.textAlign(CENTER, CENTER);
-    juegoBuffer.textSize(40);
-    juegoBuffer.textStyle(BOLD);
-    juegoBuffer.text('SLOW MOTION', width/2, 80);
-    juegoBuffer.textStyle(NORMAL);
+    juegoBuffer.textAlign(LEFT, TOP);
+    juegoBuffer.textSize(20);
+    juegoBuffer.fill(100, 255, 100);
+    juegoBuffer.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
+    juegoBuffer.fill(255, 180, 70);
+    juegoBuffer.text(`Puntos (count): ${pointsCount}`, 40, 125);
     juegoBuffer.pop();
   }
-  
-  // FPS (en juegoBuffer)
-  const fps = frameRate();
-  juegoBuffer.push();
-  juegoBuffer.textAlign(LEFT, TOP);
-  juegoBuffer.textSize(20);
-  juegoBuffer.fill(100, 255, 100);
-  juegoBuffer.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
-  juegoBuffer.pop();
   
   // ===== COMPOSICIÓN FINAL =====
   push();
@@ -469,6 +476,13 @@ function draw() {
   }
 }
 
+// Toggle de modo debug con tecla D
+function keyPressed() {
+  if (key && key.toLowerCase() === 'd') {
+    isDebug = !isDebug;
+  }
+}
+
 // Touch event handlers for p5.js
 function touchStarted() {
   // Reiniciar el juego si está en estado de Game Over
@@ -501,29 +515,22 @@ function resetGame() {
   trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
-  waves = []; // Limpiar ondas
+  medidorIndicator = new MedidorIndicator();
+  medidorIndicator.loadAssets();
+  medidorIndicator.setup();
 }
 
-// Función para crear una onda expansiva
 function createWave(x, y) {
-  // Limitar a MAX_WAVES ondas simultáneas
-  if (waves.length >= MAX_WAVES) {
-    waves.shift(); // Eliminar la onda más vieja
-  }
-  
-  // Agregar nueva onda
-  waves.push({
-    x: x / width,        // Normalizar a 0-1
-    y: y / height,       // Normalizar a 0-1
+  const wave = {
+    x: x / width,
+    y: y / height,
     startTime: millis() / 1000.0,
     active: true
-  });
+  };
+  waves.push(wave);
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  dynamicBackground.resize();
 }
-
-// Función displayFPS eliminada - ahora se dibuja en juegoBuffer
 

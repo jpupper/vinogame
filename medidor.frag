@@ -7,7 +7,11 @@ uniform float u_time;             // tiempo para animación
 uniform vec2 u_resolution;        // tamaño del buffer
 
 varying vec2 vTexCoord;
-
+float mapr(float _value,float _low2,float _high2) {
+	float val = _low2 + (_high2 - _low2) * (_value - 0.) / (1.0 - 0.);
+    //float val = 0.1;
+	return val;
+}
 void main() {
     // p5.js invierte Y en vTexCoord, corregimos
     vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
@@ -47,7 +51,13 @@ void main() {
 
     // Sumar dibujo violeta a la copa
     vec3 finalRGB = glassColor.rgb + violetMasked;
+
+
+    float auxFillLevel = 0.8;
+
+    auxFillLevel = mapr(auxFillLevel, 0.5, 1.0);
+    finalRGB = mix(violetMasked, glassColor.rgb, step(auxFillLevel, 1.-uv.y));
     float finalA = max(glassColor.a, maskA * insideLiquid);
 
-    gl_FragColor = vec4(finalRGB, finalA);
+    gl_FragColor = vec4(finalRGB, glassColor.a);
 }

@@ -784,6 +784,39 @@
                 <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
             </div>
             
+            <!-- Controles de Halos -->
+            <div class="control-group">
+                <label>Halos de Elementos Buenos</label>
+                <div style="margin-top:8px">
+                    <label for="goodHaloSizeSlider">Tamaño</label>
+                    <input type="range" id="goodHaloSizeSlider" min="0.05" max="0.25" step="0.01" value="0.12">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="goodHaloStrengthSlider">Fuerza</label>
+                    <input type="range" id="goodHaloStrengthSlider" min="0.0" max="1.0" step="0.01" value="0.35">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="goodHaloColorInput">Color</label>
+                    <input type="color" id="goodHaloColorInput" value="#FFD700">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Halos de Elementos Malos</label>
+                <div style="margin-top:8px">
+                    <label for="badHaloSizeSlider">Tamaño</label>
+                    <input type="range" id="badHaloSizeSlider" min="0.05" max="0.3" step="0.01" value="0.14">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="badHaloStrengthSlider">Fuerza</label>
+                    <input type="range" id="badHaloStrengthSlider" min="0.0" max="1.0" step="0.01" value="0.27">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="badHaloColorInput">Color</label>
+                    <input type="color" id="badHaloColorInput" value="#FF0000">
+                </div>
+            </div>
+            
             <!-- Métricas en Tiempo Real -->
             <div class="metrics-section">
                 <h4>📊 Métricas en Tiempo Real</h4>

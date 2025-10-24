@@ -24,6 +24,14 @@ uniform float u_grapeActive[10];        // Si la uva está activa
 uniform vec2 u_badPositions[10];
 uniform float u_badActive[10];
 
+// HALOS CONFIGURABLES
+uniform float u_goodHaloSize;           // tamaño del halo de buenos (radio externo)
+uniform float u_goodHaloStrength;       // fuerza del halo de buenos
+uniform vec3  u_goodHaloColor;          // color del halo de buenos
+uniform float u_badHaloSize;            // tamaño del halo de malos (radio externo)
+uniform float u_badHaloStrength;        // fuerza del halo de malos
+uniform vec3  u_badHaloColor;           // color del halo de malos
+
 varying vec2 vTexCoord;
 
 void main() {
@@ -185,9 +193,8 @@ void main() {
             vec2 pos = u_grapePositions[i];
             pos.x *= u_resolution.x / u_resolution.y;
             float d = distance(arUV, pos);
-            float halo = smoothstep(0.12, 0.02, d);
-            vec3 gold = vec3(1.0, 0.85, 0.2);
-            finalColor += gold * halo * 0.35;
+            float halo = smoothstep(u_goodHaloSize, 0.02, d);
+            finalColor += u_goodHaloColor * halo * u_goodHaloStrength;
         }
     }
 
@@ -197,9 +204,8 @@ void main() {
             vec2 posB = u_badPositions[i];
             posB.x *= u_resolution.x / u_resolution.y;
             float dB = distance(arUV, posB);
-            float haloB = smoothstep(0.14, 0.03, dB);
-            vec3 redHalo = vec3(1.0, 0.2, 0.2);
-            finalColor += redHalo * haloB * 0.27;
+            float haloB = smoothstep(u_badHaloSize, 0.03, dB);
+            finalColor += u_badHaloColor * haloB * u_badHaloStrength;
         }
     }
     
