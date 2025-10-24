@@ -570,6 +570,135 @@
             border: 1px solid rgba(255, 0, 0, 0.3);
             color: #ff6b6b;
         }
+        
+        /* Estilos para el botón de agregar asset */
+        .add-asset-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .add-asset-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        .add-asset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.5);
+        }
+        
+        .add-asset-btn .plus-icon {
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        /* Modal para seleccionar tipo de asset */
+        .asset-upload-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .asset-upload-modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: rgba(20, 20, 30, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+        
+        .modal-content h3 {
+            color: #fff;
+            margin: 0 0 20px 0;
+            text-align: center;
+            font-size: 20px;
+        }
+        
+        .asset-type-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .asset-type-btn {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .asset-type-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #4ecdc4;
+            transform: translateX(5px);
+        }
+        
+        .asset-type-btn .icon {
+            font-size: 24px;
+            min-width: 30px;
+        }
+        
+        .asset-type-btn .info {
+            flex: 1;
+        }
+        
+        .asset-type-btn .info small {
+            display: block;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            margin-top: 3px;
+        }
+        
+        .modal-close-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
     </style>
     <script src="p5.min2.js"></script>
     <script src="config.js?v=14"></script>
@@ -615,7 +744,6 @@
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
             <button class="tab-button" data-tab="assets">🎨 Assets</button>
-            <button class="tab-button" data-tab="gallery">🖼️ Galería</button>
         </div>
         
         <!-- Pestaña de Controles -->
@@ -666,8 +794,8 @@
                 </div>
                 
                 <div class="metric-item">
-                    <label>Tamaño de Objetos</label>
-                    <span class="metric-value" id="objectSize">100px</span>
+                    <label>FPS</label>
+                    <span class="metric-value" id="fpsCounter">60</span>
                 </div>
             </div>
             
@@ -680,61 +808,16 @@
             </div>
         </div>
         
-        <!-- Pestaña de Assets -->
+        <!-- Pestaña de Assets (anteriormente Galería) -->
         <div class="tab-content" id="assets-tab">
-            <div class="assets-section">
-                <h4>🖼️ Gestión de Fondos</h4>
-                <div class="asset-upload-group">
-                    <label class="upload-label">
-                        <input type="file" id="backgroundUpload" accept="image/*" multiple>
-                        <span class="upload-button">📁 Cargar Fondos</span>
-                    </label>
-                    <div class="upload-info">
-                        <small>Tamaño requerido: 1920x1080 píxeles</small>
-                        <small>Formatos: JPG, PNG, WebP</small>
-                    </div>
-                    <div class="preview-grid" id="backgroundPreview"></div>
-                </div>
+            <!-- Botón para agregar nuevos assets -->
+            <div class="add-asset-section">
+                <button class="add-asset-btn" id="addAssetBtn">
+                    <span class="plus-icon">+</span>
+                    <span>Cargar Nuevo Asset</span>
+                </button>
             </div>
             
-            <div class="assets-section">
-                <h4>🍇 Gestión de Objetos</h4>
-                <div class="asset-upload-group">
-                    <label class="upload-label">
-                        <input type="file" id="objectUpload" accept="image/*" multiple>
-                        <span class="upload-button">📁 Cargar Objetos</span>
-                    </label>
-                    <div class="upload-info">
-                        <small>Tamaño requerido: 512x512 píxeles</small>
-                        <small>Formatos: JPG, PNG, WebP</small>
-                    </div>
-                    <div class="preview-grid" id="objectPreview"></div>
-                </div>
-            </div>
-            
-            <div class="assets-section">
-                <h4>🐛 Gestión de Items Malos</h4>
-                <div class="asset-upload-group">
-                    <label class="upload-label">
-                        <input type="file" id="badItemUpload" accept="image/*" multiple>
-                        <span class="upload-button">📁 Cargar Items Malos</span>
-                    </label>
-                    <div class="upload-info">
-                        <small>Tamaño requerido: 512x512 píxeles</small>
-                        <small>Formatos: JPG, PNG, WebP</small>
-                    </div>
-                    <div class="preview-grid" id="badItemPreview"></div>
-                </div>
-            </div>
-            
-            <div class="assets-actions">
-                <button class="action-button" id="resetAssets">🔄 Restaurar Originales</button>
-                <button class="action-button" id="exportAssets">💾 Exportar Assets</button>
-            </div>
-        </div>
-        
-        <!-- Pestaña de Galería -->
-        <div class="tab-content" id="gallery-tab">
             <div class="gallery-navigation">
                 <button class="gallery-nav-btn active" data-category="all">🎯 Todos</button>
                 <button class="gallery-nav-btn" data-category="objects">🍷 Objetos</button>
@@ -769,5 +852,39 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal para cargar assets -->
+    <div class="asset-upload-modal" id="assetUploadModal">
+        <div class="modal-content">
+            <h3>📦 Selecciona el tipo de asset</h3>
+            <div class="asset-type-options">
+                <button class="asset-type-btn" data-type="objects">
+                    <span class="icon">🍷</span>
+                    <div class="info">
+                        <div>Objetos del Juego</div>
+                        <small>Tamaño: 512x512 píxeles</small>
+                    </div>
+                </button>
+                <button class="asset-type-btn" data-type="badItems">
+                    <span class="icon">👾</span>
+                    <div class="info">
+                        <div>Personajes Malos</div>
+                        <small>Tamaño: 512x512 píxeles</small>
+                    </div>
+                </button>
+                <button class="asset-type-btn" data-type="backgrounds">
+                    <span class="icon">🌄</span>
+                    <div class="info">
+                        <div>Fondos</div>
+                        <small>Tamaño: 1920x1080 píxeles</small>
+                    </div>
+                </button>
+            </div>
+            <button class="modal-close-btn" id="closeModalBtn">Cancelar</button>
+        </div>
+    </div>
+    
+    <!-- Input oculto para cargar archivos -->
+    <input type="file" id="hiddenFileInput" accept="image/*" multiple style="display: none;">
 </body>
 </html>

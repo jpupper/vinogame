@@ -1,0 +1,2 @@
+-Never ever put a code that Works with an alert. Always code the messages and the status information inside the HTML and css. NEVER AN ALERT. 
+-Everytime you need to connect first explore all the conections of that concept and all the places that you should code to change it.

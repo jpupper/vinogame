@@ -12,7 +12,10 @@ class ControlPanel {
         
         // Elementos de métricas
         this.fallingObjectsCount = null;
-        this.objectSize = null;
+        this.fpsCounter = null;
+        this.lastFrameTime = Date.now();
+        this.frameCount = 0;
+        this.fps = 60;
         
         // Elementos de pestañas
         this.tabButtons = null;
@@ -27,6 +30,13 @@ class ControlPanel {
             backgrounds: [],
             objects: [],
             badItems: []
+        };
+        
+        // Tracking de assets custom en los arrays del juego
+        this.customAssetTracking = {
+            objects: [],      // [{name, p5ImageRef, arrayIndex}]
+            badItems: [],     // [{name, p5ImageRef, arrayIndex}]
+            backgrounds: []   // [{name, p5ImageRef, arrayIndex}]
         };
         
         // Elementos de galería
@@ -126,29 +136,36 @@ class ControlPanel {
         this.showSaveNotification();
     }
     
-    showSaveNotification() {
+    showSaveNotification(message = '✅ Configuración guardada') {
         // Crear notificación temporal
         const notification = document.createElement('div');
-        notification.textContent = '✅ Configuración guardada';
+        notification.textContent = message;
+        
+        // Determinar color según el tipo de mensaje
+        const isError = message.includes('❌');
+        const bgColor = isError ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 255, 0, 0.8)';
+        
         notification.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0, 255, 0, 0.8);
+            background: ${bgColor};
             color: white;
             padding: 10px 20px;
             border-radius: 5px;
-            z-index: 10000;
+            z-index: 10002;
             font-family: Arial, sans-serif;
             font-size: 14px;
         `;
         
         document.body.appendChild(notification);
         
-        // Remover después de 2 segundos
+        // Remover después de 3 segundos
         setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 2000);
+            if (notification.parentNode) {
+                document.body.removeChild(notification);
+            }
+        }, 3000);
     }
     
     loadPreset(presetName) {
@@ -210,7 +227,7 @@ class ControlPanel {
         
         // Elementos de métricas
         this.fallingObjectsCount = document.getElementById('fallingObjectsCount');
-        this.objectSize = document.getElementById('objectSize');
+        this.fpsCounter = document.getElementById('fpsCounter');
         
         // Elementos de pestañas
         this.tabButtons = document.querySelectorAll('.tab-button');
@@ -229,6 +246,14 @@ class ControlPanel {
         this.saveChangesBtn = document.getElementById('saveChangesBtn');
         this.saveStatus = document.getElementById('saveStatus');
         
+        // Elementos del modal de carga de assets
+        this.addAssetBtn = document.getElementById('addAssetBtn');
+        this.assetUploadModal = document.getElementById('assetUploadModal');
+        this.closeModalBtn = document.getElementById('closeModalBtn');
+        this.hiddenFileInput = document.getElementById('hiddenFileInput');
+        this.assetTypeButtons = document.querySelectorAll('.asset-type-btn');
+        this.currentUploadType = null;
+        
         if (!this.panel) {
             console.error('Panel de control no encontrado');
             return;
@@ -239,7 +264,9 @@ class ControlPanel {
         this.setupAssetManagement();
         this.setupGalleryNavigation();
         this.setupSaveChanges();
+        this.setupAssetUploadModal();
         this.loadCurrentAssets();
+        this.loadAssetsFromLocalStorage(); // Cargar assets guardados
         this.updateValues();
         this.startMetricsUpdate();
     }
@@ -402,10 +429,19 @@ class ControlPanel {
             this.fallingObjectsCount.textContent = totalObjects;
         }
         
-        // Actualizar tamaño de objetos
-        if (this.objectSize && typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
-            const size = CONFIG.wineGlasses.itemSize;
-            this.objectSize.textContent = size + 'px';
+        // Actualizar FPS
+        if (this.fpsCounter) {
+            this.frameCount++;
+            const currentTime = Date.now();
+            const elapsed = currentTime - this.lastFrameTime;
+            
+            // Actualizar FPS cada segundo
+            if (elapsed >= 1000) {
+                this.fps = Math.round((this.frameCount * 1000) / elapsed);
+                this.fpsCounter.textContent = this.fps;
+                this.frameCount = 0;
+                this.lastFrameTime = currentTime;
+            }
         }
     }
     
@@ -594,23 +630,22 @@ class ControlPanel {
     
     // Resetear assets a originales
     resetAssets() {
-        if (confirm('¿Estás seguro de que quieres restaurar todos los assets originales? Se perderán los assets personalizados.')) {
-            this.customAssets = {
-                backgrounds: [],
-                objects: [],
-                badItems: []
-            };
-            
-            // Limpiar vistas previas
-            ['backgroundPreview', 'objectPreview', 'badItemPreview'].forEach(id => {
-                const container = document.getElementById(id);
-                if (container) {
-                    container.innerHTML = '';
-                }
-            });
-            
-            console.log('Assets restaurados a originales');
-        }
+        this.customAssets = {
+            backgrounds: [],
+            objects: [],
+            badItems: []
+        };
+        
+        // Limpiar vistas previas
+        ['backgroundPreview', 'objectPreview', 'badItemPreview'].forEach(id => {
+            const container = document.getElementById(id);
+            if (container) {
+                container.innerHTML = '';
+            }
+        });
+        
+        this.showSaveNotification('✅ Assets restaurados a originales');
+        console.log('Assets restaurados a originales');
     }
     
     // Exportar assets personalizados
@@ -672,59 +707,57 @@ class ControlPanel {
     
     // Cargar assets actuales del juego
     loadCurrentAssets() {
-        // Definir los assets actuales del juego basados en la carpeta img/
-        this.currentAssets = {
-            objects: [
-                { name: 'copa.png', path: 'img/objetos/copa.png', type: 'object' },
-            { name: 'copa2.png', path: 'img/objetos/copa2.png', type: 'object' },
-            { name: 'copa4.png', path: 'img/objetos/copa4.png', type: 'object' },
-            { name: 'copaoro.png', path: 'img/objetos/copaoro.png', type: 'object' },
-            { name: 'botella.png', path: 'img/objetos/botella.png', type: 'object' },
-            { name: 'uva.png', path: 'img/objetos/uva.png', type: 'object' },
-            { name: 'uva2.png', path: 'img/objetos/uva2.png', type: 'object' },
-            { name: 'uva_roja.png', path: 'img/objetos/uva_roja.png', type: 'object' },
-            { name: 'uva_roja2.png', path: 'img/objetos/uva_roja2.png', type: 'object' },
-            { name: 'uva_verde.png', path: 'img/objetos/uva_verde.png', type: 'object' },
-            { name: 'destapador.png', path: 'img/objetos/destapador.png', type: 'object' },
-            { name: 'destapador2.png', path: 'img/objetos/destapador2.png', type: 'object' },
-            { name: 'corcho.png', path: 'img/objetos/corcho.png', type: 'object' },
-            { name: 'gota.png', path: 'img/objetos/gota.png', type: 'object' },
-            { name: 'hoja.png', path: 'img/objetos/hoja.png', type: 'object' }
-            ],
-            badItems: [
-                { name: 'bicho1.png', path: 'img/malos/bicho1.png', type: 'badItem' },
-                { name: 'bicho2.png', path: 'img/malos/bicho2.png', type: 'badItem' },
-                { name: 'bicho3.png', path: 'img/malos/bicho3.png', type: 'badItem' },
-                { name: 'bicho4.png', path: 'img/malos/bicho4.png', type: 'badItem' },
-                { name: 'bicho5.png', path: 'img/malos/bicho5.png', type: 'badItem' },
-                { name: 'bicho6.png', path: 'img/malos/bicho6.png', type: 'badItem' },
-                { name: 'bicho7.png', path: 'img/malos/bicho7.png', type: 'badItem' },
-                { name: 'bicho8.png', path: 'img/malos/bicho8.png', type: 'badItem' }
-            ],
-            backgrounds: [
-                { name: 'fondo1.jpg', path: 'img/background/fondo1.jpg', type: 'background' },
-                { name: 'fondo2.jpg', path: 'img/background/fondo2.jpg', type: 'background' },
-                { name: 'fondo3.jpg', path: 'img/background/fondo3.jpg', type: 'background' },
-                { name: 'fondo4.jpg', path: 'img/background/fondo4.jpg', type: 'background' },
-                { name: 'fondo5.jpg', path: 'img/background/fondo5.jpg', type: 'background' },
-                { name: '1.jpg', path: 'img/1.jpg', type: 'background' },
-                { name: '2.jpg', path: 'img/2.jpg', type: 'background' },
-                { name: '3.jpg', path: 'img/3.jpg', type: 'background' },
-                { name: '4.jpg', path: 'img/4.jpg', type: 'background' },
-                { name: '5.jpg', path: 'img/5.jpg', type: 'background' },
-                { name: '6.png', path: 'img/6.png', type: 'background' },
-                { name: '7.png', path: 'img/7.png', type: 'background' },
-                { name: '8.jpg', path: 'img/8.jpg', type: 'background' },
-                { name: '9.jpg', path: 'img/9.jpg', type: 'background' },
-                { name: '10.jpg', path: 'img/10.jpg', type: 'background' },
-                { name: '11.jpg', path: 'img/11.jpg', type: 'background' },
-                { name: '12.jpg', path: 'img/12.jpg', type: 'background' },
-                { name: '13.jpg', path: 'img/13.jpg', type: 'background' }
-            ]
-        };
+        // Intentar cargar desde localStorage primero
+        const savedState = localStorage.getItem('assetsState');
+        
+        if (savedState) {
+            try {
+                this.currentAssets = JSON.parse(savedState);
+                console.log('💾 Estado de assets cargado desde localStorage');
+            } catch (error) {
+                console.error('Error al cargar estado de assets:', error);
+                this.loadDefaultAssets();
+            }
+        } else {
+            this.loadDefaultAssets();
+        }
         
         // Renderizar los assets en la galería
         this.renderCurrentAssets();
+    }
+    
+    // Cargar assets por defecto
+    loadDefaultAssets() {
+        this.currentAssets = {
+            objects: [
+                { name: 'uva_roja.png', path: 'img/objetos/uva_roja.png', type: 'object', isOriginal: true },
+                { name: 'uva_roja2.png', path: 'img/objetos/uva_roja2.png', type: 'object', isOriginal: true },
+                { name: 'uva_verde.png', path: 'img/objetos/uva_verde.png', type: 'object', isOriginal: true },
+                { name: 'uva.png', path: 'img/objetos/uva.png', type: 'object', isOriginal: true },
+                { name: 'hoja.png', path: 'img/objetos/hoja.png', type: 'object', isOriginal: true },
+                { name: 'copa.png', path: 'img/objetos/copa.png', type: 'object', isOriginal: true },
+                { name: 'copa2.png', path: 'img/objetos/copa2.png', type: 'object', isOriginal: true },
+                { name: 'botella.png', path: 'img/objetos/botella.png', type: 'object', isOriginal: true },
+                { name: 'destapador.png', path: 'img/objetos/destapador.png', type: 'object', isOriginal: true },
+                { name: 'destapador2.png', path: 'img/objetos/destapador2.png', type: 'object', isOriginal: true }
+            ],
+            badItems: [
+                { name: 'bicho1.png', path: 'img/malos/bicho1.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho2.png', path: 'img/malos/bicho2.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho3.png', path: 'img/malos/bicho3.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho4.png', path: 'img/malos/bicho4.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho5.png', path: 'img/malos/bicho5.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho6.png', path: 'img/malos/bicho6.png', type: 'badItem', isOriginal: true },
+                { name: 'bicho7.png', path: 'img/malos/bicho7.png', type: 'badItem', isOriginal: true }
+            ],
+            backgrounds: [
+                { name: 'fondo1.jpg', path: 'img/background/fondo1.jpg', type: 'background', isOriginal: true },
+                { name: 'fondo2.jpg', path: 'img/background/fondo2.jpg', type: 'background', isOriginal: true },
+                { name: 'fondo3.jpg', path: 'img/background/fondo3.jpg', type: 'background', isOriginal: true },
+                { name: 'fondo4.jpg', path: 'img/background/fondo4.jpg', type: 'background', isOriginal: true },
+                { name: 'fondo5.jpg', path: 'img/background/fondo5.jpg', type: 'background', isOriginal: true }
+            ]
+        };
     }
     
     // Renderizar assets actuales en la galería
@@ -808,12 +841,12 @@ class ControlPanel {
                         });
                         
                         console.log(`Asset ${assetName} reemplazado exitosamente`);
-                        alert(`✅ ${assetName} ha sido reemplazado exitosamente`);
+                        this.showSaveNotification(`✅ ${assetName} reemplazado exitosamente`);
                     } else {
-                        alert(`❌ Error: La imagen debe tener dimensiones ${requiredDimensions.width}x${requiredDimensions.height} píxeles`);
+                        this.showSaveNotification(`❌ Error: La imagen debe tener dimensiones ${requiredDimensions.width}x${requiredDimensions.height} píxeles`);
                     }
                 } catch (error) {
-                    alert(`❌ Error al procesar la imagen: ${error.message}`);
+                    this.showSaveNotification(`❌ Error al procesar la imagen: ${error.message}`);
                 }
             }
         };
@@ -823,18 +856,336 @@ class ControlPanel {
     
     // Eliminar asset actual
     deleteCurrentAsset(assetName, assetType) {
-        if (confirm(`¿Estás seguro de que quieres eliminar ${assetName}? Esta acción no se puede deshacer.`)) {
-            // Encontrar y remover el asset de la lista actual
-            const assetList = this.currentAssets[assetType + 's'] || this.currentAssets[assetType];
-            if (assetList) {
-                const index = assetList.findIndex(asset => asset.name === assetName);
-                if (index !== -1) {
-                    assetList.splice(index, 1);
-                    this.renderCurrentAssets();
-                    console.log(`Asset ${assetName} eliminado`);
-                    alert(`✅ ${assetName} ha sido eliminado`);
-                }
+        // Normalizar tipo (singular/plural)
+        const typePlural = assetType === 'background' ? 'backgrounds'
+            : assetType === 'badItem' ? 'badItems'
+            : 'objects';
+    
+        // Encontrar y remover el asset de la lista actual
+        const assetList = this.currentAssets[typePlural];
+        if (assetList) {
+            const index = assetList.findIndex(asset => asset.name === assetName);
+            if (index !== -1) {
+                const asset = assetList[index];
+    
+                // Eliminar del juego (tanto originales como custom)
+                this.removeAssetFromGameByIndex(typePlural, index);
+    
+                // Eliminar de la lista
+                assetList.splice(index, 1);
+    
+                // Guardar estado
+                this.saveAssetsState();
+                this.renderCurrentAssets();
+    
+                console.log(`Asset ${assetName} eliminado del panel y del juego`);
+                this.showSaveNotification(`✅ ${assetName} eliminado`);
             }
+        }
+    }
+    
+    // Eliminar asset del juego por índice
+    removeAssetFromGameByIndex(assetType, index) {
+        // Normalizar tipo (aceptar singular/plural)
+        const type = (assetType === 'background' || assetType === 'backgrounds') ? 'backgrounds'
+            : (assetType === 'badItem' || assetType === 'badItems') ? 'badItems'
+            : 'objects';
+    
+        let targetArray = null;
+    
+        if (type === 'objects' && typeof goodItemImages !== 'undefined') {
+            targetArray = goodItemImages;
+        } else if (type === 'badItems' && typeof badItemImages !== 'undefined') {
+            targetArray = badItemImages;
+        } else if (type === 'backgrounds' && typeof backgroundTextures !== 'undefined') {
+            targetArray = backgroundTextures;
+        }
+    
+        if (targetArray && index >= 0 && index < targetArray.length) {
+            targetArray.splice(index, 1);
+            console.log(`❌ Asset eliminado del array de p5 (Index: ${index}, Nuevo tamaño: ${targetArray.length})`);
+        }
+    }
+    
+    // Eliminar asset del juego
+    removeAssetFromGame(assetType, assetName) {
+        // Normalizar tipo (aceptar singular/plural)
+        const type = (assetType === 'background' || assetType === 'backgrounds') ? 'backgrounds'
+            : (assetType === 'badItem' || assetType === 'badItems') ? 'badItems'
+            : 'objects';
+    
+        let targetArray = null;
+        let trackingArray = null;
+    
+        // Obtener el array correcto del juego y el tracking
+        if (type === 'objects' && typeof goodItemImages !== 'undefined') {
+            targetArray = goodItemImages;
+            trackingArray = this.customAssetTracking.objects;
+        } else if (type === 'badItems' && typeof badItemImages !== 'undefined') {
+            targetArray = badItemImages;
+            trackingArray = this.customAssetTracking.badItems;
+        } else if (type === 'backgrounds' && typeof backgroundTextures !== 'undefined') {
+            targetArray = backgroundTextures;
+            trackingArray = this.customAssetTracking.backgrounds;
+        }
+    
+        if (targetArray && trackingArray) {
+            // Encontrar el asset en el tracking
+            const trackIndex = trackingArray.findIndex(t => t.name === assetName);
+    
+            if (trackIndex !== -1) {
+                const tracked = trackingArray[trackIndex];
+    
+                // Encontrar el índice real en el array del juego usando la referencia
+                const realIndex = targetArray.indexOf(tracked.p5ImageRef);
+    
+                if (realIndex !== -1) {
+                    // Eliminar del array del juego
+                    targetArray.splice(realIndex, 1);
+                    console.log(`❌ Asset eliminado del array de p5: ${assetName} (Index: ${realIndex})`);
+                    console.log(`   Array actualizado. Tamaño: ${targetArray.length}`);
+                }
+    
+                // Eliminar del tracking
+                trackingArray.splice(trackIndex, 1);
+    
+                // Actualizar índices en el tracking (los que están después del eliminado)
+                for (let i = 0; i < trackingArray.length; i++) {
+                    const currentIndex = targetArray.indexOf(trackingArray[i].p5ImageRef);
+                    if (currentIndex !== -1) {
+                        trackingArray[i].arrayIndex = currentIndex;
+                    }
+                }
+            } else {
+                console.warn(`⚠️ Asset no encontrado en tracking: ${assetName}`);
+            }
+        }
+    }
+     
+     // Configuración del modal de carga de assets
+     setupAssetUploadModal() {
+         if (!this.addAssetBtn || !this.assetUploadModal) return;
+         
+         // Abrir modal al hacer clic en el botón +
+         this.addAssetBtn.addEventListener('click', () => {
+             this.assetUploadModal.classList.add('show');
+         });
+         
+         // Cerrar modal
+         this.closeModalBtn.addEventListener('click', () => {
+             this.assetUploadModal.classList.remove('show');
+         });
+         
+         // Cerrar modal al hacer clic fuera del contenido
+         this.assetUploadModal.addEventListener('click', (e) => {
+             if (e.target === this.assetUploadModal) {
+                 this.assetUploadModal.classList.remove('show');
+             }
+         });
+         
+         // Configurar botones de tipo de asset
+         this.assetTypeButtons.forEach(btn => {
+             btn.addEventListener('click', () => {
+                 const assetType = btn.getAttribute('data-type');
+                 this.currentUploadType = assetType;
+                 this.hiddenFileInput.click();
+                 this.assetUploadModal.classList.remove('show');
+             });
+         });
+         
+         // Configurar input de archivo oculto
+         this.hiddenFileInput.addEventListener('change', (e) => {
+             if (this.currentUploadType) {
+                 const requiredDimensions = this.currentUploadType === 'backgrounds' 
+                     ? { width: 1920, height: 1080 } 
+                     : { width: 512, height: 512 };
+                 
+                 this.handleNewAssetUpload(e, this.currentUploadType, requiredDimensions);
+                 this.currentUploadType = null;
+             }
+         });
+     }
+     
+     // Manejar carga de nuevos assets desde el botón +
+     async handleNewAssetUpload(event, assetType, requiredDimensions) {
+         const files = Array.from(event.target.files);
+         
+         for (const file of files) {
+             try {
+                 const isValid = await this.validateImageDimensions(file, requiredDimensions);
+                 
+                 if (isValid) {
+                     const assetData = await this.processAsset(file, assetType);
+                     
+                     // Agregar a la lista de assets actuales
+                     if (!this.currentAssets[assetType]) {
+                         this.currentAssets[assetType] = [];
+                     }
+                     
+                     const newAsset = {
+                         name: file.name,
+                         path: assetData.dataUrl,
+                         type: assetType.replace(/s$/, ''),
+                         isCustom: true
+                     };
+                     
+                     this.currentAssets[assetType].push(newAsset);
+                     
+                     // ⭐ INTEGRAR CON EL JUEGO INMEDIATAMENTE
+                     this.addAssetToGame(assetType, assetData.dataUrl, file.name);
+                     
+                     this.showSaveNotification(`✅ ${file.name} cargado correctamente`);
+                 } else {
+                     this.showSaveNotification(
+                         `❌ ${file.name}: Dimensiones incorrectas. Requerido: ${requiredDimensions.width}x${requiredDimensions.height}px`
+                     );
+                 }
+             } catch (error) {
+                 this.showSaveNotification(`❌ Error al procesar ${file.name}: ${error.message}`);
+             }
+         }
+         
+         // Renderizar los assets actualizados
+         this.renderCurrentAssets();
+         
+         // Guardar en localStorage
+         this.saveAssetsToLocalStorage();
+         
+         // Limpiar input
+         event.target.value = '';
+     }
+     
+     // Agregar asset al juego dinámicamente
+     addAssetToGame(assetType, dataUrl, fileName) {
+         // Crear imagen desde dataUrl
+         const img = new Image();
+         img.onload = () => {
+             // Convertir a p5.Image
+             const p5img = createImage(img.width, img.height);
+             p5img.drawingContext.drawImage(img, 0, 0);
+             
+             // Agregar al array correspondiente del juego y trackear
+             if (assetType === 'objects' && typeof goodItemImages !== 'undefined') {
+                 const arrayIndex = goodItemImages.length;
+                 goodItemImages.push(p5img);
+                 
+                 // Trackear para poder eliminarlo después
+                 this.customAssetTracking.objects.push({
+                     name: fileName,
+                     p5ImageRef: p5img,
+                     arrayIndex: arrayIndex
+                 });
+                 
+                 console.log(`✅ Asset bueno agregado: ${fileName} (Total: ${goodItemImages.length})`);
+             } else if (assetType === 'badItems' && typeof badItemImages !== 'undefined') {
+                 const arrayIndex = badItemImages.length;
+                 badItemImages.push(p5img);
+                 
+                 // Trackear para poder eliminarlo después
+                 this.customAssetTracking.badItems.push({
+                     name: fileName,
+                     p5ImageRef: p5img,
+                     arrayIndex: arrayIndex
+                 });
+                 
+                 console.log(`✅ Asset malo agregado: ${fileName} (Total: ${badItemImages.length})`);
+             } else if (assetType === 'backgrounds' && typeof backgroundTextures !== 'undefined') {
+                 const arrayIndex = backgroundTextures.length;
+                 backgroundTextures.push(p5img);
+                 
+                 // Trackear para poder eliminarlo después
+                 this.customAssetTracking.backgrounds.push({
+                     name: fileName,
+                     p5ImageRef: p5img,
+                     arrayIndex: arrayIndex
+                 });
+                 
+                 console.log(`✅ Fondo agregado: ${fileName} (Total: ${backgroundTextures.length})`);
+             }
+         };
+         img.src = dataUrl;
+     }
+     
+     // Guardar estado completo de assets
+     saveAssetsState() {
+         localStorage.setItem('assetsState', JSON.stringify(this.currentAssets));
+         
+         // También guardar los custom assets por separado para compatibilidad
+         const customAssets = {
+             objects: this.currentAssets.objects.filter(a => a.isCustom).map(a => ({
+                 name: a.name,
+                 path: a.path
+             })),
+             badItems: this.currentAssets.badItems.filter(a => a.isCustom).map(a => ({
+                 name: a.name,
+                 path: a.path
+             })),
+             backgrounds: this.currentAssets.backgrounds.filter(a => a.isCustom).map(a => ({
+                 name: a.name,
+                 path: a.path
+             }))
+         };
+         
+         localStorage.setItem('customAssets', JSON.stringify(customAssets));
+         console.log('💾 Estado de assets guardado en localStorage');
+     }
+     
+     // Guardar assets en localStorage (alias para compatibilidad)
+     saveAssetsToLocalStorage() {
+         this.saveAssetsState();
+     }
+     
+     // Cargar assets desde localStorage al iniciar
+     loadAssetsFromLocalStorage() {
+         try {
+             const savedAssets = localStorage.getItem('customAssets');
+             if (savedAssets) {
+                 const assetsData = JSON.parse(savedAssets);
+                 
+                 // Cargar objetos buenos
+                 if (assetsData.objects) {
+                     for (const asset of assetsData.objects) {
+                         this.addAssetToGame('objects', asset.path, asset.name);
+                         this.currentAssets.objects.push({
+                             name: asset.name,
+                             path: asset.path,
+                             type: 'object',
+                             isCustom: true
+                         });
+                     }
+                 }
+                 
+                 // Cargar objetos malos
+                 if (assetsData.badItems) {
+                     for (const asset of assetsData.badItems) {
+                         this.addAssetToGame('badItems', asset.path, asset.name);
+                         this.currentAssets.badItems.push({
+                             name: asset.name,
+                             path: asset.path,
+                             type: 'badItem',
+                             isCustom: true
+                         });
+                     }
+                 }
+                 
+                 // Cargar fondos
+                 if (assetsData.backgrounds) {
+                     for (const asset of assetsData.backgrounds) {
+                         this.addAssetToGame('backgrounds', asset.path, asset.name);
+                         this.currentAssets.backgrounds.push({
+                             name: asset.name,
+                             path: asset.path,
+                             type: 'background',
+                             isCustom: true
+                         });
+                     }
+                 }
+                 
+                 console.log('💾 Assets cargados desde localStorage');
+                 this.renderCurrentAssets();
+             }
+         } catch (error) {
+             console.error('Error al cargar assets desde localStorage:', error);
          }
      }
      

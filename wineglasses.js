@@ -1,30 +1,5 @@
-// Imágenes de items buenos (se cargan globalmente)
-let goodItemImages = [];
-let badItemImages = [];
-
-// Cargar imágenes de items buenos
-function preload() {
-    // Cargar imágenes de objetos buenos
-    goodItemImages.push(loadImage('img/objetos/uva_roja.png'));
-    goodItemImages.push(loadImage('img/objetos/uva_roja2.png'));
-    goodItemImages.push(loadImage('img/objetos/uva_verde.png'));
-    goodItemImages.push(loadImage('img/objetos/uva.png'));
-    goodItemImages.push(loadImage('img/objetos/hoja.png'));
-    goodItemImages.push(loadImage('img/objetos/copa.png'));
-    goodItemImages.push(loadImage('img/objetos/copa2.png'));
-    goodItemImages.push(loadImage('img/objetos/botella.png'));
-    goodItemImages.push(loadImage('img/objetos/destapador.png'));
-    goodItemImages.push(loadImage('img/objetos/destapador2.png'));
-    
-    // Cargar imágenes de objetos malos
-    badItemImages.push(loadImage('img/malos/bicho1.png'));
-    badItemImages.push(loadImage('img/malos/bicho2.png'));
-    badItemImages.push(loadImage('img/malos/bicho3.png'));
-    badItemImages.push(loadImage('img/malos/bicho4.png'));
-    badItemImages.push(loadImage('img/malos/bicho5.png'));
-    badItemImages.push(loadImage('img/malos/bicho6.png'));
-    badItemImages.push(loadImage('img/malos/bicho7.png'));
-}
+// Imágenes de items buenos y malos (se cargan en sketch.js preload())
+// Las variables goodItemImages y badItemImages se declaran en sketch.js
 
 // Sistema de copas de vino que caen
 class WineGlassSystem {
@@ -228,7 +203,6 @@ class Item {
         if (this.isBad) {
             // ===== ITEM MALO =====
             const pulseFactor = 1 + 0.15 * sin(this.pulsePhase * 2);
-            // const rotation = this.pulsePhase * 0.5; // ROTACIÓN ELIMINADA
             
             // Aura roja de peligro
             ctx.noStroke();
@@ -237,22 +211,25 @@ class Item {
                 ctx.ellipse(0, 0, this.size * (1.3 + i * 0.15) * pulseFactor);
             }
             
-            // Dibujar imagen de bicho
+            // Dibujar imagen de bicho o círculo si no hay imágenes
             if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
                 ctx.push();
-                // ctx.rotate(rotation); // ROTACIÓN ELIMINADA
                 ctx.scale(pulseFactor);
                 ctx.tint(255, 100, 100); // Tinte rojizo
                 ctx.imageMode(CENTER);
                 ctx.image(badItemImages[this.imageIndex], 0, 0, this.size, this.size);
                 ctx.pop();
+            } else {
+                // Fallback: círculo rojo
+                ctx.noStroke();
+                ctx.fill(200, 30, 30);
+                ctx.ellipse(0, 0, this.size * pulseFactor);
             }
         } else {
             // ===== ITEM BUENO =====
             const captureProgress = this.hoverTime / this.requiredHoverTime;
             const maxScale = CONFIG.wineGlasses.captureScale;
             const scaleFactor = 1.0 + captureProgress * (maxScale - 1.0);
-            // const rotation = captureProgress * PI; // ROTACIÓN ELIMINADA
             const pulseFactor = this.isBeingHovered ? 1 + 0.05 * sin(this.pulsePhase * 4) : 1;
             
             // Glow dorado
@@ -269,16 +246,20 @@ class Item {
                 }
             }
             
-            // Dibujar imagen del item bueno
+            // Dibujar imagen del item bueno o círculo si no hay imágenes
             if (goodItemImages.length > 0 && goodItemImages[this.imageIndex]) {
                 ctx.push();
-                // ctx.rotate(rotation); // ROTACIÓN ELIMINADA
                 ctx.scale(scaleFactor * pulseFactor);
                 const brightness = 1.0 + captureProgress * 0.4;
                 ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
                 ctx.imageMode(CENTER);
                 ctx.image(goodItemImages[this.imageIndex], 0, 0, this.size, this.size);
                 ctx.pop();
+            } else {
+                // Fallback: círculo dorado
+                ctx.noStroke();
+                ctx.fill(255, 215, 80);
+                ctx.ellipse(0, 0, this.size * pulseFactor * scaleFactor);
             }
             
             // Barra de progreso

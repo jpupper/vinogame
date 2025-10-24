@@ -71,16 +71,27 @@ class DynamicBackground {
             }
         }
         
-        // Actualizar transición de texturas
-        this.transitionProgress += this.transitionSpeed;
-        if (this.transitionProgress >= 1) {
+        // Actualizar transición de texturas con protección de arrays vacíos
+        if (backgroundTextures && backgroundTextures.length > 1) {
+            this.transitionProgress += this.transitionSpeed;
+            if (this.transitionProgress >= 1) {
+                this.transitionProgress = 0;
+                this.currentTextureIndex = this.nextTextureIndex;
+                this.nextTextureIndex = (this.nextTextureIndex + 1) % backgroundTextures.length;
+            }
+        } else {
+            // Sin texturas o con una sola, fijar índices y progreso
             this.transitionProgress = 0;
-            this.currentTextureIndex = this.nextTextureIndex;
-            this.nextTextureIndex = (this.nextTextureIndex + 1) % backgroundTextures.length;
+            this.currentTextureIndex = 0;
+            this.nextTextureIndex = 0;
         }
         
-        // Actualizar rotación de textura
-        this.textureRotation += this.textureRotationSpeed;
+        // Actualizar rotación de textura (solo si hay texturas)
+        if (backgroundTextures && backgroundTextures.length > 0) {
+            this.textureRotation += this.textureRotationSpeed;
+        } else {
+            this.textureRotation = 0;
+        }
     }
     
     
@@ -115,7 +126,15 @@ class DynamicBackground {
     }
     
     drawWineCellarBackground() {
-        // Fondo negro profundo
+        // Fondo negro si no hay texturas
+        if (!backgroundTexturesLoaded || backgroundTextures.length === 0) {
+            noStroke();
+            fill(0);
+            rect(0, 0, width, height);
+            return;
+        }
+        
+        // Fondo base oscuro
         background(5, 5, 10);
         
         // Dibujar textura dinámica con transición suave

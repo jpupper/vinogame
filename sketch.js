@@ -15,6 +15,21 @@ let grapeTexturesLoaded = false;
 let backgroundTextures = [];
 let backgroundTexturesLoaded = false;
 
+// Imágenes de items buenos y malos (desde wineglasses.js)
+// Estos arrays son dinámicos y pueden ser modificados por el panel de control
+let goodItemImages = [];
+let badItemImages = [];
+
+// Hacer los arrays accesibles globalmente para el panel de control
+if (typeof window !== 'undefined') {
+    window.goodItemImages = goodItemImages;
+    window.badItemImages = badItemImages;
+    window.backgroundTextures = backgroundTextures;
+}
+
+// Fuente para texto WEBGL
+let gameFont;
+
 // Buffers
 let fondoBuffer;
 let juegoBuffer;
@@ -56,11 +71,11 @@ let targetZoom = 1.0;
 function preload() {
   // Arrays de paths para cargar imágenes
   const backgroundImages = [
-    'img/1.jpg',   // Uvas verdes translúcidas
-    'img/3.jpg',   // Uvas moradas oscuras
-    'img/6.png',   // Gota azul
-    'img/7.png',   // Forma orgánica morada
-    'img/8.jpg'    // Células azules/moradas
+    'img/objetos/uva_verde.png',   // Uvas verdes
+    'img/objetos/uva_roja.png',    // Uvas rojas
+    'img/objetos/uva_roja2.png',   // Uvas rojas 2
+    'img/objetos/uva.png',         // Uva genérica
+    'img/objetos/gota.png'         // Gota
 ];
 
 const backgroundImagesPaths = [
@@ -81,12 +96,30 @@ const backgroundImagesPaths = [
     backgroundTextures.push(loadImage(path));
   }
   
+  // Cargar imágenes de objetos buenos (desde wineglasses.js)
+  goodItemImages.push(loadImage('img/objetos/uva_roja.png'));
+  goodItemImages.push(loadImage('img/objetos/uva_roja2.png'));
+  goodItemImages.push(loadImage('img/objetos/uva_verde.png'));
+  goodItemImages.push(loadImage('img/objetos/uva.png'));
+  goodItemImages.push(loadImage('img/objetos/hoja.png'));
+  goodItemImages.push(loadImage('img/objetos/copa.png'));
+  goodItemImages.push(loadImage('img/objetos/copa2.png'));
+  goodItemImages.push(loadImage('img/objetos/botella.png'));
+  goodItemImages.push(loadImage('img/objetos/destapador.png'));
+  goodItemImages.push(loadImage('img/objetos/destapador2.png'));
+  
+  // Cargar imágenes de objetos malos (desde wineglasses.js)
+  badItemImages.push(loadImage('img/malos/bicho1.png'));
+  badItemImages.push(loadImage('img/malos/bicho2.png'));
+  badItemImages.push(loadImage('img/malos/bicho3.png'));
+  badItemImages.push(loadImage('img/malos/bicho4.png'));
+  badItemImages.push(loadImage('img/malos/bicho5.png'));
+  badItemImages.push(loadImage('img/malos/bicho6.png'));
+  badItemImages.push(loadImage('img/malos/bicho7.png'));
+  
   // Cargar shaders
   feedbackShader = loadShader('feedback.vert', 'feedback.frag');
   compositeShader = loadShader('composite.vert', 'composite.frag');
-  
-  // Cargar imagen de uva
-  loadGrapeImage();
   
   // Crear e inicializar barril
   barrelIndicator = new BarrelIndicator();
@@ -99,6 +132,9 @@ function setup() {
   grapeTexturesLoaded = true;
   backgroundTexturesLoaded = true;
   shaderLoaded = true;
+  
+  // NO configurar fuente en WEBGL - causa errores
+  // La fuente se configura en los buffers 2D individuales
   
   // Crear buffers
   fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback simple
@@ -321,6 +357,28 @@ function draw() {
   barrelIndicator.update(comboLevel);
   barrelIndicator.display(juegoBuffer);
   
+  // INDICADOR DE SLOW MOTION (en juegoBuffer)
+  if (timeScale < 0.9) {
+    juegoBuffer.push();
+    juegoBuffer.fill(100, 200, 255, 150 * (1 - timeScale));
+    juegoBuffer.noStroke();
+    juegoBuffer.textAlign(CENTER, CENTER);
+    juegoBuffer.textSize(40);
+    juegoBuffer.textStyle(BOLD);
+    juegoBuffer.text('SLOW MOTION', width/2, 80);
+    juegoBuffer.textStyle(NORMAL);
+    juegoBuffer.pop();
+  }
+  
+  // FPS (en juegoBuffer)
+  const fps = frameRate();
+  juegoBuffer.push();
+  juegoBuffer.textAlign(LEFT, TOP);
+  juegoBuffer.textSize(20);
+  juegoBuffer.fill(100, 255, 100);
+  juegoBuffer.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
+  juegoBuffer.pop();
+  
   // ===== COMPOSICIÓN FINAL =====
   push();
   
@@ -343,22 +401,6 @@ function draw() {
   
   // Dibujar juego encima
   image(juegoBuffer, 0, 0);
-  
-  // FPS (directo en canvas principal)
-  displayFPS();
-  
-  // INDICADOR DE SLOW MOTION
-  if (timeScale < 0.9) {
-    push();
-    fill(100, 200, 255, 150 * (1 - timeScale));
-    noStroke();
-    textAlign(CENTER, CENTER);
-    textSize(40);
-    textStyle(BOLD);
-    text('SLOW MOTION', width/2, 80);
-    textStyle(NORMAL);
-    pop();
-  }
   
   pop();
   
@@ -433,15 +475,5 @@ function windowResized() {
   dynamicBackground.resize();
 }
 
-function displayFPS() {
-  const fps = frameRate();
-  push();
-  textAlign(LEFT, TOP);
-  textSize(20);
-  
-  // Texto principal
-  fill(100, 255, 100);
-  text(`FPS: ${fps.toFixed(1)}`, 40, 100);
-  pop();
-}
+// Función displayFPS eliminada - ahora se dibuja en juegoBuffer
 
