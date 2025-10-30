@@ -6,6 +6,20 @@ let trailSystem;
 let dynamicBackground;
 let scoreSystem;
 let medidorIndicator; // antes: barrelIndicator
+let medidorIndicatorLeft;
+let medidorIndicatorRight;
+
+// Estados y modos de juego
+let gameState = 'standby'; // 'standby' | 'playing'
+let gameMode = null; // 'cooperative' | 'competitive'
+let selectionScreen;
+let rankingSystem;
+let rankingSaved = false;
+let scoreSystemLeft = null;
+let scoreSystemRight = null;
+// Celebraciones por lado en competitivo
+let leftCelebration = null;
+let rightCelebration = null;
 
 // Modo debug
 let isDebug = false;
@@ -153,9 +167,13 @@ function preload() {
   feedbackShader = loadShader('sh/feedback.vert', 'sh/feedback.frag');
   compositeShader = loadShader('sh/composite.vert', 'sh/composite.frag');
   
-  // Crear e inicializar medidor
-  medidorIndicator = new MedidorIndicator();
+  // Crear e inicializar medidores
+  medidorIndicator = new MedidorIndicator(); // cooperativo
   medidorIndicator.loadAssets();
+  medidorIndicatorLeft = new MedidorIndicator();
+  medidorIndicatorLeft.loadAssets();
+  medidorIndicatorRight = new MedidorIndicator();
+  medidorIndicatorRight.loadAssets();
   // Trofeo: cargar imagen de copa y exponer global
   if (typeof window !== 'undefined') {
     window.trophyImage = loadImage('img/copa/copa.png');
@@ -202,6 +220,18 @@ function setup() {
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
   medidorIndicator.setup();
+  // Configurar medidores competitivos
+  medidorIndicatorLeft.setup();
+  medidorIndicatorLeft.position.x = 40;
+  medidorIndicatorLeft.position.y = 140;
+  medidorIndicatorRight.setup();
+  medidorIndicatorRight.position.x = width - medidorIndicatorRight.size.w - 40;
+  medidorIndicatorRight.position.y = 140;
+
+  // Pantalla de selección y ranking
+  selectionScreen = new ModeSelectionScreen();
+  selectionScreen.setup();
+  rankingSystem = new RankingSystem();
 }
 
 // Variables para optimización de rendimiento
@@ -417,97 +447,151 @@ function draw() {
   
   // ===== BUFFER DE JUEGO =====
   juegoBuffer.clear();
+  if (gameState === 'playing') {
+    // Actualizar y mostrar rastros (en juegoBuffer)
+    trailSystem.update();
+    trailSystem.display(juegoBuffer);
 
-  // Actualizar y mostrar rastros (en juegoBuffer)
-  trailSystem.update();
-  trailSystem.display(juegoBuffer);
-  
-  // Actualizar y mostrar copas de vino (en juegoBuffer)
-  wineGlassSystem.update();
-  wineGlassSystem.display(juegoBuffer);
+    // Actualizar y mostrar copas de vino (en juegoBuffer)
+    wineGlassSystem.update();
+    wineGlassSystem.display(juegoBuffer);
 
-  // Mostrar el servidor de puntos solo en modo debug (elipses)
-  if (isDebug) {
-    Pserver.display(juegoBuffer);
-  }
-  Pserver.update();
-  
-  // Comprobar colisiones con copas de vino y items malos - optimizado
-  if (!scoreSystem.gameOver && !scoreSystem.win && frameCount % 2 === 0) { // Solo cada 2 frames
-    const allPoints = Pserver.getAllPoints();
-    const collisions = wineGlassSystem.checkCollisions(allPoints);
-    
-    // Procesar copas de vino recolectadas
-    for (let collected of collisions.glasses) {
-      scoreSystem.addScore(collected.points, collected.x, collected.y);
-      particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
-      dynamicBackground.addRipple(collected.x, collected.y);
-      
-      // ⭐ CREAR ONDA EXPANSIVA ⭐
-      createWave(collected.x, collected.y);
-      
-      // ACTIVAR EFECTOS ESPECIALES
-      targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
-      
-      // PARTICLE BURST ESPECIAL en combos milestone
-      if (scoreSystem.currentCombo % 5 === 0 && scoreSystem.currentCombo >= 5) {
-        // Explosión masiva de partículas
-        for (let i = 0; i < 50; i++) {
-          particleSystem.createExplosion(
-            collected.x + random(-50, 50), 
-            collected.y + random(-50, 50), 
-            color(255, 200 + random(-50, 50), 0) // Dorado
-          );
+    // Mostrar el servidor de puntos solo en modo debug (elipses)
+    if (isDebug) {
+      Pserver.display(juegoBuffer);
+    }
+    Pserver.update();
+
+    // Comprobar colisiones con copas de vino y items malos - optimizado
+    if (frameCount % 2 === 0) { // Solo cada 2 frames
+      const allPoints = Pserver.getAllPoints();
+      const collisions = wineGlassSystem.checkCollisions(allPoints);
+
+      if (gameMode === 'competitive') {
+        // Puntuación por lado (izquierda/derecha)
+        for (let collected of collisions.glasses) {
+          const target = collected.x < width / 2 ? scoreSystemLeft : scoreSystemRight;
+          if (!target.gameOver && !target.win) {
+            target.addScore(collected.points, collected.x, collected.y);
+          }
+          particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
+          dynamicBackground.addRipple(collected.x, collected.y);
+          createWave(collected.x, collected.y);
+          targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
+        }
+
+        for (let bad of collisions.badItems) {
+          const target = bad.x < width / 2 ? scoreSystemLeft : scoreSystemRight;
+          if (!target.gameOver && !target.win) {
+            target.addScore(-bad.penalty, bad.x, bad.y);
+            target.loseLife();
+            target.resetCombo();
+          }
+          particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
+          dynamicBackground.addRipple(bad.x, bad.y);
+          targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
+          shakeAmount = 15;
+        }
+      } else {
+        // Modo cooperativo (original)
+        if (!scoreSystem.gameOver && !scoreSystem.win) {
+          // Procesar copas de vino recolectadas
+          for (let collected of collisions.glasses) {
+            scoreSystem.addScore(collected.points, collected.x, collected.y);
+            particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
+            dynamicBackground.addRipple(collected.x, collected.y);
+            createWave(collected.x, collected.y);
+            targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
+          }
+          // Procesar items malos recolectados
+          for (let bad of collisions.badItems) {
+            scoreSystem.addScore(-bad.penalty, bad.x, bad.y);
+            scoreSystem.loseLife();
+            particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
+            dynamicBackground.addRipple(bad.x, bad.y);
+            scoreSystem.resetCombo();
+            targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
+            shakeAmount = 15;
+          }
         }
       }
-      
-      // SLOW MOTION en combos altos (x10, x15, x20)
-      if (scoreSystem.currentCombo === 10 || scoreSystem.currentCombo === 15 || scoreSystem.currentCombo === 20) {
-        targetTimeScale = 0.5; // 50% velocidad
-        slowMotionDuration = 120; // 2 segundos a 60fps
+    }
+
+    // Actualizar y mostrar efectos de partículas (en juegoBuffer)
+    particleSystem.update();
+    particleSystem.display(juegoBuffer);
+
+    // Sistema de puntuación y medidor
+    if (gameMode === 'competitive') {
+      if (!scoreSystemLeft) scoreSystemLeft = new ScoreSystem();
+      if (!scoreSystemRight) scoreSystemRight = new ScoreSystem();
+      scoreSystemLeft.update();
+      scoreSystemRight.update();
+      // Detectar celebraciones por lado (win/lose)
+      const leftWinsCond = (scoreSystemLeft.win || scoreSystemRight.gameOver);
+      const leftLosesCond = (scoreSystemLeft.gameOver || scoreSystemRight.win);
+      const rightWinsCond = (scoreSystemRight.win || scoreSystemLeft.gameOver);
+      const rightLosesCond = (scoreSystemRight.gameOver || scoreSystemLeft.win);
+      if (!leftCelebration && (leftWinsCond || leftLosesCond)) {
+        leftCelebration = { type: leftWinsCond ? 'win' : 'lose', start: millis(), duration: 3500 };
+      }
+      if (!rightCelebration && (rightWinsCond || rightLosesCond)) {
+        rightCelebration = { type: rightWinsCond ? 'win' : 'lose', start: millis(), duration: 3500 };
+      }
+
+      // Aplicar efectos al shader y partículas durante celebración
+      applyCelebrationEffects('left', leftCelebration);
+      applyCelebrationEffects('right', rightCelebration);
+
+      displayCompetitiveHUD(juegoBuffer);
+
+      // Medidores por equipo
+      medidorIndicatorLeft.update(scoreSystemLeft.comboCount, CONFIG.score.winComboThreshold);
+      medidorIndicatorLeft.display(juegoBuffer);
+      medidorIndicatorRight.update(scoreSystemRight.comboCount, CONFIG.score.winComboThreshold);
+      medidorIndicatorRight.display(juegoBuffer);
+
+      // Guardar ranking cuando termina una partida (cualquiera de los equipos)
+      if (!rankingSaved && ((scoreSystemLeft.gameOver || scoreSystemLeft.win) || (scoreSystemRight.gameOver || scoreSystemRight.win))) {
+        const leftScoreFinal = Math.floor(scoreSystemLeft.score);
+        const rightScoreFinal = Math.floor(scoreSystemRight.score);
+        let winnerSide = null;
+        if (scoreSystemLeft.win || scoreSystemRight.gameOver) {
+          winnerSide = 'izquierda';
+        } else if (scoreSystemRight.win || scoreSystemLeft.gameOver) {
+          winnerSide = 'derecha';
+        }
+        rankingSystem.saveCompetitive(leftScoreFinal, rightScoreFinal, winnerSide);
+        rankingSaved = true;
+      }
+    } else {
+      scoreSystem.update();
+      scoreSystem.display(juegoBuffer);
+      medidorIndicator.update(scoreSystem.comboCount, CONFIG.score.winComboThreshold);
+      medidorIndicator.display(juegoBuffer);
+
+      if (!rankingSaved && (scoreSystem.gameOver || scoreSystem.win)) {
+        rankingSystem.saveCooperative(Math.floor(scoreSystem.score));
+        rankingSaved = true;
       }
     }
-    
-    // Procesar items malos recolectados
-    for (let bad of collisions.badItems) {
-      scoreSystem.addScore(-bad.penalty, bad.x, bad.y);
-      scoreSystem.loseLife();
-      particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
-      dynamicBackground.addRipple(bad.x, bad.y);
-      scoreSystem.resetCombo();
-      
-      // ACTIVAR EFECTOS ESPECIALES (más intenso para items malos)
-      targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
-      
-      // SCREEN SHAKE al perder vida
-      shakeAmount = 15;
+
+    // Indicadores de debug (FPS, cantidad de puntos)
+    if (isDebug) {
+      const fps = frameRate();
+      const pointsCount = Pserver.getAllPoints().length;
+      juegoBuffer.push();
+      juegoBuffer.textAlign(LEFT, TOP);
+      juegoBuffer.textSize(20);
+      juegoBuffer.fill(100, 255, 100);
+      juegoBuffer.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
+      juegoBuffer.fill(255, 180, 70);
+      juegoBuffer.text(`Puntos (count): ${pointsCount}`, 40, 125);
+      juegoBuffer.pop();
     }
-  }
-  
-  // Actualizar y mostrar efectos de partículas (en juegoBuffer)
-  particleSystem.update();
-  particleSystem.display(juegoBuffer);
-  
-  // Actualizar y mostrar sistema de puntuación (en juegoBuffer)
-  scoreSystem.update();
-  scoreSystem.display(juegoBuffer);
-  
-  // Actualizar medidor con combo actual y umbral
-  medidorIndicator.update(scoreSystem.comboCount, CONFIG.score.winComboThreshold);
-  medidorIndicator.display(juegoBuffer);
-  
-  // Indicadores de debug (FPS, cantidad de puntos)
-  if (isDebug) {
-    const fps = frameRate();
-    const pointsCount = Pserver.getAllPoints().length;
-    juegoBuffer.push();
-    juegoBuffer.textAlign(LEFT, TOP);
-    juegoBuffer.textSize(20);
-    juegoBuffer.fill(100, 255, 100);
-    juegoBuffer.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
-    juegoBuffer.fill(255, 180, 70);
-    juegoBuffer.text(`Puntos (count): ${pointsCount}`, 40, 125);
-    juegoBuffer.pop();
+  } else {
+    // STANDBY: dibujar UI de selección de modo encima del fondo con shaders
+    selectionScreen.display(juegoBuffer);
   }
   
   // ===== COMPOSICIÓN FINAL =====
@@ -576,8 +660,25 @@ function touchEnded() {
 
 function mousePressed() {
   // Reiniciar el juego si está en estado de Game Over
-  if (scoreSystem && (scoreSystem.gameOver || scoreSystem.win)) {
-    resetGame();
+  if (gameState === 'standby') {
+    const selected = selectionScreen.handleClick(mouseX, mouseY);
+    if (selected) {
+      gameMode = selected;
+      gameState = 'playing';
+      rankingSaved = false;
+      // Preparar sistemas según el modo
+      if (gameMode === 'competitive') {
+        scoreSystemLeft = new ScoreSystem();
+        scoreSystemRight = new ScoreSystem();
+      } else {
+        scoreSystem = new ScoreSystem();
+      }
+      return;
+    }
+  } else {
+    if (scoreSystem && (scoreSystem.gameOver || scoreSystem.win)) {
+      resetGame();
+    }
   }
 }
 
@@ -594,6 +695,10 @@ function resetGame() {
   } else {
     scoreSystem = new ScoreSystem();
   }
+
+  // Reiniciar sistemas competitivos
+  if (scoreSystemLeft) scoreSystemLeft.reset();
+  if (scoreSystemRight) scoreSystemRight.reset();
   
   // Mantener el fondo existente si ya está inicializado
   if (!dynamicBackground) {
@@ -686,5 +791,146 @@ function getScaledBackgroundImage(index) {
     return null;
   }
   return scaledBackgroundImages[index]['current'];
+}
+
+// HUD para competitivo (dos equipos)
+function displayCompetitiveHUD(ctx = window) {
+  ctx.push();
+  // Separador visual
+  ctx.stroke(255, 255, 255, 60);
+  ctx.line(width / 2, 0, width / 2, height);
+  ctx.noStroke();
+
+  // Izquierda
+  ctx.textAlign(LEFT, TOP);
+  ctx.fill(255);
+  ctx.textSize(28);
+  ctx.text('Equipo Izquierda', 40, 30);
+  const leftScoreVal = scoreSystemLeft ? Math.floor(scoreSystemLeft.displayScore || scoreSystemLeft.score) : 0;
+  const leftLivesVal = scoreSystemLeft ? scoreSystemLeft.lives : 0;
+  ctx.text(`Score: ${leftScoreVal}`, 40, 65);
+  // Corazones (izquierda)
+  const lifeSize = CONFIG.lives.size;
+  const lifeSpacing = CONFIG.lives.spacing;
+  const leftHeartStartX = 40 + lifeSize;
+  const heartsY = 100;
+  if (scoreSystemLeft) {
+    for (let i = 0; i < leftLivesVal; i++) {
+      scoreSystemLeft.drawHeart(leftHeartStartX + i * lifeSpacing, heartsY, lifeSize, ctx);
+    }
+  }
+
+  // Derecha
+  ctx.textAlign(RIGHT, TOP);
+  ctx.text('Equipo Derecha', width - 40, 30);
+  const rightScoreVal = scoreSystemRight ? Math.floor(scoreSystemRight.displayScore || scoreSystemRight.score) : 0;
+  const rightLivesVal = scoreSystemRight ? scoreSystemRight.lives : 0;
+  ctx.text(`Score: ${rightScoreVal}`, width - 40, 65);
+  // Corazones (derecha)
+  const rightHeartStartX = width - 40 - lifeSize;
+  if (scoreSystemRight) {
+    for (let i = 0; i < rightLivesVal; i++) {
+      // Dibujar desde la derecha hacia la izquierda
+      const x = rightHeartStartX - i * lifeSpacing;
+      scoreSystemRight.drawHeart(x, heartsY, lifeSize, ctx);
+    }
+  }
+
+  // Overlay híbrido de Ganaste/Perdiste por lado
+  const leftWins = (scoreSystemLeft && scoreSystemLeft.win) || (scoreSystemRight && scoreSystemRight.gameOver);
+  const rightWins = (scoreSystemRight && scoreSystemRight.win) || (scoreSystemLeft && scoreSystemLeft.gameOver);
+  const leftLoses = (scoreSystemLeft && scoreSystemLeft.gameOver) || (scoreSystemRight && scoreSystemRight.win);
+  const rightLoses = (scoreSystemRight && scoreSystemRight.gameOver) || (scoreSystemLeft && scoreSystemLeft.win);
+
+  const bigSize = Math.min(64, height * 0.08);
+  ctx.textSize(bigSize);
+  ctx.textAlign(CENTER, CENTER);
+  const trophy = (typeof window !== 'undefined' ? window.trophyImage : null);
+
+  // Lado izquierdo
+  if (leftWins && !leftLoses) {
+    ctx.fill(255, 215, 0);
+    ctx.text('GANASTE', width * 0.25, height * 0.25);
+    if (trophy) ctx.image(trophy, width * 0.25, height * 0.35, bigSize, bigSize);
+    drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
+  } else if (leftLoses && !leftWins) {
+    ctx.fill(255, 80, 80);
+    ctx.text('PERDISTE', width * 0.25, height * 0.25);
+    drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
+  }
+
+  // Lado derecho
+  if (rightWins && !rightLoses) {
+    ctx.fill(255, 215, 0);
+    ctx.text('GANASTE', width * 0.75, height * 0.25);
+    if (trophy) ctx.image(trophy, width * 0.75, height * 0.35, bigSize, bigSize);
+    drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
+  } else if (rightLoses && !rightWins) {
+    ctx.fill(255, 80, 80);
+    ctx.text('PERDISTE', width * 0.75, height * 0.25);
+    drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
+  }
+  ctx.pop();
+}
+
+// Efectos de celebración: distorsiones del shader (ondas) + explosiones de partículas
+function applyCelebrationEffects(side, celebration) {
+  if (!celebration) return;
+  const now = millis();
+  const elapsed = now - celebration.start;
+  if (elapsed > celebration.duration) return;
+
+  const xMin = side === 'left' ? 0 : width / 2;
+  const xMax = side === 'left' ? width / 2 : width;
+  const yMin = height * 0.2;
+  const yMax = height * 0.8;
+
+  for (let i = 0; i < 3; i++) {
+    const wx = random(xMin + 30, xMax - 30);
+    const wy = random(yMin, yMax);
+    createWave(wx, wy);
+    dynamicBackground.addRipple(wx, wy);
+  }
+
+  const col = celebration.type === 'win' ? color(255, 215, 0) : color(255, 60, 60);
+  for (let i = 0; i < 2; i++) {
+    const px = random(xMin + 50, xMax - 50);
+    const py = random(yMin, yMax);
+    particleSystem.createExplosion(px, py, col);
+  }
+
+  targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.25 : 0.18));
+}
+
+// Overlay visual p5.js por lado (destellos + confetti)
+function drawSideCelebrationOverlay(ctx, side, celebration) {
+  if (!celebration) return;
+  const now = millis();
+  const elapsed = now - celebration.start;
+  if (elapsed > celebration.duration) return;
+
+  const xCenter = side === 'left' ? width * 0.25 : width * 0.75;
+  const baseY = height * 0.3;
+  const hue = celebration.type === 'win' ? [255, 215, 0] : [255, 80, 80];
+
+  ctx.push();
+  ctx.noFill();
+  ctx.stroke(hue[0], hue[1], hue[2], 160);
+  ctx.strokeWeight(2);
+  const t = now / 500.0;
+  for (let i = 0; i < 6; i++) {
+    const r = 40 + i * 12 + sin(t + i) * 6;
+    ctx.arc(xCenter, baseY, r, r, 0, TWO_PI * 0.6);
+  }
+  // Confetti
+  ctx.noStroke();
+  for (let i = 0; i < 18; i++) {
+    ctx.fill(hue[0], hue[1], hue[2], 180);
+    const cx = xCenter + random(-120, 120);
+    const cy = baseY + random(-80, 80);
+    const s = random(4, 8);
+    ctx.rect(cx, cy, s, s);
+  }
+  ctx.pop();
 }
 
