@@ -2,20 +2,20 @@
   "metadata": {
     "version": "1.0.0",
     "created": "2024-01-01",
-    "lastModified": "2024-01-01",
+    "lastModified": "2025-10-30",
     "description": "Configuraciones del panel de control para RGB Madness"
   },
   "gameSettings": {
     "fallSpeed": {
       "current": 2.25,
       "min": 0.5,
-      "max": 5.0,
+      "max": 5,
       "step": 0.25,
       "default": 2.25,
       "description": "Multiplicador de velocidad de caída de objetos"
     },
     "lives": {
-      "current": 3,
+      "current": 4,
       "min": 1,
       "max": 10,
       "step": 1,
@@ -47,7 +47,58 @@
       "step": 1,
       "default": 20,
       "description": "Cantidad de aciertos consecutivos para ganar"
+    },
+    "hoverTime": {
+      "current": 1000,
+      "min": 100,
+      "max": 3000,
+      "step": 100,
+      "default": 1000,
+      "unit": "ms",
+      "description": "Tiempo requerido para agarrar objetos"
     }
+  },
+  "haloSettings": {
+    "goodHalo": {
+      "size": 0.12,
+      "strength": 0.35,
+      "color": "#ffd700"
+    },
+    "badHalo": {
+      "size": 0.14,
+      "strength": 0.27,
+      "color": "#ff0000"
+    }
+  },
+  "assets": {
+    "objects": [
+      "img/objetos/uva_roja.png",
+      "img/objetos/uva_roja2.png",
+      "img/objetos/uva_verde.png",
+      "img/objetos/uva.png",
+      "img/objetos/hoja.png",
+      "img/objetos/copa.png",
+      "img/objetos/copa2.png",
+      "img/objetos/botella.png",
+      "img/objetos/destapador.png",
+      "img/objetos/destapador2.png"
+    ],
+    "badItems": [
+      "img/malos/bicho1.png",
+      "img/malos/bicho2.png",
+      "img/malos/bicho3.png",
+      "img/malos/bicho4.png",
+      "img/malos/bicho5.png",
+      "img/malos/bicho6.png",
+      "img/malos/bicho7.png"
+    ],
+    "backgrounds": [
+      "img/background/fondo1.jpg",
+      "img/background/fondo2.jpg",
+      "img/background/fondo3.jpg",
+      "img/background/fondo4.jpg",
+      "img/background/fondo5.jpg"
+    ]
   },
   "panelSettings": {
     "isVisible": false,
@@ -86,7 +137,7 @@
       "description": "Configuración difícil para expertos"
     },
     "extreme": {
-      "fallSpeed": 5.0,
+      "fallSpeed": 5,
       "lives": 1,
       "objectSize": 60,
       "spawnRate": 800,

@@ -64,15 +64,12 @@ class ControlPanel {
     
     // Funciones para manejar configuración JSON
     async loadConfiguration() {
-        try {
-            const response = await fetch('panel-config.json');
-            this.configData = await response.json();
-            this.applyConfiguration();
-            console.log('Configuración cargada exitosamente');
-        } catch (error) {
-            console.warn('No se pudo cargar la configuración JSON, usando valores por defecto:', error);
-            this.createDefaultConfiguration();
-        }
+        this.configData = await this.loadConfigFromFile();
+        this.applyConfiguration();
+        this.loadAssetsFromConfig();
+        this.loadHaloSettingsFromConfig();
+        this.loadCurrentAssets(); // Renderizar assets en el panel
+        console.log('Configuración cargada exitosamente desde panel-config.json');
     }
     
     createDefaultConfiguration() {
@@ -86,6 +83,103 @@ class ControlPanel {
                 hoverTime: { current: 1000, default: 1000 }
             }
         };
+    }
+    
+    // Funciones de manejo de archivo JSON
+    async loadConfigFromFile() {
+        try {
+            const response = await fetch('./panel-config.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const config = await response.json();
+            return config;
+        } catch (error) {
+            console.warn('No se pudo cargar panel-config.json, usando configuración por defecto:', error);
+            return this.createDefaultConfiguration();
+        }
+    }
+
+    async saveConfigToFile(config) {
+        try {
+            // En un entorno web, no podemos escribir directamente archivos
+            // Pero podemos descargar el archivo actualizado
+            const dataStr = JSON.stringify(config, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            // Crear enlace de descarga
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'panel-config.json';
+            
+            // Simular click para descargar
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Limpiar URL
+            URL.revokeObjectURL(url);
+            
+            this.showSaveNotification('✅ Configuración guardada! Reemplaza el archivo panel-config.json en tu proyecto');
+            return true;
+        } catch (error) {
+            console.error('Error al guardar configuración:', error);
+            this.showSaveNotification('❌ Error al guardar configuración', 'error');
+            return false;
+        }
+    }
+
+    loadAssetsFromConfig() {
+        if (!this.configData || !this.configData.assets) return;
+        
+        // Inicializar variables globales si no existen
+        window.goodItemImagePaths = window.goodItemImagePaths || [];
+        window.badItemImagePaths = window.badItemImagePaths || [];
+        window.backgroundImagePaths = window.backgroundImagePaths || [];
+        
+        // Cargar assets desde la configuración
+        const assets = this.configData.assets;
+        
+        if (assets.objects && assets.objects.length > 0) {
+            window.goodItemImagePaths = [...assets.objects];
+        }
+        if (assets.badItems && assets.badItems.length > 0) {
+            window.badItemImagePaths = [...assets.badItems];
+        }
+        if (assets.backgrounds && assets.backgrounds.length > 0) {
+            window.backgroundImagePaths = [...assets.backgrounds];
+        }
+        
+        // Actualizar currentAssets con copias
+        this.currentAssets = {
+            objects: window.goodItemImagePaths.slice(),
+            badItems: window.badItemImagePaths.slice(),
+            backgrounds: window.backgroundImagePaths.slice()
+        };
+        
+        console.log('Assets cargados desde configuración JSON:', this.currentAssets);
+    }
+
+    loadHaloSettingsFromConfig() {
+        if (!this.configData || !this.configData.haloSettings) return;
+        
+        const haloSettings = this.configData.haloSettings;
+        
+        // Aplicar configuración de halos
+        if (haloSettings.goodHalo) {
+            window.goodHaloSize = haloSettings.goodHalo.size;
+            window.goodHaloStrength = haloSettings.goodHalo.strength;
+            window.goodHaloColor = haloSettings.goodHalo.color;
+        }
+        
+        if (haloSettings.badHalo) {
+            window.badHaloSize = haloSettings.badHalo.size;
+            window.badHaloStrength = haloSettings.badHalo.strength;
+            window.badHaloColor = haloSettings.badHalo.color;
+        }
+        
+        console.log('Configuración de halos cargada desde JSON');
     }
     
     applyConfiguration() {
@@ -155,7 +249,7 @@ class ControlPanel {
         this.updateHaloSettings();
     }
 
-    saveConfiguration() {
+    async saveConfiguration() {
         if (!this.configData) return;
         
         // Actualizar valores actuales en la configuración
@@ -166,24 +260,31 @@ class ControlPanel {
         if (this.winComboSlider) this.configData.gameSettings.winComboThreshold.current = parseInt(this.winComboSlider.value);
         if (this.hoverTimeSlider) this.configData.gameSettings.hoverTime.current = parseInt(this.hoverTimeSlider.value);
         
-        // Halos
-        if (this.goodHaloSizeSlider) this.configData.gameSettings.goodHaloSize.current = parseFloat(this.goodHaloSizeSlider.value);
-        if (this.goodHaloStrengthSlider) this.configData.gameSettings.goodHaloStrength.current = parseFloat(this.goodHaloStrengthSlider.value);
-        if (this.goodHaloColorInput) this.configData.gameSettings.goodHaloColor.current = this.goodHaloColorInput.value;
-        if (this.badHaloSizeSlider) this.configData.gameSettings.badHaloSize.current = parseFloat(this.badHaloSizeSlider.value);
-        if (this.badHaloStrengthSlider) this.configData.gameSettings.badHaloStrength.current = parseFloat(this.badHaloStrengthSlider.value);
-        if (this.badHaloColorInput) this.configData.gameSettings.badHaloColor.current = this.badHaloColorInput.value;
+        // Actualizar configuración de halos
+        if (!this.configData.haloSettings) this.configData.haloSettings = {};
+        if (!this.configData.haloSettings.goodHalo) this.configData.haloSettings.goodHalo = {};
+        if (!this.configData.haloSettings.badHalo) this.configData.haloSettings.badHalo = {};
+        
+        if (this.goodHaloSizeSlider) this.configData.haloSettings.goodHalo.size = parseFloat(this.goodHaloSizeSlider.value);
+        if (this.goodHaloStrengthSlider) this.configData.haloSettings.goodHalo.strength = parseFloat(this.goodHaloStrengthSlider.value);
+        if (this.goodHaloColorInput) this.configData.haloSettings.goodHalo.color = this.goodHaloColorInput.value;
+        if (this.badHaloSizeSlider) this.configData.haloSettings.badHalo.size = parseFloat(this.badHaloSizeSlider.value);
+        if (this.badHaloStrengthSlider) this.configData.haloSettings.badHalo.strength = parseFloat(this.badHaloStrengthSlider.value);
+        if (this.badHaloColorInput) this.configData.haloSettings.badHalo.color = this.badHaloColorInput.value;
+        
+        // Actualizar assets
+        if (!this.configData.assets) this.configData.assets = {};
+        this.configData.assets.objects = window.goodItemImagePaths.slice();
+        this.configData.assets.badItems = window.badItemImagePaths.slice();
+        this.configData.assets.backgrounds = window.backgroundImagePaths.slice();
         
         // Actualizar metadatos
         this.configData.metadata = this.configData.metadata || {};
         this.configData.metadata.lastModified = new Date().toISOString().split('T')[0];
         
-        // Guardar en localStorage (ya que no podemos escribir archivos directamente)
-        localStorage.setItem('rgbMadnessConfig', JSON.stringify(this.configData, null, 2));
-        console.log('Configuración guardada en localStorage');
-        
-        // Mostrar notificación visual
-        this.showSaveNotification();
+        // Guardar en archivo JSON
+        await this.saveConfigToFile(this.configData);
+        console.log('Configuración completa guardada en panel-config.json');
     }
     
     showSaveNotification(message = '✅ Configuración guardada') {
@@ -191,9 +292,11 @@ class ControlPanel {
         const notification = document.createElement('div');
         notification.textContent = message;
         
-        // Determinar color según el tipo de mensaje
+        // Determinar color y duración según el tipo de mensaje
         const isError = message.includes('❌');
+        const isImportant = message.includes('Reemplaza el archivo');
         const bgColor = isError ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 255, 0, 0.8)';
+        const duration = isImportant ? 6000 : 3000; // 6 segundos para mensajes importantes
         
         notification.style.cssText = `
             position: fixed;
@@ -206,16 +309,18 @@ class ControlPanel {
             z-index: 10002;
             font-family: Arial, sans-serif;
             font-size: 14px;
+            max-width: 300px;
+            word-wrap: break-word;
         `;
         
         document.body.appendChild(notification);
         
-        // Remover después de 3 segundos
+        // Remover después del tiempo especificado
         setTimeout(() => {
             if (notification.parentNode) {
                 document.body.removeChild(notification);
             }
-        }, 3000);
+        }, duration);
     }
     
     loadPreset(presetName) {
@@ -337,7 +442,6 @@ class ControlPanel {
                 const value = parseFloat(event.target.value);
                 this.fallSpeedValue.textContent = value + 'x';
                 this.updateGameFallSpeed(value);
-                this.saveConfiguration(); // Auto-guardar
             });
         }
         
@@ -346,7 +450,6 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.livesValue.textContent = value;
                 this.updateGameLives(value);
-                this.saveConfiguration(); // Auto-guardar
             });
         }
         
@@ -355,7 +458,6 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.objectSizeValue.textContent = value + 'px';
                 this.updateObjectSize(value);
-                this.saveConfiguration(); // Auto-guardar
             });
         }
         
@@ -364,7 +466,6 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.spawnRateValue.textContent = (value / 1000).toFixed(1) + 's';
                 this.updateSpawnRate(value);
-                this.saveConfiguration(); // Auto-guardar
             });
         }
 
@@ -374,7 +475,6 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.winComboValue.textContent = value;
                 this.updateWinComboThreshold(value);
-                this.saveConfiguration(); // Auto-guardar
             });
         }
 
@@ -384,28 +484,27 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.hoverTimeValue.textContent = value + ' ms';
                 this.updateHoverTime(value);
-                this.saveConfiguration();
             });
         }
         
         // Eventos de halos
         if (this.goodHaloSizeSlider) {
-            this.goodHaloSizeSlider.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.goodHaloSizeSlider.addEventListener('input', () => { this.updateHaloSettings(); });
         }
         if (this.goodHaloStrengthSlider) {
-            this.goodHaloStrengthSlider.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.goodHaloStrengthSlider.addEventListener('input', () => { this.updateHaloSettings(); });
         }
         if (this.goodHaloColorInput) {
-            this.goodHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.goodHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); });
         }
         if (this.badHaloSizeSlider) {
-            this.badHaloSizeSlider.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.badHaloSizeSlider.addEventListener('input', () => { this.updateHaloSettings(); });
         }
         if (this.badHaloStrengthSlider) {
-            this.badHaloStrengthSlider.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.badHaloStrengthSlider.addEventListener('input', () => { this.updateHaloSettings(); });
         }
         if (this.badHaloColorInput) {
-            this.badHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); this.saveConfiguration(); });
+            this.badHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); });
         }
     }
     
@@ -616,24 +715,10 @@ class ControlPanel {
         this.currentAssets = { objects: g, badItems: b, backgrounds: bg };
     }
 
+    // Esta función ahora es redundante ya que loadAssetsFromConfig() maneja la carga
     loadAssetsFromLocalStorage() {
-        try {
-            const raw = localStorage.getItem('vinogame_assets');
-            if (raw) {
-                const saved = JSON.parse(raw);
-                if (saved && Array.isArray(saved.objects) && Array.isArray(saved.badItems) && Array.isArray(saved.backgrounds)) {
-                    window.goodItemImagePaths = saved.objects;
-                    window.badItemImagePaths = saved.badItems;
-                    window.backgroundImagePaths = saved.backgrounds;
-                    this.currentAssets.objects = window.goodItemImagePaths.slice();
-                    this.currentAssets.badItems = window.badItemImagePaths.slice();
-                    this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
-                    this.reloadGameImagesFromPaths();
-                }
-            }
-        } catch (e) {
-            console.log('No se pudo cargar assets desde localStorage:', e);
-        }
+        // Los assets ahora se cargan desde panel-config.json en loadAssetsFromConfig()
+        console.log('Assets se cargan desde panel-config.json, no desde localStorage');
     }
 
     loadCurrentAssets() {
@@ -651,9 +736,9 @@ class ControlPanel {
                 const del = document.createElement('button');
                 del.textContent = '×';
                 del.className = 'remove-btn';
-                del.addEventListener('click', (e) => {
+                del.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    this.removeAsset(category, idx);
+                    await this.removeAsset(category, idx);
                 });
                 item.appendChild(img);
                 item.appendChild(del);
@@ -690,7 +775,7 @@ class ControlPanel {
         }, 800);
     }
     
-    removeAsset(category, index) {
+    async removeAsset(category, index) {
         const lists = this.currentAssets;
         if (!lists[category] || index < 0 || index >= lists[category].length) return;
         lists[category].splice(index, 1);
@@ -705,7 +790,7 @@ class ControlPanel {
         // Reconstruir imágenes del juego
         this.reloadGameImagesFromPaths();
         // Guardar y re-renderizar
-        this.saveAssetsToLocalStorage();
+        await this.saveAssetsToConfig();
         this.loadCurrentAssets();
     }
 
@@ -734,18 +819,20 @@ class ControlPanel {
         }
     }
 
-    saveAssetsToLocalStorage() {
-        try {
-            const payload = {
-                objects: this.currentAssets.objects,
-                badItems: this.currentAssets.badItems,
-                backgrounds: this.currentAssets.backgrounds,
-            };
-            localStorage.setItem('vinogame_assets', JSON.stringify(payload));
-            this.showSaveNotification('✅ Assets guardados');
-        } catch (e) {
-            console.log('No se pudo guardar assets:', e);
-        }
+    async saveAssetsToConfig() {
+        // Actualizar assets en la configuración y guardar archivo JSON
+        if (!this.configData.assets) this.configData.assets = {};
+        this.configData.assets.objects = window.goodItemImagePaths.slice();
+        this.configData.assets.badItems = window.badItemImagePaths.slice();
+        this.configData.assets.backgrounds = window.backgroundImagePaths.slice();
+        
+        // Actualizar metadatos
+        this.configData.metadata = this.configData.metadata || {};
+        this.configData.metadata.lastModified = new Date().toISOString().split('T')[0];
+        
+        // Guardar archivo JSON actualizado
+        await this.saveConfigToFile(this.configData);
+        console.log('Assets guardados en panel-config.json');
     }
 
     setupGalleryNavigation() {
@@ -847,7 +934,7 @@ class ControlPanel {
                     const urls = await Promise.all(readers);
                     urls.forEach(addDataUrl);
                     this.reloadGameImagesFromPaths();
-                    this.saveAssetsToLocalStorage();
+                    await this.saveAssetsToConfig();
                     this.loadCurrentAssets();
                     this.showSaveNotification('✅ Asset(s) cargado(s)');
                 } catch (e) {
