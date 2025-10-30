@@ -19,6 +19,7 @@ class BarrelIndicator {
     setup() {
         // Crear buffer para el barril
         this.barrelBuffer = createGraphics(this.size.w, this.size.h, WEBGL);
+        this.barrelBuffer.canvas.getContext('webgl', { willReadFrequently: true });
         
         // Calcular posición a la derecha, debajo del combo
         // El combo está en la esquina superior derecha
@@ -52,9 +53,9 @@ class BarrelIndicator {
         this.barrelBuffer.noStroke();
         this.barrelBuffer.rect(0, 0, this.size.w, this.size.h);
         
-        // Dibujar el buffer en pantalla
+        // Dibujar el buffer en pantalla sin redimensionamiento (el buffer ya tiene el tamaño correcto)
         ctx.imageMode(CORNER);
-        ctx.image(this.barrelBuffer, this.position.x, this.position.y, this.size.w, this.size.h);
+        ctx.image(this.barrelBuffer, this.position.x, this.position.y);
     }
 }
 
@@ -82,6 +83,7 @@ class MedidorIndicator {
     setup() {
         // Crear buffer WEBGL para el medidor
         this.medidorBuffer = createGraphics(this.size.w, this.size.h, WEBGL);
+        this.medidorBuffer.canvas.getContext('webgl', { willReadFrequently: true });
 
         // Posicionar a la derecha, debajo del combo
         this.position.x = width - 180;
@@ -118,8 +120,8 @@ class MedidorIndicator {
         this.medidorBuffer.noStroke();
         this.medidorBuffer.rect(0, 0, this.size.w, this.size.h);
 
-        // Pintar en pantalla
+        // Pintar en pantalla sin redimensionamiento (el buffer ya tiene el tamaño correcto)
         ctx.imageMode(CORNER);
-        ctx.image(this.medidorBuffer, this.position.x, this.position.y, this.size.w, this.size.h);
+        ctx.image(this.medidorBuffer, this.position.x, this.position.y);
     }
 }

@@ -23,7 +23,7 @@
       "description": "Número de vidas del jugador"
     },
     "objectSize": {
-      "current": 100,
+      "current": 110,
       "min": 50,
       "max": 200,
       "step": 10,
@@ -41,7 +41,7 @@
       "description": "Frecuencia de aparición de nuevos objetos"
     },
     "winComboThreshold": {
-      "current": 20,
+      "current": 10,
       "min": 5,
       "max": 50,
       "step": 1,
@@ -49,7 +49,7 @@
       "description": "Cantidad de aciertos consecutivos para ganar"
     },
     "hoverTime": {
-      "current": 1000,
+      "current": 350,
       "min": 100,
       "max": 3000,
       "step": 100,

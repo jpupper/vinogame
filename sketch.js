@@ -26,6 +26,11 @@ let goodItemImagePaths = [];
 let badItemImagePaths = [];
 let backgroundImagePaths = [];
 
+// Imágenes pre-escaladas para optimización
+let scaledGoodItemImages = {};
+let scaledBadItemImages = {};
+let scaledBackgroundImages = {};
+
 // Hacer los arrays accesibles globalmente para el panel de control
 if (typeof window !== 'undefined') {
     window.goodItemImages = goodItemImages;
@@ -169,9 +174,24 @@ function setup() {
   
   // Crear buffers
   fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback simple
+  fondoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
+  
   juegoBuffer = createGraphics(width, height);
+  juegoBuffer.canvas.getContext('2d', { willReadFrequently: true });
+  
   particulasBuffer = createGraphics(width, height);
+  particulasBuffer.canvas.getContext('2d', { willReadFrequently: true });
+  
   feedbackBuffer = createGraphics(width, height, WEBGL); // Composición final
+  feedbackBuffer.canvas.getContext('webgl', { willReadFrequently: true });
+  
+  // Optimizar canvas 2D para lecturas frecuentes
+  if (juegoBuffer.canvas) {
+    juegoBuffer.canvas.willReadFrequently = true;
+  }
+  if (particulasBuffer.canvas) {
+    particulasBuffer.canvas.willReadFrequently = true;
+  }
   
   // Inicializar sistemas
   Pserver = new PointServer();
@@ -183,6 +203,10 @@ function setup() {
   scoreSystem = new ScoreSystem();
   medidorIndicator.setup();
 }
+
+// Variables para optimización de rendimiento
+let lastShaderUpdateTime = 0;
+let cachedShaderUniforms = {};
 
 function draw() {
   // Actualizar sistemas
@@ -207,12 +231,14 @@ function draw() {
     }
   }
   
-  // Actualizar ondas expansivas (limpiar ondas viejas)
+  // Actualizar ondas expansivas (limpiar ondas viejas) - optimizado para ejecutar menos frecuentemente
   let currentTime = millis() / 1000.0;
-  waves = waves.filter(wave => {
-    let waveAge = currentTime - wave.startTime;
-    return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
-  });
+  if (frameCount % 5 === 0) { // Solo cada 5 frames
+    waves = waves.filter(wave => {
+      let waveAge = currentTime - wave.startTime;
+      return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
+    });
+  }
   
   // Zoom punch desactivado
   // zoomPunch = lerp(zoomPunch, targetZoom, 0.15);
@@ -239,10 +265,11 @@ function draw() {
   feedbackShader.setUniform('u_comboLevel', comboLevel);
   feedbackShader.setUniform('u_vignetteIntensity', vignetteIntensity);
   
-  // Pasar ondas expansivas al shader
+  // Pasar ondas expansivas al shader - optimizado con caché
   let wavePositions = [];
   let waveTimes = [];
   let waveActive = [];
+  
   for (let i = 0; i < MAX_WAVES; i++) {
     if (i < waves.length && waves[i].active) {
       wavePositions.push(waves[i].x, waves[i].y);
@@ -254,9 +281,28 @@ function draw() {
       waveActive.push(0.0);
     }
   }
-  feedbackShader.setUniform('u_wavePositions', wavePositions);
-  feedbackShader.setUniform('u_waveTimes', waveTimes);
-  feedbackShader.setUniform('u_waveActive', waveActive);
+  
+  // Solo actualizar uniforms si los datos han cambiado - optimizado sin JSON.stringify
+  let waveDataChanged = !cachedShaderUniforms.wavePositions || 
+                       wavePositions.length !== cachedShaderUniforms.wavePositions.length;
+  
+  if (!waveDataChanged) {
+    for (let i = 0; i < wavePositions.length; i++) {
+      if (wavePositions[i] !== cachedShaderUniforms.wavePositions[i]) {
+        waveDataChanged = true;
+        break;
+      }
+    }
+  }
+  
+  if (waveDataChanged) {
+    feedbackShader.setUniform('u_wavePositions', wavePositions);
+    feedbackShader.setUniform('u_waveTimes', waveTimes);
+    feedbackShader.setUniform('u_waveActive', waveActive);
+    cachedShaderUniforms.wavePositions = wavePositions.slice();
+    cachedShaderUniforms.waveTimes = waveTimes.slice();
+    cachedShaderUniforms.waveActive = waveActive.slice();
+  }
   
   fondoBuffer.rect(0, 0, width, height);
   fondoBuffer.pop();
@@ -386,8 +432,8 @@ function draw() {
   }
   Pserver.update();
   
-  // Comprobar colisiones con copas de vino y items malos
-  if (!scoreSystem.gameOver && !scoreSystem.win) {
+  // Comprobar colisiones con copas de vino y items malos - optimizado
+  if (!scoreSystem.gameOver && !scoreSystem.win && frameCount % 2 === 0) { // Solo cada 2 frames
     const allPoints = Pserver.getAllPoints();
     const collisions = wineGlassSystem.checkCollisions(allPoints);
     
@@ -489,17 +535,17 @@ function draw() {
   
   pop();
   
-  // Agregar rastros para cada punto del servidor
-  const allPoints = Pserver.getAllPoints();
-  for (let i = 0; i < allPoints.length; i++) {
-    const p = allPoints[i];
-    if (frameCount % 3 === 0) { // Añadir un punto cada 3 frames para no saturar
+  // Agregar rastros para cada punto del servidor - optimizado
+  if (frameCount % 3 === 0) { // Solo cada 3 frames
+    const allPoints = Pserver.getAllPoints();
+    for (let i = 0; i < allPoints.length; i++) {
+      const p = allPoints[i];
       trailSystem.addTrail(p.x, p.y, p.id, color(200, 100, 150));
-    }
-    
-    // Añadir ondas al fondo cuando hay movimiento significativo
-    if (frameCount % 30 === 0) {
-      dynamicBackground.addRipple(p.x, p.y);
+      
+      // Añadir ondas al fondo cuando hay movimiento significativo
+      if (frameCount % 30 === 0) {
+        dynamicBackground.addRipple(p.x, p.y);
+      }
     }
   }
 }
@@ -573,5 +619,72 @@ function createWave(x, y) {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+}
+
+// Función para pre-escalar imágenes y optimizar rendimiento
+function preScaleImages() {
+  const commonSizes = [50, 75, 100, 125, 150]; // Tamaños comunes de objetos
+  
+  // Pre-escalar imágenes de objetos buenos
+  for (let i = 0; i < goodItemImages.length; i++) {
+    if (goodItemImages[i]) {
+      scaledGoodItemImages[i] = {};
+      for (let size of commonSizes) {
+        let scaledImg = createGraphics(size, size);
+        scaledImg.image(goodItemImages[i], 0, 0, size, size);
+        scaledGoodItemImages[i][size] = scaledImg;
+      }
+    }
+  }
+  
+  // Pre-escalar imágenes de objetos malos
+  for (let i = 0; i < badItemImages.length; i++) {
+    if (badItemImages[i]) {
+      scaledBadItemImages[i] = {};
+      for (let size of commonSizes) {
+        let scaledImg = createGraphics(size, size);
+        scaledImg.image(badItemImages[i], 0, 0, size, size);
+        scaledBadItemImages[i][size] = scaledImg;
+      }
+    }
+  }
+  
+  // Pre-escalar imágenes de fondo para tamaño de pantalla
+  for (let i = 0; i < backgroundTextures.length; i++) {
+    if (backgroundTextures[i]) {
+      scaledBackgroundImages[i] = {};
+      // Crear versión escalada para el tamaño actual de pantalla
+      const bgWidth = width * 1.2;
+      const bgHeight = height * 1.2;
+      let scaledBg = createGraphics(bgWidth, bgHeight);
+      scaledBg.image(backgroundTextures[i], 0, 0, bgWidth, bgHeight);
+      scaledBackgroundImages[i]['current'] = scaledBg;
+    }
+  }
+  
+  console.log('Imágenes pre-escaladas para optimización de rendimiento');
+}
+
+// Función para obtener imagen escalada más cercana
+function getScaledImage(imageArray, index, targetSize, isBad = false) {
+  const scaledArray = isBad ? scaledBadItemImages : scaledGoodItemImages;
+  
+  if (!scaledArray[index]) return null;
+  
+  // Encontrar el tamaño más cercano
+  const commonSizes = [50, 75, 100, 125, 150];
+  let closestSize = commonSizes.reduce((prev, curr) => 
+    Math.abs(curr - targetSize) < Math.abs(prev - targetSize) ? curr : prev
+  );
+  
+  return scaledArray[index][closestSize];
+}
+
+// Función para obtener imagen de fondo escalada
+function getScaledBackgroundImage(index) {
+  if (!scaledBackgroundImages[index] || !scaledBackgroundImages[index]['current']) {
+    return null;
+  }
+  return scaledBackgroundImages[index]['current'];
 }
 

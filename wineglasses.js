@@ -204,13 +204,20 @@ class Item {
             // ===== ITEM MALO =====
             const pulseFactor = 1 + 0.15 * sin(this.pulsePhase * 2);
             
-            // Dibujar imagen de bicho o círculo si no hay imágenes
+            // Dibujar imagen del item malo o círculo si no hay imágenes
             if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
                 ctx.push();
                 ctx.scale(pulseFactor);
                 ctx.tint(255, 100, 100); // Tinte rojizo
                 ctx.imageMode(CENTER);
-                ctx.image(badItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                
+                // Usar imagen pre-escalada si está disponible
+                const scaledImg = window.getScaledImage && window.getScaledImage(badItemImages, this.imageIndex, this.size, true);
+                if (scaledImg) {
+                    ctx.image(scaledImg, 0, 0);
+                } else {
+                    ctx.image(badItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                }
                 ctx.pop();
             } else {
                 // Fallback: círculo rojo
@@ -232,7 +239,14 @@ class Item {
                 const brightness = 1.0 + captureProgress * 0.4;
                 ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
                 ctx.imageMode(CENTER);
-                ctx.image(goodItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                
+                // Usar imagen pre-escalada si está disponible
+                const scaledImg = window.getScaledImage && window.getScaledImage(goodItemImages, this.imageIndex, this.size, false);
+                if (scaledImg) {
+                    ctx.image(scaledImg, 0, 0);
+                } else {
+                    ctx.image(goodItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                }
                 ctx.pop();
             } else {
                 // Fallback: círculo dorado

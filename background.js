@@ -146,11 +146,21 @@ class DynamicBackground {
             
             // Textura actual
             tint(255, 255, 255, 70 * (1 - this.transitionProgress));
-            image(backgroundTextures[this.currentTextureIndex], 0, 0, width * 1.2, height * 1.2);
+            const currentScaled = window.getScaledBackgroundImage && window.getScaledBackgroundImage(this.currentTextureIndex);
+            if (currentScaled) {
+                image(currentScaled, 0, 0);
+            } else {
+                image(backgroundTextures[this.currentTextureIndex], 0, 0, width * 1.2, height * 1.2);
+            }
             
             // Textura siguiente (fade in)
             tint(255, 255, 255, 70 * this.transitionProgress);
-            image(backgroundTextures[this.nextTextureIndex], 0, 0, width * 1.2, height * 1.2);
+            const nextScaled = window.getScaledBackgroundImage && window.getScaledBackgroundImage(this.nextTextureIndex);
+            if (nextScaled) {
+                image(nextScaled, 0, 0);
+            } else {
+                image(backgroundTextures[this.nextTextureIndex], 0, 0, width * 1.2, height * 1.2);
+            }
             
             pop();
         }

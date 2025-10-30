@@ -188,6 +188,13 @@ class ControlPanel {
         };
         
         console.log('Assets REEMPLAZADOS desde configuración JSON:', this.currentAssets);
+        
+        // Pre-escalar imágenes para optimización después de cargar
+        setTimeout(() => {
+            if (typeof window.preScaleImages === 'function') {
+                window.preScaleImages();
+            }
+        }, 100); // Pequeño delay para asegurar que las imágenes estén cargadas
     }
 
     loadHaloSettingsFromConfig() {
@@ -584,7 +591,11 @@ class ControlPanel {
             CONFIG.wineGlasses.speed.max = speed;
         }
         
-        console.log('Velocidad de caída actualizada:', speed);
+        // Debounce del log para evitar spam
+        clearTimeout(this._fallSpeedLogTimeout);
+        this._fallSpeedLogTimeout = setTimeout(() => {
+            console.log('Velocidad de caída actualizada:', speed);
+        }, 100);
     }
     
     updateGameLives(lives) {
@@ -621,7 +632,11 @@ class ControlPanel {
             wineGlassSystem.spawnInterval = rate;
         }
         
-        console.log('Velocidad de aparición actualizada:', rate + 'ms');
+        // Debounce del log para evitar spam
+        clearTimeout(this._spawnRateLogTimeout);
+        this._spawnRateLogTimeout = setTimeout(() => {
+            console.log('Velocidad de aparición actualizada:', rate + 'ms');
+        }, 100);
     }
 
     // Nuevo: actualizar umbral de combo para ganar en tiempo real

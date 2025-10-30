@@ -4,6 +4,7 @@ class WinAnimation {
         this.duration = (CONFIG.win && CONFIG.win.duration) ? CONFIG.win.duration : 5000;
         this.particles = [];
         this.letters = [];
+        this.scaledTrophyImage = null;
 
         const baseColor = (CONFIG.win && CONFIG.win.text && CONFIG.win.text.color)
             ? CONFIG.win.text.color
@@ -141,21 +142,30 @@ class WinAnimation {
 
         // Trofeo: dibujar imagen de copa animada sobre el texto
         if (typeof window !== 'undefined' && window.trophyImage) {
+            // Pre-escalar imagen de trofeo si no se ha hecho
+            if (!this.scaledTrophyImage) {
+                const img = window.trophyImage;
+                const aspect = img.height > 0 && img.width > 0 ? (img.height / img.width) : 1;
+                const baseSize = min(width, height) * 0.18;
+                const w = baseSize;
+                const h = w * aspect;
+                this.scaledTrophyImage = createGraphics(w, h);
+                this.scaledTrophyImage.image(img, 0, 0, w, h);
+            }
+            
             ctx.push();
             const t = constrain((millis() - this.startTime) / this.duration, 0, 1);
             const intro = this.easeOutElastic(constrain((t - 0.1) * 3, 0, 1));
-            const img = window.trophyImage;
-            const aspect = img.height > 0 && img.width > 0 ? (img.height / img.width) : 1;
-            const baseSize = min(width, height) * 0.18; // tamaño base
-            const w = baseSize * intro;
-            const h = w * aspect;
             ctx.imageMode(CENTER);
             ctx.noStroke();
             // Sombra ligera detrás del trofeo
             ctx.fill(0, 0, 0, 100 * intro);
-            ctx.ellipse(width/2 + 5, height * 0.35 + 5, w * 0.9, h * 0.9);
-            // Imagen del trofeo
-            ctx.image(img, width/2, height * 0.35, w, h);
+            ctx.ellipse(width/2 + 5, height * 0.35 + 5, this.scaledTrophyImage.width * intro * 0.9, this.scaledTrophyImage.height * intro * 0.9);
+            // Imagen del trofeo pre-escalada
+            ctx.push();
+            ctx.scale(intro);
+            ctx.image(this.scaledTrophyImage, width/2/intro, height * 0.35/intro);
+            ctx.pop();
             ctx.pop();
         }
 
