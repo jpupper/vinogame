@@ -150,8 +150,8 @@ function preload() {
   }
   
   // Cargar shaders
-  feedbackShader = loadShader('feedback.vert', 'feedback.frag');
-  compositeShader = loadShader('composite.vert', 'composite.frag');
+  feedbackShader = loadShader('sh/feedback.vert', 'sh/feedback.frag');
+  compositeShader = loadShader('sh/composite.vert', 'sh/composite.frag');
   
   // Crear e inicializar medidor
   medidorIndicator = new MedidorIndicator();

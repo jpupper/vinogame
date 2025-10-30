@@ -13,7 +13,7 @@ class BarrelIndicator {
 
     loadAssets() {
         this.barrelImage = loadImage('img/objetos/barril.png');
-        this.barrelShader = loadShader('barrel.vert', 'barrel.frag');
+        this.barrelShader = loadShader('sh/barrel.vert', 'sh/barrel.frag');
     }
     
     setup() {
@@ -77,7 +77,7 @@ class MedidorIndicator {
     loadAssets() {
         this.glassImage = loadImage('img/medidor/copa-vacia.png');
         this.glassMask = loadImage('img/medidor/copa-vacia-mask.png');
-        this.medidorShader = loadShader('medidor.vert', 'medidor.frag');
+        this.medidorShader = loadShader('sh/medidor.vert', 'sh/medidor.frag');
     }
 
     setup() {
