@@ -51,6 +51,10 @@ class WineGlassSystem {
     }
 
     spawnItem() {
+        // Evitar crear items si los assets aún no están listos
+        if (typeof window !== 'undefined' && window.assetsReady === false) {
+            return;
+        }
         const rand = random(1);
         const x = random(width * 0.1, width * 0.9);
         

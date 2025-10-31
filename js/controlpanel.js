@@ -66,7 +66,7 @@ class ControlPanel {
     async loadConfiguration() {
         this.configData = await this.loadConfigFromFile();
         this.applyConfiguration();
-        this.loadAssetsFromConfig();
+        await this.loadAssetsFromConfig();
         this.loadHaloSettingsFromConfig();
         this.loadCurrentAssets(); // Renderizar assets en el panel
         console.log('Configuración cargada exitosamente desde panel-config.json');
@@ -130,7 +130,7 @@ class ControlPanel {
         }
     }
 
-    loadAssetsFromConfig() {
+    async loadAssetsFromConfig() {
         if (!this.configData || !this.configData.assets) return;
         
         // Inicializar variables globales si no existen
@@ -140,44 +140,49 @@ class ControlPanel {
         window.goodItemImages = window.goodItemImages || [];
         window.badItemImages = window.badItemImages || [];
         window.backgroundTextures = window.backgroundTextures || [];
+        if (typeof window !== 'undefined') {
+            window.assetsReady = false;
+        }
         
+        // Helper para cargar una categoría de imágenes y mantener el orden
+        const loadCategory = async (paths, targetArray) => {
+            targetArray.length = 0;
+            const promises = (paths || []).map((path, idx) => new Promise((resolve) => {
+                targetArray[idx] = null;
+                if (typeof loadImage === 'function') {
+                    loadImage(path,
+                        (img) => { img.__loaded = true; targetArray[idx] = img; resolve(true); },
+                        () => { targetArray[idx] = null; resolve(false); }
+                    );
+                } else {
+                    resolve(true);
+                }
+            }));
+            await Promise.all(promises);
+        };
+
         // Cargar assets desde la configuración - REEMPLAZAR completamente
         const assets = this.configData.assets;
         
         if (assets.objects && assets.objects.length > 0) {
             // Reemplazar completamente los arrays
             window.goodItemImagePaths.length = 0;
-            window.goodItemImages.length = 0;
-            assets.objects.forEach(path => {
-                window.goodItemImagePaths.push(path);
-                if (typeof loadImage === 'function') {
-                    window.goodItemImages.push(loadImage(path));
-                }
-            });
+            assets.objects.forEach(path => { window.goodItemImagePaths.push(path); });
+            await loadCategory(window.goodItemImagePaths, window.goodItemImages);
         }
         
         if (assets.badItems && assets.badItems.length > 0) {
             // Reemplazar completamente los arrays
             window.badItemImagePaths.length = 0;
-            window.badItemImages.length = 0;
-            assets.badItems.forEach(path => {
-                window.badItemImagePaths.push(path);
-                if (typeof loadImage === 'function') {
-                    window.badItemImages.push(loadImage(path));
-                }
-            });
+            assets.badItems.forEach(path => { window.badItemImagePaths.push(path); });
+            await loadCategory(window.badItemImagePaths, window.badItemImages);
         }
         
         if (assets.backgrounds && assets.backgrounds.length > 0) {
             // Reemplazar completamente los arrays
             window.backgroundImagePaths.length = 0;
-            window.backgroundTextures.length = 0;
-            assets.backgrounds.forEach(path => {
-                window.backgroundImagePaths.push(path);
-                if (typeof loadImage === 'function') {
-                    window.backgroundTextures.push(loadImage(path));
-                }
-            });
+            assets.backgrounds.forEach(path => { window.backgroundImagePaths.push(path); });
+            await loadCategory(window.backgroundImagePaths, window.backgroundTextures);
         }
         
         // Actualizar currentAssets con copias
@@ -189,12 +194,15 @@ class ControlPanel {
         
         console.log('Assets REEMPLAZADOS desde configuración JSON:', this.currentAssets);
         
-        // Pre-escalar imágenes para optimización después de cargar
-        setTimeout(() => {
-            if (typeof window.preScaleImages === 'function') {
-                window.preScaleImages();
-            }
-        }, 100); // Pequeño delay para asegurar que las imágenes estén cargadas
+        // Asegurar assets listos y pre-escalados
+        if (typeof window.ensureAssetsReady === 'function') {
+            await window.ensureAssetsReady();
+        } else if (typeof window.preScaleImages === 'function') {
+            window.preScaleImages();
+        }
+        if (typeof window !== 'undefined') {
+            window.assetsReady = true;
+        }
     }
 
     loadHaloSettingsFromConfig() {
@@ -837,28 +845,51 @@ class ControlPanel {
         this.loadCurrentAssets();
     }
 
-    reloadGameImagesFromPaths() {
-        if (typeof loadImage !== 'function') return;
+    async reloadGameImagesFromPaths() {
+        if (typeof window !== 'undefined') {
+            window.assetsReady = false;
+        }
+        const loadCategory = async (paths, targetArray) => {
+            targetArray.length = 0;
+            const promises = (paths || []).map((path, idx) => new Promise((resolve) => {
+                targetArray[idx] = null;
+                if (typeof loadImage === 'function') {
+                    loadImage(path,
+                        (img) => { img.__loaded = true; targetArray[idx] = img; resolve(true); },
+                        () => { targetArray[idx] = null; resolve(false); }
+                    );
+                } else {
+                    resolve(true);
+                }
+            }));
+            await Promise.all(promises);
+        };
         // Reconstruir buenos
         if (window.goodItemImages) {
-            window.goodItemImages.length = 0;
-            (window.goodItemImagePaths || []).forEach(p => window.goodItemImages.push(loadImage(p)));
+            await loadCategory(window.goodItemImagePaths || [], window.goodItemImages);
         }
         // Reconstruir malos
         if (window.badItemImages) {
-            window.badItemImages.length = 0;
-            (window.badItemImagePaths || []).forEach(p => window.badItemImages.push(loadImage(p)));
+            await loadCategory(window.badItemImagePaths || [], window.badItemImages);
         }
         // Reconstruir fondos
         if (window.backgroundTextures) {
-            window.backgroundTextures.length = 0;
-            (window.backgroundImagePaths || []).forEach(p => window.backgroundTextures.push(loadImage(p)));
+            await loadCategory(window.backgroundImagePaths || [], window.backgroundTextures);
             window.backgroundTexturesLoaded = window.backgroundTextures.length > 0;
         }
         // Ajustar índices del fondo dinámico
         if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
             dynamicBackground.currentTextureIndex = 0;
             dynamicBackground.nextTextureIndex = (window.backgroundTextures && window.backgroundTextures.length > 1) ? 1 : 0;
+        }
+        // Marcar assets listos y pre-escalar
+        if (typeof window.ensureAssetsReady === 'function') {
+            await window.ensureAssetsReady();
+        } else if (typeof window.preScaleImages === 'function') {
+            window.preScaleImages();
+        }
+        if (typeof window !== 'undefined') {
+            window.assetsReady = true;
         }
     }
 

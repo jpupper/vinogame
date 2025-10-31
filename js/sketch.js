@@ -42,6 +42,8 @@ let badItemImages = [];
 let goodItemImagePaths = [];
 let badItemImagePaths = [];
 let backgroundImagePaths = [];
+// Estado de carga de assets
+let assetsReady = false;
 
 // Imágenes pre-escaladas para optimización
 let scaledGoodItemImages = {};
@@ -56,6 +58,7 @@ if (typeof window !== 'undefined') {
     window.goodItemImagePaths = goodItemImagePaths;
     window.badItemImagePaths = badItemImagePaths;
     window.backgroundImagePaths = backgroundImagePaths;
+    window.assetsReady = assetsReady;
 }
 
 // Fuente para texto WEBGL
@@ -252,6 +255,16 @@ function setup() {
   selectionScreen = new ModeSelectionScreen();
   selectionScreen.setup();
   rankingSystem = new RankingSystem();
+
+  // Marcar assets listos para el arranque inicial (preload ya los cargó)
+  assetsReady = true;
+  if (typeof window !== 'undefined') {
+    window.assetsReady = true;
+  }
+  // Pre-escalar imágenes para optimización
+  if (typeof preScaleImages === 'function') {
+    preScaleImages();
+  }
 }
 
 // Variables para optimización de rendimiento
@@ -403,104 +416,100 @@ function draw() {
   // ===== PASO 2: SHADER DE COMPOSICIÓN (texturas + feedback + ondas) =====
   if (backgroundTexturesLoaded) {
     const len = backgroundTextures.length;
-    if (len > 0) {
+    const isImgReady = (img) => !!(img && typeof img.width === 'number' && img.width > 0);
+    if (len > 0 && assetsReady) {
       feedbackBuffer.shader(compositeShader);
-      // Selección segura de texturas
-      let tex1, tex2;
-      if (len === 1) {
-        tex1 = backgroundTextures[0];
-        tex2 = backgroundTextures[0];
+      // Selección segura de texturas según índices actuales
+      const idx1 = (dynamicBackground.currentTextureIndex < len) ? dynamicBackground.currentTextureIndex : 0;
+      const idx2 = (dynamicBackground.nextTextureIndex < len) ? dynamicBackground.nextTextureIndex : idx1;
+      const tex1 = backgroundTextures[idx1] || null;
+      const tex2 = backgroundTextures[idx2] || tex1;
+      if (!isImgReady(tex1) || !isImgReady(tex2)) {
+        // Si las texturas no están listas, dibujar fondo negro y saltar uniforms
+        feedbackBuffer.clear();
+        feedbackBuffer.push();
+        feedbackBuffer.noStroke();
+        feedbackBuffer.fill(0);
+        feedbackBuffer.rect(0, 0, width, height);
+        feedbackBuffer.pop();
       } else {
-        const idx1 = (dynamicBackground.currentTextureIndex < len) ? dynamicBackground.currentTextureIndex : 0;
-        const idx2 = (dynamicBackground.nextTextureIndex < len) ? dynamicBackground.nextTextureIndex : idx1;
-        tex1 = backgroundTextures[idx1] || backgroundTextures[0];
-        tex2 = backgroundTextures[idx2] || backgroundTextures[0];
-      }
-      // Robustez: si hay 1 textura, usarla en ambos uniforms; si 0, usar un negro
-      if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
-        let tex1 = backgroundTextures[dynamicBackground.currentTextureIndex || 0];
-        let tex2 = tex1;
-        let blend = 0.0;
-        if (backgroundTextures.length > 1) {
-          tex2 = backgroundTextures[dynamicBackground.nextTextureIndex || 0];
-          blend = dynamicBackground.transitionProgress || 0.0;
-        }
+        const blend = (len > 1) ? (dynamicBackground.transitionProgress || 0.0) : 0.0;
         compositeShader.setUniform('u_backgroundTexture1', tex1);
         compositeShader.setUniform('u_backgroundTexture2', tex2);
         compositeShader.setUniform('u_backgroundBlend', blend);
-      }
-      compositeShader.setUniform('u_backgroundRotation', dynamicBackground.textureRotation);
-      compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
-      compositeShader.setUniform('u_resolution', [width, height]);
-      compositeShader.setUniform('u_time', millis() / 1000.0);
-      compositeShader.setUniform('u_comboLevel', comboLevel);
-      
-      // Pasar ondas expansivas al composite shader (para distorsión de UVs)
-      compositeShader.setUniform('u_wavePositions', wavePositions);
-      compositeShader.setUniform('u_waveTimes', waveTimes);
-      compositeShader.setUniform('u_waveActive', waveActive);
-      
-      // Pasar posiciones de uvas al composite shader (para distorsión gravitacional)
-      let grapePositions = [];
-      let grapeProgress = [];
-      let grapeActive = [];
-      
-      const MAX_GRAPES = 10;
-      const grapes = wineGlassSystem.glasses; // Obtener todas las uvas/copas
-      
-      for (let i = 0; i < MAX_GRAPES; i++) {
-        if (i < grapes.length) {
-          grapePositions.push(grapes[i].x / width, grapes[i].y / height);
-          grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
-          grapeActive.push(1.0);
-        } else {
-          grapePositions.push(0, 0);
-          grapeProgress.push(0);
-          grapeActive.push(0.0);
+        compositeShader.setUniform('u_backgroundRotation', dynamicBackground.textureRotation);
+        compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
+        compositeShader.setUniform('u_resolution', [width, height]);
+        compositeShader.setUniform('u_time', millis() / 1000.0);
+        compositeShader.setUniform('u_comboLevel', comboLevel);
+
+        // Pasar ondas expansivas al composite shader (para distorsión de UVs)
+        compositeShader.setUniform('u_wavePositions', wavePositions);
+        compositeShader.setUniform('u_waveTimes', waveTimes);
+        compositeShader.setUniform('u_waveActive', waveActive);
+
+        // Pasar posiciones de uvas al composite shader (para distorsión gravitacional)
+        let grapePositions = [];
+        let grapeProgress = [];
+        let grapeActive = [];
+
+        const MAX_GRAPES = 10;
+        const grapes = wineGlassSystem.glasses; // Obtener todas las uvas/copas
+
+        for (let i = 0; i < MAX_GRAPES; i++) {
+          if (i < grapes.length) {
+            grapePositions.push(grapes[i].x / width, grapes[i].y / height);
+            grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
+            grapeActive.push(1.0);
+          } else {
+            grapePositions.push(0, 0);
+            grapeProgress.push(0);
+            grapeActive.push(0.0);
+          }
         }
-      }
-      
-      compositeShader.setUniform('u_grapePositions', grapePositions);
-      compositeShader.setUniform('u_grapeProgress', grapeProgress);
-      compositeShader.setUniform('u_grapeActive', grapeActive);
 
-      // Pasar posiciones de items malos para halos rojos
-      let badPositions = [];
-      let badActive = [];
-      const MAX_BAD = 10;
-      const bads = wineGlassSystem.badItems;
-      for (let i = 0; i < MAX_BAD; i++) {
-        if (i < bads.length) {
-          badPositions.push(bads[i].x / width, bads[i].y / height);
-          badActive.push(1.0);
-        } else {
-          badPositions.push(0, 0);
-          badActive.push(0.0);
+        compositeShader.setUniform('u_grapePositions', grapePositions);
+        compositeShader.setUniform('u_grapeProgress', grapeProgress);
+        compositeShader.setUniform('u_grapeActive', grapeActive);
+
+        // Pasar posiciones de items malos para halos rojos
+        let badPositions = [];
+        let badActive = [];
+        const MAX_BAD = 10;
+        const bads = wineGlassSystem.badItems;
+        for (let i = 0; i < MAX_BAD; i++) {
+          if (i < bads.length) {
+            badPositions.push(bads[i].x / width, bads[i].y / height);
+            badActive.push(1.0);
+          } else {
+            badPositions.push(0, 0);
+            badActive.push(0.0);
+          }
         }
+        compositeShader.setUniform('u_badPositions', badPositions);
+        compositeShader.setUniform('u_badActive', badActive);
+
+        // Uniforms de halos configurables desde el panel
+        const goodHalo = (typeof window !== 'undefined' && window.getGoodHaloSettings) ? window.getGoodHaloSettings() : { size: 0.12, strength: 0.35, color: [1.0, 0.85, 0.2] };
+        const badHalo = (typeof window !== 'undefined' && window.getBadHaloSettings) ? window.getBadHaloSettings() : { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
+        compositeShader.setUniform('u_goodHaloSize', goodHalo.size);
+        compositeShader.setUniform('u_goodHaloStrength', goodHalo.strength);
+        compositeShader.setUniform('u_goodHaloColor', goodHalo.color);
+        compositeShader.setUniform('u_badHaloSize', badHalo.size);
+        compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
+        compositeShader.setUniform('u_badHaloColor', badHalo.color);
+
+        // Línea divisoria en modo competitivo (distorsionada por el shader)
+        const splitEnabled = gameMode === 'competitive' ? 1.0 : 0.0;
+        compositeShader.setUniform('u_splitLineEnabled', splitEnabled);
+        // Blanco suave; se tiñe con el fondo
+        compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
+        // Grosor y suavizado en coordenadas UV
+        compositeShader.setUniform('u_splitLineThickness', 0.003);
+        compositeShader.setUniform('u_splitLineSoftness', 0.008);
+        
+        feedbackBuffer.rect(0, 0, width, height);
       }
-      compositeShader.setUniform('u_badPositions', badPositions);
-      compositeShader.setUniform('u_badActive', badActive);
-
-      // Uniforms de halos configurables desde el panel
-      const goodHalo = (typeof window !== 'undefined' && window.getGoodHaloSettings) ? window.getGoodHaloSettings() : { size: 0.12, strength: 0.35, color: [1.0, 0.85, 0.2] };
-      const badHalo = (typeof window !== 'undefined' && window.getBadHaloSettings) ? window.getBadHaloSettings() : { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
-      compositeShader.setUniform('u_goodHaloSize', goodHalo.size);
-      compositeShader.setUniform('u_goodHaloStrength', goodHalo.strength);
-      compositeShader.setUniform('u_goodHaloColor', goodHalo.color);
-      compositeShader.setUniform('u_badHaloSize', badHalo.size);
-      compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
-      compositeShader.setUniform('u_badHaloColor', badHalo.color);
-
-      // Línea divisoria en modo competitivo (distorsionada por el shader)
-      const splitEnabled = gameMode === 'competitive' ? 1.0 : 0.0;
-      compositeShader.setUniform('u_splitLineEnabled', splitEnabled);
-      // Blanco suave; se tiñe con el fondo
-      compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
-      // Grosor y suavizado en coordenadas UV
-      compositeShader.setUniform('u_splitLineThickness', 0.003);
-      compositeShader.setUniform('u_splitLineSoftness', 0.008);
-      
-      feedbackBuffer.rect(0, 0, width, height);
     } else {
       // Sin texturas: dibujar fondo negro sólido en feedbackBuffer
       feedbackBuffer.clear();
@@ -663,6 +672,14 @@ function draw() {
       juegoBuffer.text(`Puntos (count): ${pointsCount}`, 40, 125);
       juegoBuffer.pop();
     }
+  } else if (gameState === 'loading') {
+    // Overlay simple de carga de assets
+    juegoBuffer.push();
+    juegoBuffer.textAlign(CENTER, CENTER);
+    juegoBuffer.fill(255);
+    juegoBuffer.textSize(24);
+    juegoBuffer.text('Cargando assets...', width / 2, height / 2);
+    juegoBuffer.pop();
   } else {
     // STANDBY: actualizar punteros y generar ondas por movimiento
     if (Pserver) {
@@ -695,14 +712,25 @@ function draw() {
       // Hover sobre botones con punteros: activar modo tras 500ms
       const selectedByHover = selectionScreen.updateHoverFromPoints(pts);
       if (selectedByHover) {
-        gameMode = selectedByHover;
-        gameState = 'playing';
-        rankingSaved = false;
-        if (gameMode === 'competitive') {
-          scoreSystemLeft = new ScoreSystem();
-          scoreSystemRight = new ScoreSystem();
+        const startPlaying = () => {
+          gameMode = selectedByHover;
+          gameState = 'playing';
+          rankingSaved = false;
+          if (gameMode === 'competitive') {
+            scoreSystemLeft = new ScoreSystem();
+            scoreSystemRight = new ScoreSystem();
+          } else {
+            scoreSystem = new ScoreSystem();
+          }
+        };
+        if (typeof window !== 'undefined' && !window.assetsReady && typeof window.ensureAssetsReady === 'function') {
+          gameState = 'loading';
+          window.ensureAssetsReady().then(() => {
+            window.assetsReady = true;
+            startPlaying();
+          });
         } else {
-          scoreSystem = new ScoreSystem();
+          startPlaying();
         }
       }
     }
@@ -782,15 +810,26 @@ function mousePressed() {
   if (gameState === 'standby') {
     const selected = selectionScreen.handleClick(mouseX, mouseY);
     if (selected) {
-      gameMode = selected;
-      gameState = 'playing';
-      rankingSaved = false;
-      // Preparar sistemas según el modo
-      if (gameMode === 'competitive') {
-        scoreSystemLeft = new ScoreSystem();
-        scoreSystemRight = new ScoreSystem();
+      const startPlaying = () => {
+        gameMode = selected;
+        gameState = 'playing';
+        rankingSaved = false;
+        // Preparar sistemas según el modo
+        if (gameMode === 'competitive') {
+          scoreSystemLeft = new ScoreSystem();
+          scoreSystemRight = new ScoreSystem();
+        } else {
+          scoreSystem = new ScoreSystem();
+        }
+      };
+      if (typeof window !== 'undefined' && !window.assetsReady && typeof window.ensureAssetsReady === 'function') {
+        gameState = 'loading';
+        window.ensureAssetsReady().then(() => {
+          window.assetsReady = true;
+          startPlaying();
+        });
       } else {
-        scoreSystem = new ScoreSystem();
+        startPlaying();
       }
       return;
     }
@@ -913,6 +952,56 @@ function getScaledBackgroundImage(index) {
     return null;
   }
   return scaledBackgroundImages[index]['current'];
+}
+
+// Esperar a que las imágenes estén cargadas completamente (cuando se cargan fuera de preload)
+function ensureAssetsReady() {
+  return new Promise((resolve) => {
+    // Si ya están listos, resolver de inmediato
+    if (assetsReady) {
+      resolve(true);
+      return;
+    }
+
+    const arrays = [goodItemImages, badItemImages, backgroundTextures];
+    const isLoaded = () => {
+      for (const arr of arrays) {
+        for (let i = 0; i < arr.length; i++) {
+          const img = arr[i];
+          if (!img) return false;
+          const ready = (img.__loaded === true) || (typeof img.width === 'number' && img.width > 0);
+          if (!ready) return false;
+        }
+      }
+      return true;
+    };
+
+    const startTime = millis ? millis() : Date.now();
+    const tick = () => {
+      if (isLoaded()) {
+        assetsReady = true;
+        if (typeof window !== 'undefined') window.assetsReady = true;
+        if (typeof preScaleImages === 'function') preScaleImages();
+        resolve(true);
+        return;
+      }
+      // Timeout de seguridad 10s
+      const now = millis ? millis() : Date.now();
+      if (now - startTime > 10000) {
+        assetsReady = true;
+        if (typeof window !== 'undefined') window.assetsReady = true;
+        if (typeof preScaleImages === 'function') preScaleImages();
+        resolve(true);
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.ensureAssetsReady = ensureAssetsReady;
 }
 
 // HUD para competitivo (dos equipos)

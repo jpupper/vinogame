@@ -159,48 +159,60 @@ class PointServer {
 		}
 	}
 
-	processJSONtouch(_json){
-		// Verificar si el JSON es válido
-		if (!_json || !_json.points || !Array.isArray(_json.points)) {
-			console.error('JSON inválido o no contiene puntos');
-			return;
-		}
+    processJSONtouch(_json){
+        // Permitir recibir string JSON o objeto
+        try {
+            if (typeof _json === 'string') {
+                _json = JSON.parse(_json);
+            }
+        } catch (e) {
+            console.error('JSON de TouchDesigner inválido (parse falló):', e);
+            return;
+        }
 
-		// Crear un mapa de los puntos actuales por ID para búsqueda rápida
-		const currentPointsMap = {};
-		for (let i = 0; i < this.points.length; i++) {
-			currentPointsMap[this.points[i].id] = i;
-		}
+        // Verificar estructura esperada
+        if (!_json || !_json.points || !Array.isArray(_json.points)) {
+            console.error('JSON inválido o no contiene puntos');
+            return;
+        }
 
-		// Crear un conjunto de IDs del nuevo JSON para verificar qué puntos eliminar
-		const newPointIds = new Set();
-		_json.points.forEach(point => {
-			newPointIds.add(point.id);
-		});
+        // Crear un mapa de los puntos actuales por ID para búsqueda rápida
+        const currentPointsMap = {};
+        for (let i = 0; i < this.points.length; i++) {
+            currentPointsMap[this.points[i].id] = i;
+        }
 
-		// Eliminar puntos que ya no existen en el nuevo JSON
-		for (let i = this.points.length - 1; i >= 0; i--) {
-			if (!newPointIds.has(this.points[i].id)) {
-				this.points.splice(i, 1);
-			}
-		}
+        // Crear un conjunto de IDs del nuevo JSON para verificar qué puntos eliminar
+        const newPointIds = new Set();
+        _json.points.forEach(point => {
+            newPointIds.add(point.id);
+        });
 
-		// Actualizar puntos existentes o crear nuevos
-		_json.points.forEach(point => {
-			const index = currentPointsMap[point.id];
-			
-			if (index !== undefined) {
-				// Actualizar punto existente
-				this.points[index].x = map(point.x,1,0,0,width) ;
-				this.points[index].y = map(point.y,1,0,0,height) ;
-			} else {
-				// Crear nuevo punto
-				this.points.push(new LidarPoint(point.x * width, point.y * height, point.id));
-			}
-		});
+        // Eliminar puntos que ya no existen en el nuevo JSON
+        for (let i = this.points.length - 1; i >= 0; i--) {
+            if (!newPointIds.has(this.points[i].id)) {
+                this.points.splice(i, 1);
+            }
+        }
 
-		console.log(`Procesados ${_json.total_points} puntos. Puntos actuales: ${this.points.length}`);
-	}
+        // Actualizar puntos existentes o crear nuevos (mapeo consistente 0..1 -> pantalla)
+        _json.points.forEach(point => {
+            const index = currentPointsMap[point.id];
+            const nx = map(point.x, 1, 0, 0, width);
+            const ny = map(point.y, 1, 0, 0, height);
+            
+            if (index !== undefined) {
+                // Actualizar punto existente
+                this.points[index].x = nx;
+                this.points[index].y = ny;
+            } else {
+                // Crear nuevo punto
+                this.points.push(new LidarPoint(nx, ny, point.id));
+            }
+        });
+
+        // Log removido para evitar penalización de rendimiento
+    }
 
 }
 
@@ -221,20 +233,46 @@ class LidarPoint{
 // Permite llamar LM.processJSONtouch(json) incluso antes de que Pserver exista;
 // en ese caso se encola y se procesa al inicializar Pserver en sketch.js
 if (typeof window !== 'undefined') {
-  if (!window.LM) {
-    window.LM = {
-      _queue: [],
-      processJSONtouch: function(json) {
-        try {
-          if (window.Pserver && typeof window.Pserver.processJSONtouch === 'function') {
-            window.Pserver.processJSONtouch(json);
-          } else {
-            this._queue.push(json);
-          }
-        } catch (e) {
-          console.error('Error en LM.processJSONtouch:', e);
+  // Crear/actualizar objeto LM global con throttling por frame
+  window.LM = window.LM || {};
+  window.LM._queue = window.LM._queue || [];
+  window.LM._pending = null;
+  window.LM._scheduled = false;
+
+  window.LM._scheduleProcess = function() {
+    if (this._scheduled) return;
+    this._scheduled = true;
+    const run = () => {
+      try {
+        const data = this._pending;
+        this._pending = null;
+        this._scheduled = false;
+        if (!data) return;
+        if (window.Pserver && typeof window.Pserver.processJSONtouch === 'function') {
+          window.Pserver.processJSONtouch(data);
+        } else {
+          this._queue.push(data);
         }
+      } catch (e) {
+        console.error('Error en LM._scheduleProcess:', e);
       }
     };
-  }
+    // Preferir requestAnimationFrame; si no existe, usar setTimeout ~16ms
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 16);
+    }
+  };
+
+  window.LM.processJSONtouch = function(json) {
+    try {
+      if (typeof json === 'string') json = JSON.parse(json);
+    } catch (e) {
+      console.error('Error parseando JSON en LM.processJSONtouch:', e);
+      return;
+    }
+    this._pending = json; // guardar el último paquete recibido
+    this._scheduleProcess(); // procesar como máximo una vez por frame
+  };
 }
