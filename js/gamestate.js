@@ -2,6 +2,7 @@ class ModeSelectionScreen {
   constructor() {
     this.buttons = [];
     this.title = 'Selecciona el modo de juego';
+    this.hoverRequiredMs = 500; // medio segundo para activar por hover
   }
 
   setup() {
@@ -14,8 +15,8 @@ class ModeSelectionScreen {
     const y = height * 0.70 - bh / 2;
 
     this.buttons = [
-      { label: 'Cooperativo', x: startX, y, w: bw, h: bh, mode: 'cooperative' },
-      { label: 'Competitivo', x: startX + bw + spacing, y, w: bw, h: bh, mode: 'competitive' }
+      { label: 'Cooperativo', x: startX, y, w: bw, h: bh, mode: 'cooperative', hoverMs: 0 },
+      { label: 'Competitivo', x: startX + bw + spacing, y, w: bw, h: bh, mode: 'competitive', hoverMs: 0 }
     ];
   }
 
@@ -77,6 +78,22 @@ class ModeSelectionScreen {
       ctx.textAlign(CENTER, CENTER);
       ctx.textSize(Math.min(32, height * 0.045));
       ctx.text(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2);
+
+      // Barra de progreso de hover (arriba del botón)
+      if (btn.hoverMs && btn.hoverMs > 0) {
+        const progress = constrain(btn.hoverMs / this.hoverRequiredMs, 0, 1);
+        const barW = btn.w * 0.8;
+        const barH = 8;
+        const barX = btn.x + (btn.w - barW) / 2;
+        const barY = btn.y - 14;
+        ctx.noStroke();
+        // Fondo
+        ctx.fill(40, 20, 60, 180);
+        ctx.rect(barX, barY, barW, barH, 4);
+        // Progreso (violeta)
+        ctx.fill(160, 120, 255, 220);
+        ctx.rect(barX, barY, barW * progress, barH, 4);
+      }
     }
     ctx.pop();
   }
@@ -88,6 +105,37 @@ class ModeSelectionScreen {
       }
     }
     return null;
+  }
+
+  // Actualizar progreso de hover en botones según puntos activos (LIDAR/mouse/touch)
+  // Retorna el modo si se completa el hover, sino null
+  updateHoverFromPoints(points) {
+    let selected = null;
+    for (const btn of this.buttons) {
+      // Detectar si algún punto está sobre el botón
+      let anyOver = false;
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        if (p.x >= btn.x && p.x <= btn.x + btn.w && p.y >= btn.y && p.y <= btn.y + btn.h) {
+          anyOver = true;
+          break;
+        }
+      }
+
+      if (anyOver) {
+        btn.hoverMs += (typeof deltaTime !== 'undefined' ? deltaTime : 16);
+        if (btn.hoverMs >= this.hoverRequiredMs) {
+          selected = btn.mode;
+          // Resetear ambos botones para evitar dobles triggers
+          for (const b of this.buttons) b.hoverMs = 0;
+          break;
+        }
+      } else {
+        // Decaimiento suave cuando se sale
+        btn.hoverMs = Math.max(0, btn.hoverMs - (typeof deltaTime !== 'undefined' ? deltaTime * 0.6 : 10));
+      }
+    }
+    return selected;
   }
 }
 

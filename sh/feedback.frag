@@ -17,6 +17,10 @@ uniform vec2 u_wavePositions[5];       // Posiciones de las ondas
 uniform float u_waveTimes[5];          // Tiempo de inicio de cada onda
 uniform float u_waveActive[5];         // Si la onda está activa (1.0 = sí, 0.0 = no)
 
+// PUNTEROS MÚLTIPLES (mouse/touch/LIDAR)
+uniform vec2 u_pointerPositions[16];   // Posiciones normalizadas (0-1)
+uniform float u_pointerActive[16];     // 1.0 si el puntero está activo
+
 varying vec2 vTexCoord;
 
 // Función de ruido 2D
@@ -66,6 +70,23 @@ void main() {
         // Deshacer la corrección de aspect ratio para el desplazamiento
         displacement.x /= u_resolution.x / u_resolution.y;
     }
+
+    // Aportar desplazamiento por punteros adicionales
+    for (int i = 0; i < 16; i++) {
+        if (u_pointerActive[i] > 0.5) {
+            vec2 pPos = vec2(u_pointerPositions[i].x, 1.0 - u_pointerPositions[i].y);
+            pPos.y = 1.0 - pPos.y; // mantener coherencia con corrección usada en mouse
+            pPos.x *= u_resolution.x / u_resolution.y;
+            float dP = distance(aspectUV, pPos);
+            float infP = smoothstep(radius, 0.0, dP);
+            if (infP > 0.0) {
+                vec2 dirP = normalize(aspectUV - pPos);
+                vec2 dispP = dirP * infP * 0.015;
+                dispP.x /= (u_resolution.x / u_resolution.y);
+                displacement += dispP;
+            }
+        }
+    }
     
     // Aplicar desplazamiento
     vec2 displacedUV = uv + displacement;
@@ -87,6 +108,27 @@ void main() {
         float centerGlow = smoothstep(0.05, 0.0, dist);
         finalColor.rgb += tint * centerGlow * (0.3 + u_effectIntensity * 0.4);
         finalColor.a = max(finalColor.a, centerGlow * 0.8);
+    }
+
+    // ===== BRILLO PARA PUNTEROS ADICIONALES =====
+    for (int i = 0; i < 16; i++) {
+        if (u_pointerActive[i] > 0.5) {
+            vec2 pPos = vec2(u_pointerPositions[i].x, 1.0 - u_pointerPositions[i].y);
+            pPos.y = 1.0 - pPos.y;
+            pPos.x *= u_resolution.x / u_resolution.y;
+            float dP = distance(aspectUV, pPos);
+            float infP = smoothstep(radius, 0.0, dP);
+            if (infP > 0.0) {
+                vec3 ptTint = vec3(
+                    0.5 + 0.5 * sin(u_time * 0.5 + dP * 10.0),
+                    0.5 + 0.5 * sin(u_time * 0.7 + dP * 10.0 + 2.0),
+                    0.5 + 0.5 * sin(u_time * 0.3 + dP * 10.0 + 4.0)
+                );
+                float centerGlowP = smoothstep(0.05, 0.0, dP);
+                finalColor.rgb += ptTint * centerGlowP * (0.25 + u_effectIntensity * 0.35);
+                finalColor.a = max(finalColor.a, centerGlowP * 0.75);
+            }
+        }
     }
     
     // ===== ONDAS EXPANSIVAS =====

@@ -328,6 +328,30 @@ function draw() {
   feedbackShader.setUniform('u_effectIntensity', effectIntensity);
   feedbackShader.setUniform('u_comboLevel', comboLevel);
   feedbackShader.setUniform('u_vignetteIntensity', vignetteIntensity);
+
+  // Pasar punteros (mouse/touch/LIDAR) como arreglo al shader de feedback
+  const MAX_POINTERS = 16;
+  let pointerPositions = [];
+  let pointerActive = [];
+  if (Pserver) {
+    const pts = Pserver.getAllPoints();
+    for (let i = 0; i < MAX_POINTERS; i++) {
+      if (i < pts.length) {
+        pointerPositions.push(pts[i].x / width, pts[i].y / height);
+        pointerActive.push(1.0);
+      } else {
+        pointerPositions.push(0, 0);
+        pointerActive.push(0.0);
+      }
+    }
+  } else {
+    for (let i = 0; i < MAX_POINTERS; i++) {
+      pointerPositions.push(0, 0);
+      pointerActive.push(0.0);
+    }
+  }
+  feedbackShader.setUniform('u_pointerPositions', pointerPositions);
+  feedbackShader.setUniform('u_pointerActive', pointerActive);
   
   // Pasar ondas expansivas al shader - optimizado con caché
   let wavePositions = [];
@@ -667,6 +691,20 @@ function draw() {
       lastPointerPositions = currentMap;
       // Mostrar puntos en standby para ver entrada de LIDAR/input
       Pserver.display(juegoBuffer);
+
+      // Hover sobre botones con punteros: activar modo tras 500ms
+      const selectedByHover = selectionScreen.updateHoverFromPoints(pts);
+      if (selectedByHover) {
+        gameMode = selectedByHover;
+        gameState = 'playing';
+        rankingSaved = false;
+        if (gameMode === 'competitive') {
+          scoreSystemLeft = new ScoreSystem();
+          scoreSystemRight = new ScoreSystem();
+        } else {
+          scoreSystem = new ScoreSystem();
+        }
+      }
     }
     // Dibujar UI de selección de modo encima del fondo con shaders
     selectionScreen.display(juegoBuffer);
