@@ -32,6 +32,12 @@ uniform float u_badHaloSize;            // tamaño del halo de malos (radio exte
 uniform float u_badHaloStrength;        // fuerza del halo de malos
 uniform vec3  u_badHaloColor;           // color del halo de malos
 
+// LÍNEA DIVISORIA (modo competitivo)
+uniform float u_splitLineEnabled;       // 1.0 para mostrar la línea, 0.0 para ocultar
+uniform vec3  u_splitLineColor;         // color RGB de la línea
+uniform float u_splitLineThickness;     // grosor en UV (0-1)
+uniform float u_splitLineSoftness;      // suavizado de borde (0-1)
+
 varying vec2 vTexCoord;
 
 void main() {
@@ -247,6 +253,14 @@ void main() {
             float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
             finalColor = mix(vec3(luminance), finalColor, 1.0 + saturationBoost);
         }
+    }
+    
+    // ===== LÍNEA DIVISORIA CON DISTORSIÓN =====
+    // Se calcula usando las UV ya distorsionadas para que se mueva con el shader
+    if (u_splitLineEnabled > 0.5) {
+        float dx = abs(finalUV.x - 0.5);
+        float mask = 1.0 - smoothstep(u_splitLineThickness, u_splitLineThickness + u_splitLineSoftness, dx);
+        finalColor = mix(finalColor, u_splitLineColor, clamp(mask, 0.0, 1.0));
     }
     
     // ===== APLICAR FEEDBACK COMO EFECTO =====

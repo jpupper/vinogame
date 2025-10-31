@@ -6,9 +6,10 @@ class ParticleSystem {
     }
 
     // Create explosion particles when a sequence is completed
-    createExplosion(x, y, color) {
+    createExplosion(x, y, color, count = 150) {
         // Create a burst of particles
-        for (let i = 0; i < 150; i++) { // Aumentado de 100 a 150 partículas
+        const n = Math.max(0, Math.floor(count));
+        for (let i = 0; i < n; i++) {
             this.explosionParticles.push(new ExplosionParticle(x, y, color));
         }
     }

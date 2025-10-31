@@ -10,7 +10,8 @@ class ModeSelectionScreen {
     const spacing = Math.min(40, width * 0.05);
     const total = 2 * bw + spacing;
     const startX = width / 2 - total / 2;
-    const y = height * 0.52 - bh / 2;
+    // Botones más abajo para mejor composición visual
+    const y = height * 0.70 - bh / 2;
 
     this.buttons = [
       { label: 'Cooperativo', x: startX, y, w: bw, h: bh, mode: 'cooperative' },
@@ -27,27 +28,52 @@ class ModeSelectionScreen {
     ctx.textSize(Math.min(48, height * 0.06));
     ctx.text(this.title, width / 2, height * 0.18);
 
-    // Imagen de copa
+    // Imagen de copa (más grande y con animación sutil)
     const img = (typeof window !== 'undefined' ? window.trophyImage : null);
     if (img) {
-      const imgSize = Math.min(120, height * 0.15);
+      // Tamaño mayor y oscilación vertical suave
+      const t = millis() / 1000.0;
+      const imgSize = Math.min(220, height * 0.28);
+      const bob = sin(t * 1.6) * Math.min(8, height * 0.01);
+      const cx = width / 2;
+      const cy = height * 0.34 + bob;
+      // Brillo suave detrás de la copa
+      ctx.noStroke();
+      ctx.fill(170, 110, 255, 55);
+      ctx.ellipse(cx, cy, imgSize * 1.5 + sin(t * 1.2) * 10, imgSize * 1.2 + sin(t * 1.2) * 8);
+      // Copa
       ctx.imageMode(CENTER);
-      ctx.image(img, width / 2, height * 0.34, imgSize, imgSize);
+      ctx.image(img, cx, cy, imgSize, imgSize);
     }
 
     // Botones
     ctx.rectMode(CORNER);
     for (const btn of this.buttons) {
-      // Sombra ligera
-      ctx.fill(0, 0, 0, 120);
-      ctx.rect(btn.x + 4, btn.y + 4, btn.w, btn.h, 12);
+      const isHover = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
 
-      // Fondo del botón
-      ctx.fill(255, 255, 255, 220);
-      ctx.rect(btn.x, btn.y, btn.w, btn.h, 12);
+      // Sombra ligera
+      ctx.noStroke();
+      ctx.fill(0, 0, 0, 120);
+      ctx.rect(btn.x + 5, btn.y + 5, btn.w, btn.h, 14);
+
+      // Fondo del botón con paleta violeta
+      const base = isHover ? [170, 110, 255, 235] : [150, 90, 220, 225];
+      ctx.fill(base[0], base[1], base[2], base[3]);
+      ctx.rect(btn.x, btn.y, btn.w, btn.h, 14);
+
+      // Highlight superior suave para efecto de profundidad
+      ctx.fill(255, 255, 255, isHover ? 40 : 28);
+      ctx.rect(btn.x, btn.y, btn.w, btn.h * 0.45, 14);
+
+      // Borde
+      ctx.stroke(isHover ? 255 : 230, isHover ? 210 : 200, 255, 180);
+      ctx.strokeWeight(2);
+      ctx.noFill();
+      ctx.rect(btn.x, btn.y, btn.w, btn.h, 14);
+      ctx.noStroke();
 
       // Texto del botón
-      ctx.fill(20);
+      ctx.fill(255);
       ctx.textAlign(CENTER, CENTER);
       ctx.textSize(Math.min(32, height * 0.045));
       ctx.text(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2);

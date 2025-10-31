@@ -20,6 +20,9 @@ let scoreSystemRight = null;
 // Celebraciones por lado en competitivo
 let leftCelebration = null;
 let rightCelebration = null;
+// Retorno automático a inicio al terminar la partida
+let gameEndTime = null;
+let gameEndDelay = 3500; // ms visibles de GANASTE/PERDISTE antes de volver al inicio
 
 // Modo debug
 let isDebug = false;
@@ -95,6 +98,9 @@ const MAX_WAVES = 5;
 // Sistema de Zoom Punch
 let zoomPunch = 1.0;
 let targetZoom = 1.0;
+
+// Seguimiento de punteros en standby para generar ondas en el fondo
+let lastPointerPositions = {};
 
 function preload() {
   // Arrays de paths para cargar imágenes
@@ -213,6 +219,20 @@ function setup() {
   
   // Inicializar sistemas
   Pserver = new PointServer();
+  // Exponer instancia para integración externa y vaciar cola de LM si existe
+  if (typeof window !== 'undefined') {
+    window.Pserver = Pserver;
+    if (window.LM && Array.isArray(window.LM._queue) && window.LM._queue.length) {
+      for (let i = 0; i < window.LM._queue.length; i++) {
+        try {
+          Pserver.processJSONtouch(window.LM._queue[i]);
+        } catch (e) {
+          console.error('Error procesando item de LM._queue:', e);
+        }
+      }
+      window.LM._queue.length = 0;
+    }
+  }
   // PNT = new PlayerPntsManager();
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
@@ -223,10 +243,10 @@ function setup() {
   // Configurar medidores competitivos
   medidorIndicatorLeft.setup();
   medidorIndicatorLeft.position.x = 40;
-  medidorIndicatorLeft.position.y = 140;
+  medidorIndicatorLeft.position.y = 200; // más espacio
   medidorIndicatorRight.setup();
   medidorIndicatorRight.position.x = width - medidorIndicatorRight.size.w - 40;
-  medidorIndicatorRight.position.y = 140;
+  medidorIndicatorRight.position.y = 200; // más espacio
 
   // Pantalla de selección y ranking
   selectionScreen = new ModeSelectionScreen();
@@ -246,8 +266,14 @@ function draw() {
   effectIntensity = lerp(effectIntensity, targetEffectIntensity, 0.1);
   targetEffectIntensity *= 0.95; // Decay automático
   
-  // Calcular combo level (0-1) basado en el combo actual
-  let comboLevel = min(1.0, scoreSystem.comboCount / CONFIG.score.winComboThreshold); // Escala según umbral configurable
+  // Calcular combo level (0-1)
+  // En standby, usar un pulso suave para que el fondo se sienta vivo
+  let comboLevel;
+  if (gameState === 'standby') {
+    comboLevel = 0.12 + 0.08 * sin(millis() / 1000.0 * 1.6);
+  } else {
+    comboLevel = min(1.0, scoreSystem.comboCount / CONFIG.score.winComboThreshold); // Escala según umbral configurable
+  }
   
   // Calcular vignette basado en vidas restantes
   vignetteIntensity = map(scoreSystem.lives, 3, 0, 0, 1, true);
@@ -268,6 +294,14 @@ function draw() {
       let waveAge = currentTime - wave.startTime;
       return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
     });
+  }
+
+  // Animación sutil en standby: agregar ondas suaves ocasionales
+  if (gameState === 'standby' && frameCount % 60 === 0) {
+    const wx = random(width * 0.25, width * 0.75);
+    const wy = random(height * 0.3, height * 0.7);
+    createWave(wx, wy);
+    dynamicBackground.addRipple(wx, wy);
   }
   
   // Zoom punch desactivado
@@ -432,6 +466,15 @@ function draw() {
       compositeShader.setUniform('u_badHaloSize', badHalo.size);
       compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
       compositeShader.setUniform('u_badHaloColor', badHalo.color);
+
+      // Línea divisoria en modo competitivo (distorsionada por el shader)
+      const splitEnabled = gameMode === 'competitive' ? 1.0 : 0.0;
+      compositeShader.setUniform('u_splitLineEnabled', splitEnabled);
+      // Blanco suave; se tiñe con el fondo
+      compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
+      // Grosor y suavizado en coordenadas UV
+      compositeShader.setUniform('u_splitLineThickness', 0.003);
+      compositeShader.setUniform('u_splitLineSoftness', 0.008);
       
       feedbackBuffer.rect(0, 0, width, height);
     } else {
@@ -538,6 +581,10 @@ function draw() {
       if (!rightCelebration && (rightWinsCond || rightLosesCond)) {
         rightCelebration = { type: rightWinsCond ? 'win' : 'lose', start: millis(), duration: 3500 };
       }
+      // Marcar fin de juego para retorno automático
+      if (!gameEndTime && (leftWinsCond || leftLosesCond || rightWinsCond || rightLosesCond)) {
+        gameEndTime = millis();
+      }
 
       // Aplicar efectos al shader y partículas durante celebración
       applyCelebrationEffects('left', leftCelebration);
@@ -573,6 +620,9 @@ function draw() {
       if (!rankingSaved && (scoreSystem.gameOver || scoreSystem.win)) {
         rankingSystem.saveCooperative(Math.floor(scoreSystem.score));
         rankingSaved = true;
+        if (!gameEndTime) {
+          gameEndTime = millis();
+        }
       }
     }
 
@@ -590,7 +640,35 @@ function draw() {
       juegoBuffer.pop();
     }
   } else {
-    // STANDBY: dibujar UI de selección de modo encima del fondo con shaders
+    // STANDBY: actualizar punteros y generar ondas por movimiento
+    if (Pserver) {
+      Pserver.update();
+      const pts = Pserver.getAllPoints();
+      const currentMap = {};
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        currentMap[p.id] = { x: p.x, y: p.y };
+        const prev = lastPointerPositions[p.id];
+        if (prev) {
+          const d = dist(prev.x, prev.y, p.x, p.y);
+          if (d > 6 && frameCount % 4 === 0) {
+            createWave(p.x, p.y);
+            dynamicBackground.addRipple(p.x, p.y);
+          }
+        } else {
+          // Primera aparición: pequeña onda de bienvenida
+          if (frameCount % 8 === 0) {
+            createWave(p.x, p.y);
+            dynamicBackground.addRipple(p.x, p.y);
+          }
+        }
+      }
+      // Actualizar mapa para el próximo frame
+      lastPointerPositions = currentMap;
+      // Mostrar puntos en standby para ver entrada de LIDAR/input
+      Pserver.display(juegoBuffer);
+    }
+    // Dibujar UI de selección de modo encima del fondo con shaders
     selectionScreen.display(juegoBuffer);
   }
   
@@ -618,7 +696,7 @@ function draw() {
   image(juegoBuffer, 0, 0);
   
   pop();
-  
+
   // Agregar rastros para cada punto del servidor - optimizado
   if (frameCount % 3 === 0) { // Solo cada 3 frames
     const allPoints = Pserver.getAllPoints();
@@ -632,6 +710,9 @@ function draw() {
       }
     }
   }
+
+  // Volver automáticamente a la pantalla de inicio cuando termina la celebración
+  returnToStandbyIfDone();
 }
 
 // Toggle de modo debug con tecla D
@@ -685,6 +766,9 @@ function mousePressed() {
 function resetGame() {
   // Reiniciar todos los sistemas sin recargar assets
   Pserver = new PointServer();
+  if (typeof window !== 'undefined') {
+    window.Pserver = Pserver;
+  }
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
   trailSystem = new TrailSystem();
@@ -796,9 +880,7 @@ function getScaledBackgroundImage(index) {
 // HUD para competitivo (dos equipos)
 function displayCompetitiveHUD(ctx = window) {
   ctx.push();
-  // Separador visual
-  ctx.stroke(255, 255, 255, 60);
-  ctx.line(width / 2, 0, width / 2, height);
+  // La línea separadora ahora la dibuja el shader composite
   ctx.noStroke();
 
   // Izquierda
@@ -808,12 +890,12 @@ function displayCompetitiveHUD(ctx = window) {
   ctx.text('Equipo Izquierda', 40, 30);
   const leftScoreVal = scoreSystemLeft ? Math.floor(scoreSystemLeft.displayScore || scoreSystemLeft.score) : 0;
   const leftLivesVal = scoreSystemLeft ? scoreSystemLeft.lives : 0;
-  ctx.text(`Score: ${leftScoreVal}`, 40, 65);
+  ctx.text(`Score: ${leftScoreVal}`, 40, 80);
   // Corazones (izquierda)
   const lifeSize = CONFIG.lives.size;
-  const lifeSpacing = CONFIG.lives.spacing;
-  const leftHeartStartX = 40 + lifeSize;
-  const heartsY = 100;
+  const lifeSpacing = CONFIG.lives.spacing + 6; // más separación
+  const leftHeartStartX = 40 + lifeSize + 16; // margen extra
+  const heartsY = 150; // bajar corazones
   if (scoreSystemLeft) {
     for (let i = 0; i < leftLivesVal; i++) {
       scoreSystemLeft.drawHeart(leftHeartStartX + i * lifeSpacing, heartsY, lifeSize, ctx);
@@ -825,9 +907,9 @@ function displayCompetitiveHUD(ctx = window) {
   ctx.text('Equipo Derecha', width - 40, 30);
   const rightScoreVal = scoreSystemRight ? Math.floor(scoreSystemRight.displayScore || scoreSystemRight.score) : 0;
   const rightLivesVal = scoreSystemRight ? scoreSystemRight.lives : 0;
-  ctx.text(`Score: ${rightScoreVal}`, width - 40, 65);
+  ctx.text(`Score: ${rightScoreVal}`, width - 40, 80);
   // Corazones (derecha)
-  const rightHeartStartX = width - 40 - lifeSize;
+  const rightHeartStartX = width - 40 - lifeSize - 16; // margen extra
   if (scoreSystemRight) {
     for (let i = 0; i < rightLivesVal; i++) {
       // Dibujar desde la derecha hacia la izquierda
@@ -885,7 +967,8 @@ function applyCelebrationEffects(side, celebration) {
   const yMin = height * 0.2;
   const yMax = height * 0.8;
 
-  for (let i = 0; i < 3; i++) {
+  // Ondas con menor densidad (solo cada 12 frames, 1 onda)
+  if (frameCount % 12 === 0) {
     const wx = random(xMin + 30, xMax - 30);
     const wy = random(yMin, yMax);
     createWave(wx, wy);
@@ -893,13 +976,15 @@ function applyCelebrationEffects(side, celebration) {
   }
 
   const col = celebration.type === 'win' ? color(255, 215, 0) : color(255, 60, 60);
-  for (let i = 0; i < 2; i++) {
+  // Explosiones de partículas con aún menor densidad (cada 20 frames, menos partículas)
+  if (frameCount % 20 === 0) {
     const px = random(xMin + 50, xMax - 50);
     const py = random(yMin, yMax);
-    particleSystem.createExplosion(px, py, col);
+    particleSystem.createExplosion(px, py, col, 40);
   }
 
-  targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.25 : 0.18));
+  // Subir la intensidad del shader con incremento más suave
+  targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.08 : 0.05));
 }
 
 // Overlay visual p5.js por lado (destellos + confetti)
@@ -918,13 +1003,13 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
   ctx.stroke(hue[0], hue[1], hue[2], 160);
   ctx.strokeWeight(2);
   const t = now / 500.0;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     const r = 40 + i * 12 + sin(t + i) * 6;
     ctx.arc(xCenter, baseY, r, r, 0, TWO_PI * 0.6);
   }
   // Confetti
   ctx.noStroke();
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 8; i++) {
     ctx.fill(hue[0], hue[1], hue[2], 180);
     const cx = xCenter + random(-120, 120);
     const cy = baseY + random(-80, 80);
@@ -932,5 +1017,24 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
     ctx.rect(cx, cy, s, s);
   }
   ctx.pop();
+}
+
+// Volver a la pantalla de inicio cuando terminó la animación de fin de juego
+function returnToStandbyIfDone() {
+  if (!gameEndTime) return;
+  const elapsed = millis() - gameEndTime;
+  if (elapsed < gameEndDelay) return;
+
+  // Limpiar estado de celebración y reiniciar sistemas
+  leftCelebration = null;
+  rightCelebration = null;
+  gameEndTime = null;
+
+  resetGame();
+  gameState = 'standby';
+  gameMode = null;
+  rankingSaved = false;
+  if (!selectionScreen) selectionScreen = new ModeSelectionScreen();
+  selectionScreen.setup();
 }
 

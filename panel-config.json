@@ -41,7 +41,7 @@
       "description": "Frecuencia de aparición de nuevos objetos"
     },
     "winComboThreshold": {
-      "current": 10,
+      "current": 5,
       "min": 5,
       "max": 50,
       "step": 1,

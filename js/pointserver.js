@@ -216,3 +216,25 @@ class LidarPoint{
 		this.y = newY;
 	}
 }
+
+// Exponer alias global para integración externa (TouchDesigner)
+// Permite llamar LM.processJSONtouch(json) incluso antes de que Pserver exista;
+// en ese caso se encola y se procesa al inicializar Pserver en sketch.js
+if (typeof window !== 'undefined') {
+  if (!window.LM) {
+    window.LM = {
+      _queue: [],
+      processJSONtouch: function(json) {
+        try {
+          if (window.Pserver && typeof window.Pserver.processJSONtouch === 'function') {
+            window.Pserver.processJSONtouch(json);
+          } else {
+            this._queue.push(json);
+          }
+        } catch (e) {
+          console.error('Error en LM.processJSONtouch:', e);
+        }
+      }
+    };
+  }
+}
