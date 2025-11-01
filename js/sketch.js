@@ -203,10 +203,10 @@ function setup() {
   fondoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
   
   juegoBuffer = createGraphics(width, height);
-  juegoBuffer.canvas.getContext('2d', { willReadFrequently: true });
+  juegoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
   
   particulasBuffer = createGraphics(width, height);
-  particulasBuffer.canvas.getContext('2d', { willReadFrequently: true });
+  particulasBuffer.canvas.getContext('webgl', { willReadFrequently: true });
   
   feedbackBuffer = createGraphics(width, height, WEBGL); // Composición final
   feedbackBuffer.canvas.getContext('webgl', { willReadFrequently: true });
@@ -784,8 +784,8 @@ function draw() {
     }
   }
 
-  // Volver automáticamente a la pantalla de inicio cuando termina la celebración
-  returnToStandbyIfDone();
+  
+
 }
 
 // Toggle de modo debug con tecla D
