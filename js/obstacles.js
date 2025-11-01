@@ -102,9 +102,20 @@ class ObstacleSystem {
         let collision = false;
         let collisionPoint = null;
 
+        // Limitar puntos a un área de colisión configurable (si está habilitada)
+        let pointsToCheck = points;
+        const area = (typeof window !== 'undefined') ? window.collisionArea : null;
+        if (area && area.enabled && typeof area.x === 'number') {
+            pointsToCheck = points.filter(p => (
+                p && typeof p.x === 'number' && typeof p.y === 'number' &&
+                p.x >= area.x && p.x <= area.x + area.width &&
+                p.y >= area.y && p.y <= area.y + area.height
+            ));
+        }
+
         // Comprobar colisiones con cada obstáculo
         for (let obstacle of this.obstacles) {
-            for (let point of points) {
+            for (let point of pointsToCheck) {
                 const d = dist(obstacle.pos.x, obstacle.pos.y, point.x, point.y);
                 if (d < obstacle.size / 2) {
                     collision = true;

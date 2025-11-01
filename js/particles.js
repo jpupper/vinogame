@@ -6,7 +6,7 @@ class ParticleSystem {
     }
 
     // Create explosion particles when a sequence is completed
-    createExplosion(x, y, color, count = 150) {
+    createExplosion(x, y, color, count = 20) {
         // Create a burst of particles
         const n = Math.max(0, Math.floor(count));
         for (let i = 0; i < n; i++) {
@@ -77,7 +77,7 @@ class ExplosionParticle {
         this.velocity = p5.Vector.random2D();
         this.velocity.mult(random(2, 10));
         this.acceleration = createVector(0, 0.1);
-        this.lifespan = 400;
+        this.lifespan = 200;
         
         // Generate a random color based on the base color with some variation
         if (baseColor) {
@@ -124,16 +124,16 @@ class ExplosionParticle {
         ctx.noStroke();
         
         // Halo exterior
-        ctx.fill(red(this.color), green(this.color), blue(this.color), alpha * 0.3);
-        ctx.ellipse(0, 0, currentSize * 2, currentSize * 2);
+        //ctx.fill(red(this.color), green(this.color), blue(this.color), alpha * 0.3);
+        //ctx.ellipse(0, 0, currentSize * 2, currentSize * 2);
         
         // Uva principal
         ctx.fill(red(this.color), green(this.color), blue(this.color), alpha);
         ctx.ellipse(0, 0, currentSize, currentSize * 1.1);
         
         // Brillo de uva
-        ctx.fill(255, 255, 255, alpha * 0.6);
-        ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
+        //ctx.fill(255, 255, 255, alpha * 0.6);
+        //ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.3, currentSize * 0.3);
         
         ctx.pop();
     }
@@ -201,19 +201,19 @@ class HoverParticle {
         ctx.noStroke();
         
         // Halo exterior suave
-        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.2);
-        ctx.ellipse(0, 0, currentSize * 2.5, currentSize * 2.5);
+      //  ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.2);
+       // ctx.ellipse(0, 0, currentSize * 2.5, currentSize * 2.5);
         
-        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.4);
-        ctx.ellipse(0, 0, currentSize * 1.8, currentSize * 1.8);
+        //ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.4);
+        //ctx.ellipse(0, 0, currentSize * 1.8, currentSize * 1.8);
         
         // Cuerpo principal
         ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan);
         ctx.ellipse(0, 0, currentSize, currentSize);
         
         // Brillo interno
-        ctx.fill(255, 255, 255, this.lifespan * 0.7);
-        ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.4, currentSize * 0.4);
+        //ctx.fill(255, 255, 255, this.lifespan * 0.7);
+        //ctx.ellipse(-currentSize * 0.2, -currentSize * 0.2, currentSize * 0.4, currentSize * 0.4);
         
         ctx.pop();
     }
@@ -280,22 +280,22 @@ class EnergyParticle {
         ctx.noStroke();
         
         // Halo exterior difuso (múltiples capas para efecto translúcido)
-        for (let i = 3; i > 0; i--) {
+       /* for (let i = 3; i > 0; i--) {
             ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.15 * i / 3);
             ctx.ellipse(0, 0, currentSize * (2 + i * 0.5) * wobbleX, currentSize * (2 + i * 0.5) * wobbleY);
-        }
+        }*/
         
         // Cuerpo principal translúcido
         ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.7);
         ctx.ellipse(0, 0, currentSize * wobbleX, currentSize * wobbleY);
         
         // Brillo interno (múltiples puntos para efecto más orgánico)
-        ctx.fill(255, 255, 255, this.lifespan * 0.6);
+        /*ctx.fill(255, 255, 255, this.lifespan * 0.6);
         ctx.ellipse(-currentSize * 0.15, -currentSize * 0.15, currentSize * 0.35, currentSize * 0.35);
         
         // Brillo secundario
         ctx.fill(255, 255, 255, this.lifespan * 0.3);
-        ctx.ellipse(currentSize * 0.1, currentSize * 0.1, currentSize * 0.2, currentSize * 0.2);
+        ctx.ellipse(currentSize * 0.1, currentSize * 0.1, currentSize * 0.2, currentSize * 0.2);*/
         
         ctx.pop();
     }

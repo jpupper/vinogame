@@ -106,12 +106,12 @@ class DynamicBackground {
                 const ringAlpha = ripple.alpha * (0.5 - i * 0.15);
                 const ringOffset = i * 5;
                 
-                noFill();
-                stroke(CONFIG.background.ripples.color[0], 
-                       CONFIG.background.ripples.color[1], 
-                       CONFIG.background.ripples.color[2], 
-                       ringAlpha);
-                strokeWeight(2 - i * 0.5);
+                // Usar rellenos en lugar de strokes para evitar contornos
+                noStroke();
+                fill(CONFIG.background.ripples.color[0], 
+                     CONFIG.background.ripples.color[1], 
+                     CONFIG.background.ripples.color[2], 
+                     ringAlpha);
                 ellipse(ripple.pos.x, ripple.pos.y, (ripple.radius - ringOffset) * 2);
             }
             
@@ -150,7 +150,15 @@ class DynamicBackground {
             if (currentScaled) {
                 image(currentScaled, 0, 0);
             } else {
-                image(backgroundTextures[this.currentTextureIndex], 0, 0, width * 1.2, height * 1.2);
+                const img = backgroundTextures[this.currentTextureIndex];
+                if (img && img.width && img.height) {
+                    push();
+                    const sx = (width * 1.2) / img.width;
+                    const sy = (height * 1.2) / img.height;
+                    scale(sx, sy);
+                    image(img, 0, 0);
+                    pop();
+                }
             }
             
             // Textura siguiente (fade in)
@@ -159,7 +167,15 @@ class DynamicBackground {
             if (nextScaled) {
                 image(nextScaled, 0, 0);
             } else {
-                image(backgroundTextures[this.nextTextureIndex], 0, 0, width * 1.2, height * 1.2);
+                const img2 = backgroundTextures[this.nextTextureIndex];
+                if (img2 && img2.width && img2.height) {
+                    push();
+                    const sx2 = (width * 1.2) / img2.width;
+                    const sy2 = (height * 1.2) / img2.height;
+                    scale(sx2, sy2);
+                    image(img2, 0, 0);
+                    pop();
+                }
             }
             
             pop();

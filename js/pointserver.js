@@ -25,25 +25,32 @@ class PointServer {
 		ctx.text(`Puntos: ${allPoints.length}`, 40, 40);
 	  
 		// Dibujar conexiones entre puntos cercanos
-		ctx.stroke(
-			CONFIG.points.connectionColor[0],
-			CONFIG.points.connectionColor[1],
-			CONFIG.points.connectionColor[2],
-			CONFIG.points.connectionColor[3]
-		);
-		ctx.strokeWeight(CONFIG.points.connectionThickness);
+		ctx.noStroke();
 		for (let i = 0; i < allPoints.length; i++) {
 			for (let j = i + 1; j < allPoints.length; j++) {
 				const d = dist(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
 				if (d < CONFIG.points.connectionDistance) {
 					const alpha = map(d, 0, CONFIG.points.connectionDistance, CONFIG.points.connectionColor[3], 0);
-					ctx.stroke(
+					const x1 = allPoints[i].x;
+					const y1 = allPoints[i].y;
+					const x2 = allPoints[j].x;
+					const y2 = allPoints[j].y;
+					const angle = atan2(y2 - y1, x2 - x1);
+					const midX = (x1 + x2) / 2;
+					const midY = (y1 + y2) / 2;
+					const thickness = CONFIG.points.connectionThickness;
+					ctx.push();
+					ctx.translate(midX, midY);
+					ctx.rotate(angle);
+					ctx.fill(
 						CONFIG.points.connectionColor[0],
 						CONFIG.points.connectionColor[1],
 						CONFIG.points.connectionColor[2],
 						alpha
 					);
-					ctx.line(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
+					ctx.rectMode(CENTER);
+					ctx.rect(0, 0, d, thickness);
+					ctx.pop();
 				}
 			}
 		}

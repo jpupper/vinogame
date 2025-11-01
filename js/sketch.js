@@ -550,7 +550,7 @@ function draw() {
           if (!target.gameOver && !target.win) {
             target.addScore(collected.points, collected.x, collected.y);
           }
-          particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
+          //particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
           dynamicBackground.addRipple(collected.x, collected.y);
           createWave(collected.x, collected.y);
           targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
@@ -563,7 +563,7 @@ function draw() {
             target.loseLife();
             target.resetCombo();
           }
-          particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
+          //particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
           dynamicBackground.addRipple(bad.x, bad.y);
           targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
           shakeAmount = 15;
@@ -574,7 +574,7 @@ function draw() {
           // Procesar copas de vino recolectadas
           for (let collected of collisions.glasses) {
             scoreSystem.addScore(collected.points, collected.x, collected.y);
-            particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
+            //particleSystem.createExplosion(collected.x, collected.y, collected.glass.wineColor);
             dynamicBackground.addRipple(collected.x, collected.y);
             createWave(collected.x, collected.y);
             targetEffectIntensity = min(1.0, targetEffectIntensity + 0.3);
@@ -583,7 +583,7 @@ function draw() {
           for (let bad of collisions.badItems) {
             scoreSystem.addScore(-bad.penalty, bad.x, bad.y);
             scoreSystem.loseLife();
-            particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
+            //particleSystem.createExplosion(bad.x, bad.y, color(255, 0, 0));
             dynamicBackground.addRipple(bad.x, bad.y);
             scoreSystem.resetCombo();
             targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
@@ -761,6 +761,18 @@ function draw() {
   // Dibujar juego encima
   image(juegoBuffer, 0, 0);
   
+  // Overlay visual del área de colisión (opcional)
+  if (typeof window !== 'undefined' && window.collisionArea && window.collisionArea.enabled && window.collisionArea.showOverlay) {
+    const ca = window.collisionArea;
+    push();
+    // Rectángulo VERDE semitransparente
+    fill(0, 255, 0, 60);
+    stroke(0, 255, 0, 200);
+    strokeWeight(2);
+    rect(ca.x, ca.y, ca.width, ca.height);
+    pop();
+  }
+
   pop();
 
   // Agregar rastros para cada punto del servidor - optimizado
@@ -1060,7 +1072,17 @@ function displayCompetitiveHUD(ctx = window) {
   if (leftWins && !leftLoses) {
     ctx.fill(255, 215, 0);
     ctx.text('GANASTE', width * 0.25, height * 0.25);
-    if (trophy) ctx.image(trophy, width * 0.25, height * 0.35, bigSize, bigSize);
+    if (trophy) {
+      ctx.push();
+      ctx.imageMode(CENTER);
+      ctx.translate(width * 0.25, height * 0.35);
+      const tw = trophy.width || bigSize;
+      const th = trophy.height || bigSize;
+      const s = bigSize / Math.max(tw, th);
+      ctx.scale(s);
+      ctx.image(trophy, 0, 0);
+      ctx.pop();
+    }
     drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
   } else if (leftLoses && !leftWins) {
     ctx.fill(255, 80, 80);
@@ -1072,7 +1094,17 @@ function displayCompetitiveHUD(ctx = window) {
   if (rightWins && !rightLoses) {
     ctx.fill(255, 215, 0);
     ctx.text('GANASTE', width * 0.75, height * 0.25);
-    if (trophy) ctx.image(trophy, width * 0.75, height * 0.35, bigSize, bigSize);
+    if (trophy) {
+      ctx.push();
+      ctx.imageMode(CENTER);
+      ctx.translate(width * 0.75, height * 0.35);
+      const tw = trophy.width || bigSize;
+      const th = trophy.height || bigSize;
+      const s = bigSize / Math.max(tw, th);
+      ctx.scale(s);
+      ctx.image(trophy, 0, 0);
+      ctx.pop();
+    }
     drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
   } else if (rightLoses && !rightWins) {
     ctx.fill(255, 80, 80);
@@ -1107,7 +1139,7 @@ function applyCelebrationEffects(side, celebration) {
   if (frameCount % 20 === 0) {
     const px = random(xMin + 50, xMax - 50);
     const py = random(yMin, yMax);
-    particleSystem.createExplosion(px, py, col, 40);
+    particleSystem.createExplosion(px, py, col, 20);
   }
 
   // Subir la intensidad del shader con incremento más suave

@@ -8,6 +8,9 @@ class WineGlassSystem {
         this.badItems = [];
         this.lastSpawnTime = 0;
         this.spawnInterval = CONFIG.wineGlasses.spawnInterval;
+        // Nuevos límites máximos de items simultáneos
+        this.maxGoodItems = (CONFIG.wineGlasses && typeof CONFIG.wineGlasses.maxGoodItems !== 'undefined') ? CONFIG.wineGlasses.maxGoodItems : 100;
+        this.maxBadItems = (CONFIG.wineGlasses && typeof CONFIG.wineGlasses.maxBadItems !== 'undefined') ? CONFIG.wineGlasses.maxBadItems : 100;
     }
 
     update() {
@@ -58,13 +61,25 @@ class WineGlassSystem {
         const rand = random(1);
         const x = random(width * 0.1, width * 0.9);
         
-        // 30% de probabilidad de item malo
+        // Gating por máximos configurados: no crear nuevos si ya alcanzó el límite
+        const canSpawnBad = this.badItems.length < this.maxBadItems;
+        const canSpawnGood = this.glasses.length < this.maxGoodItems;
+
+        // 30% malo, 70% bueno, pero respetando límites
         if (rand < 0.3) {
-            this.badItems.push(new Item(x, true)); // isBad = true
-        }
-        // 70% de probabilidad de item bueno
-        else {
-            this.glasses.push(new Item(x, false)); // isBad = false
+            if (canSpawnBad) {
+                this.badItems.push(new Item(x, true)); // isBad = true
+            } else if (canSpawnGood) {
+                // Si no se puede malo, intenta bueno
+                this.glasses.push(new Item(x, false));
+            }
+        } else {
+            if (canSpawnGood) {
+                this.glasses.push(new Item(x, false)); // isBad = false
+            } else if (canSpawnBad) {
+                // Si no se puede bueno, intenta malo
+                this.badItems.push(new Item(x, true));
+            }
         }
     }
 
@@ -72,11 +87,22 @@ class WineGlassSystem {
         let collectedGlasses = [];
         let collectedBadItems = [];
 
+        // Limitar puntos a un área de colisión configurable (si está habilitada)
+        let pointsToCheck = points;
+        const area = (typeof window !== 'undefined') ? window.collisionArea : null;
+        if (area && area.enabled && typeof area.x === 'number') {
+            pointsToCheck = points.filter(p => (
+                p && typeof p.x === 'number' && typeof p.y === 'number' &&
+                p.x >= area.x && p.x <= area.x + area.width &&
+                p.y >= area.y && p.y <= area.y + area.height
+            ));
+        }
+
         // Verificar colisiones con copas de vino
         for (let i = this.glasses.length - 1; i >= 0; i--) {
             const glass = this.glasses[i];
             
-            for (let point of points) {
+            for (let point of pointsToCheck) {
                 const d = dist(glass.x, glass.y, point.x, point.y);
                 
                 if (d < glass.size / 2) {
@@ -102,7 +128,7 @@ class WineGlassSystem {
         for (let i = this.badItems.length - 1; i >= 0; i--) {
             const item = this.badItems[i];
             
-            for (let point of points) {
+            for (let point of pointsToCheck) {
                 const d = dist(item.x, item.y, point.x, point.y);
                 
                 if (d < item.size / 2) {
@@ -220,14 +246,21 @@ class Item {
                 if (scaledImg) {
                     ctx.image(scaledImg, 0, 0);
                 } else {
-                    ctx.image(badItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                    const img = badItemImages[this.imageIndex];
+                    if (img && img.width && img.height) {
+                        ctx.push();
+                        const s = this.size / Math.max(img.width, img.height);
+                        ctx.scale(s);
+                        ctx.image(img, 0, 0);
+                        ctx.pop();
+                    }
                 }
                 ctx.pop();
             } else {
                 // Fallback: círculo rojo
-                ctx.noStroke();
-                ctx.fill(200, 30, 30);
-                ctx.ellipse(0, 0, this.size * pulseFactor);
+                //ctx.noStroke();
+                //ctx.fill(200, 30, 30);
+                //ctx.ellipse(0, 0, this.size * pulseFactor);
             }
         } else {
             // ===== ITEM BUENO =====
@@ -249,123 +282,34 @@ class Item {
                 if (scaledImg) {
                     ctx.image(scaledImg, 0, 0);
                 } else {
-                    ctx.image(goodItemImages[this.imageIndex], 0, 0, this.size, this.size);
+                    const img = goodItemImages[this.imageIndex];
+                    if (img && img.width && img.height) {
+                        ctx.push();
+                        const s = this.size / Math.max(img.width, img.height);
+                        ctx.scale(s);
+                        ctx.image(img, 0, 0);
+                        ctx.pop();
+                    }
                 }
                 ctx.pop();
             } else {
                 // Fallback: círculo dorado
-                ctx.noStroke();
-                ctx.fill(255, 215, 80);
-                ctx.ellipse(0, 0, this.size * pulseFactor * scaleFactor);
+                //ctx.noStroke();
+                //ctx.fill(255, 215, 80);
+                //ctx.ellipse(0, 0, this.size * pulseFactor * scaleFactor);
             }
             
             // Barra de progreso
-            if (this.hoverTime > 0 && captureProgress < 0.95) {
-                this.drawProgressBar(ctx);
-            }
+            //if (this.hoverTime > 0 && captureProgress < 0.95) {
+             //   this.drawProgressBar(ctx);
+           // }
         }
         
         ctx.pop();
     }
     
-    // Dibujar partículas orbitando alrededor de la uva
-    drawOrbitingParticles(ctx, progress, scale) {
-        const particleCount = floor(progress * 8); // Hasta 8 partículas
-        const orbitRadius = this.size * 0.8 * scale;
-        
-        ctx.noStroke();
-        
-        for (let i = 0; i < particleCount; i++) {
-            const angle = (i / particleCount) * TWO_PI + this.pulsePhase * 2;
-            const x = cos(angle) * orbitRadius;
-            const y = sin(angle) * orbitRadius;
-            
-            // Tamaño de partícula
-            const particleSize = 4 + progress * 4;
-            
-            // Color dorado brillante
-            ctx.fill(255, 220, 100, 200);
-            ctx.ellipse(x, y, particleSize);
-            
-            // Núcleo más brillante
-            ctx.fill(255, 255, 200, 255);
-            ctx.ellipse(x, y, particleSize * 0.5);
-        }
-    }
-
-    drawGlass(pulseFactor, ctx = window) {
-        const scale = pulseFactor;
-        
-        // Calcular nivel de llenado: 0 = vacío, 1 = lleno
-        const fillLevel = 1 - (this.hoverTime / this.requiredHoverTime);
-        
-        // BASE DE LA COPA (abajo)
-        ctx.fill(180, 180, 180);
-        ctx.stroke(140, 140, 140);
-        ctx.strokeWeight(2);
-        ctx.ellipse(0, 40 * scale, 20 * scale, 6 * scale);
-        
-        // TALLO (vertical)
-        ctx.strokeWeight(3);
-        ctx.stroke(160, 160, 160);
-        ctx.line(0, 40 * scale, 0, 15 * scale);
-        
-        // VINO DENTRO (dibujar primero)
-        if (fillLevel > 0.05) {
-            ctx.noStroke();
-            ctx.fill(this.wineColor);
-            
-            // El vino va desde el borde superior (y=-25) hasta el fondo (y=10)
-            // fillLevel 1 = lleno hasta arriba, fillLevel 0 = vacío
-            const wineBottom = 10 * scale; // Fondo de la copa
-            const wineTop = lerp(10, -25, fillLevel) * scale; // Superficie del vino
-            const wineHeight = wineBottom - wineTop;
-            
-            if (wineHeight > 0) {
-                // Calcular ancho del vino según la altura
-                const topWidth = lerp(18, 13, fillLevel);
-                
-                // Cuerpo del vino
-                ctx.beginShape();
-                ctx.vertex(-18 * scale, wineBottom);
-                ctx.vertex(18 * scale, wineBottom);
-                ctx.vertex(topWidth * scale, wineTop);
-                ctx.vertex(-topWidth * scale, wineTop);
-                ctx.endShape(CLOSE);
-                
-                // Superficie del vino (elipse)
-                ctx.fill(red(this.wineColor) + 20, green(this.wineColor) + 20, blue(this.wineColor) + 20, 180);
-                ctx.ellipse(0, wineTop, topWidth * 2 * scale, 5 * scale);
-            }
-        }
-        
-        // CONTORNO DE LA COPA (vidrio transparente)
-        ctx.noFill();
-        ctx.stroke(220, 230, 240, 200);
-        ctx.strokeWeight(2.5);
-        
-        // Lado izquierdo
-        ctx.line(-18 * scale, 10 * scale, -13 * scale, -25 * scale);
-        // Lado derecho
-        ctx.line(18 * scale, 10 * scale, 13 * scale, -25 * scale);
-        // Borde superior
-        ctx.arc(0, -25 * scale, 26 * scale, 8 * scale, 0, PI);
-        
-        // Línea del fondo
-        ctx.noFill();
-        ctx.stroke(200, 210, 220, 150);
-        ctx.strokeWeight(1.5);
-        ctx.ellipse(0, 10 * scale, 36 * scale, 6 * scale);
-        
-        // BRILLO en el vidrio
-        ctx.noStroke();
-        ctx.fill(255, 255, 255, 120);
-        ctx.ellipse(-6 * scale, -10 * scale, 4 * scale, 15 * scale);
-        ctx.fill(255, 255, 255, 60);
-        ctx.ellipse(8 * scale, 0, 3 * scale, 10 * scale);
-    }
-
-    drawProgressBar(ctx = window) {
+  
+ /*drawProgressBar(ctx = window) {
         const barWidth = 40;
         const barHeight = 5;
         const progress = this.hoverTime / this.requiredHoverTime;
@@ -378,5 +322,5 @@ class Item {
         // Progreso
         ctx.fill(255, 200, 0);
         ctx.rect(-barWidth/2, -50, barWidth * progress, barHeight, 2);
-    }
+    }*/
 }

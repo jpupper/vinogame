@@ -73,22 +73,31 @@ class ControlPanel {
     }
     
     createDefaultConfiguration() {
-        this.configData = {
+        // Devuelve un objeto de configuración por defecto en vez de depender de efectos secundarios
+        const defaults = {
             gameSettings: {
                 fallSpeed: { current: 2.25, default: 2.25 },
                 lives: { current: 3, default: 3 },
                 objectSize: { current: 100, default: 100 },
                 spawnRate: { current: 2000, default: 2000 },
+                // Nuevo: máximos de objetos simultáneos en pantalla
+                maxGoodItems: { current: 10, default: 10 },
+                maxBadItems: { current: 5, default: 5 },
                 winComboThreshold: { current: 20, default: 20 },
-                hoverTime: { current: 1000, default: 1000 }
+                hoverTime: { current: 1000, default: 1000 },
+                collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false }
             }
         };
+        this.configData = defaults;
+        return defaults;
     }
     
     // Funciones de manejo de archivo JSON
     async loadConfigFromFile() {
         try {
-            const response = await fetch('./panel-config.json');
+            // Fuerza a no usar caché del navegador para que los cambios del JSON recién reemplazado se reflejen.
+            const cacheBust = `?_=${Date.now()}`;
+            const response = await fetch(`./panel-config.json${cacheBust}`, { cache: 'no-store' });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -229,6 +238,15 @@ class ControlPanel {
     applyConfiguration() {
         if (!this.configData || !this.configData.gameSettings) return;
         const settings = this.configData.gameSettings;
+        // Asegurar que existan los nuevos campos incluso si el JSON antiguo no los trae
+        if (!settings.maxGoodItems) {
+            const defGood = this.maxGoodItemsInput ? parseInt(this.maxGoodItemsInput.value || '10') : 10;
+            settings.maxGoodItems = { current: defGood, default: defGood };
+        }
+        if (!settings.maxBadItems) {
+            const defBad = this.maxBadItemsInput ? parseInt(this.maxBadItemsInput.value || '5') : 5;
+            settings.maxBadItems = { current: defBad, default: defBad };
+        }
         
         // Aplicar configuraciones a los controles
         if (this.fallSpeedSlider && settings.fallSpeed) {
@@ -253,6 +271,16 @@ class ControlPanel {
             this.spawnRateSlider.value = settings.spawnRate.current;
             this.spawnRateValue.textContent = (settings.spawnRate.current / 1000).toFixed(1) + 's';
             this.updateSpawnRate(settings.spawnRate.current);
+        }
+
+        // Nuevos: máximos de objetos simultáneos
+        if (this.maxGoodItemsInput && settings.maxGoodItems) {
+            this.maxGoodItemsInput.value = parseInt(settings.maxGoodItems.current);
+            this.updateMaxGoodItems(parseInt(settings.maxGoodItems.current));
+        }
+        if (this.maxBadItemsInput && settings.maxBadItems) {
+            this.maxBadItemsInput.value = parseInt(settings.maxBadItems.current);
+            this.updateMaxBadItems(parseInt(settings.maxBadItems.current));
         }
 
         // Umbral de combo para ganar
@@ -291,6 +319,39 @@ class ControlPanel {
 
         // Aplicar a juego (valores iniciales)
         this.updateHaloSettings();
+
+        // Aplicar área de colisión (si existe)
+        const ca = settings.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
+        // Si p5.width/p5.height aún no están inicializados, usa window.innerWidth/innerHeight
+        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
+        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
+        if (!ca.width || ca.width <= 0) ca.width = canvasW;
+        if (!ca.height || ca.height <= 0) ca.height = canvasH;
+        // Asegurar que el rectángulo esté dentro del canvas
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+        ca.x = clamp(parseInt(ca.x || 0), 0, canvasW);
+        ca.y = clamp(parseInt(ca.y || 0), 0, canvasH);
+        ca.width = clamp(parseInt(ca.width || canvasW), 1, Math.max(1, canvasW - ca.x));
+        ca.height = clamp(parseInt(ca.height || canvasH), 1, Math.max(1, canvasH - ca.y));
+
+        // UI: asignar valores si existen los elementos
+        if (this.collisionAreaEnabled) this.collisionAreaEnabled.checked = !!ca.enabled;
+        if (this.collisionAreaX) this.collisionAreaX.value = ca.x;
+        if (this.collisionAreaY) this.collisionAreaY.value = ca.y;
+        if (this.collisionAreaW) this.collisionAreaW.value = ca.width;
+        if (this.collisionAreaH) this.collisionAreaH.value = ca.height;
+        // Runtime: exponer en window
+        window.collisionArea = {
+            enabled: !!ca.enabled,
+            x: ca.x,
+            y: ca.y,
+            width: ca.width,
+            height: ca.height
+        };
+        if (this.collisionAreaOverlay) this.collisionAreaOverlay.checked = !!(settings.collisionArea && settings.collisionArea.showOverlay);
+        window.collisionArea.showOverlay = !!(settings.collisionArea && settings.collisionArea.showOverlay);
+        // Log de diagnóstico para verificar que los valores del JSON se aplicaron correctamente
+        console.log('Configuración de área de colisión aplicada desde JSON:', window.collisionArea);
     }
 
     async saveConfiguration() {
@@ -301,8 +362,32 @@ class ControlPanel {
         this.configData.gameSettings.lives.current = parseInt(this.livesSlider.value);
         this.configData.gameSettings.objectSize.current = parseInt(this.objectSizeSlider.value);
         this.configData.gameSettings.spawnRate.current = parseInt(this.spawnRateSlider.value);
+        if (this.maxGoodItemsInput) {
+            this.configData.gameSettings.maxGoodItems = this.configData.gameSettings.maxGoodItems || { current: 10, default: 10 };
+            this.configData.gameSettings.maxGoodItems.current = parseInt(this.maxGoodItemsInput.value || '0');
+        }
+        if (this.maxBadItemsInput) {
+            this.configData.gameSettings.maxBadItems = this.configData.gameSettings.maxBadItems || { current: 5, default: 5 };
+            this.configData.gameSettings.maxBadItems.current = parseInt(this.maxBadItemsInput.value || '0');
+        }
         if (this.winComboSlider) this.configData.gameSettings.winComboThreshold.current = parseInt(this.winComboSlider.value);
         if (this.hoverTimeSlider) this.configData.gameSettings.hoverTime.current = parseInt(this.hoverTimeSlider.value);
+
+        // Guardar área de colisión
+        this.configData.gameSettings.collisionArea = this.configData.gameSettings.collisionArea || {};
+        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
+        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
+        const enabled = this.collisionAreaEnabled ? !!this.collisionAreaEnabled.checked : (window.collisionArea ? !!window.collisionArea.enabled : false);
+        const x = this.collisionAreaX ? parseInt(this.collisionAreaX.value || 0) : (window.collisionArea ? window.collisionArea.x : 0);
+        const y = this.collisionAreaY ? parseInt(this.collisionAreaY.value || 0) : (window.collisionArea ? window.collisionArea.y : 0);
+        const w = this.collisionAreaW ? parseInt(this.collisionAreaW.value || canvasW) : (window.collisionArea ? window.collisionArea.width : canvasW);
+        const h = this.collisionAreaH ? parseInt(this.collisionAreaH.value || canvasH) : (window.collisionArea ? window.collisionArea.height : canvasH);
+        this.configData.gameSettings.collisionArea.enabled = enabled;
+        this.configData.gameSettings.collisionArea.x = x;
+        this.configData.gameSettings.collisionArea.y = y;
+        this.configData.gameSettings.collisionArea.width = w;
+        this.configData.gameSettings.collisionArea.height = h;
+        this.configData.gameSettings.collisionArea.showOverlay = this.collisionAreaOverlay ? !!this.collisionAreaOverlay.checked : (window.collisionArea ? !!window.collisionArea.showOverlay : false);
         
         // Actualizar configuración de halos
         if (!this.configData.haloSettings) this.configData.haloSettings = {};
@@ -423,6 +508,9 @@ class ControlPanel {
         this.objectSizeValue = document.getElementById('objectSizeValue');
         this.spawnRateSlider = document.getElementById('spawnRateSlider');
         this.spawnRateValue = document.getElementById('spawnRateValue');
+        // Nuevos: máximos de items simultáneos
+        this.maxGoodItemsInput = document.getElementById('maxGoodItemsInput');
+        this.maxBadItemsInput = document.getElementById('maxBadItemsInput');
         
         // Nuevo: umbral de combo para ganar
         this.winComboSlider = document.getElementById('winComboSlider');
@@ -430,6 +518,14 @@ class ControlPanel {
         // Nuevo: slider de tiempo de agarre
         this.hoverTimeSlider = document.getElementById('hoverTimeSlider');
         this.hoverTimeValue = document.getElementById('hoverTimeValue');
+
+        // Nueva: elementos de área de colisión
+        this.collisionAreaEnabled = document.getElementById('collisionAreaEnabled');
+        this.collisionAreaX = document.getElementById('collisionAreaX');
+        this.collisionAreaY = document.getElementById('collisionAreaY');
+        this.collisionAreaW = document.getElementById('collisionAreaW');
+        this.collisionAreaH = document.getElementById('collisionAreaH');
+        this.collisionAreaOverlay = document.getElementById('collisionAreaOverlay');
         
         // STATS tab metrics
         this.statsFpsCounter = document.getElementById('statsFpsCounter');
@@ -513,6 +609,22 @@ class ControlPanel {
             });
         }
 
+        // Nuevos: límites máximos de items en pantalla
+        if (this.maxGoodItemsInput) {
+            this.maxGoodItemsInput.addEventListener('input', (event) => {
+                const value = Math.max(0, parseInt(event.target.value || '0'));
+                event.target.value = value;
+                this.updateMaxGoodItems(value);
+            });
+        }
+        if (this.maxBadItemsInput) {
+            this.maxBadItemsInput.addEventListener('input', (event) => {
+                const value = Math.max(0, parseInt(event.target.value || '0'));
+                event.target.value = value;
+                this.updateMaxBadItems(value);
+            });
+        }
+
         // Control del umbral de combo para ganar
         if (this.winComboSlider) {
             this.winComboSlider.addEventListener('input', (event) => {
@@ -549,6 +661,49 @@ class ControlPanel {
         }
         if (this.badHaloColorInput) {
             this.badHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); });
+        }
+
+        // Eventos de área de colisión
+        if (this.collisionAreaEnabled) {
+            this.collisionAreaEnabled.addEventListener('change', (e) => {
+                this.updateCollisionAreaEnabled(e.target.checked);
+            });
+        }
+        if (this.collisionAreaOverlay) {
+            this.collisionAreaOverlay.addEventListener('change', (e) => {
+                this.updateCollisionAreaOverlay(!!e.target.checked);
+            });
+        }
+        const clampNum = (val, min, max) => Math.max(min, Math.min(max, val));
+        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
+        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
+        if (this.collisionAreaX) {
+            this.collisionAreaX.addEventListener('input', (e) => {
+                const v = clampNum(parseInt(e.target.value || 0), 0, canvasW);
+                e.target.value = v;
+                this.updateCollisionAreaValue('x', v);
+            });
+        }
+        if (this.collisionAreaY) {
+            this.collisionAreaY.addEventListener('input', (e) => {
+                const v = clampNum(parseInt(e.target.value || 0), 0, canvasH);
+                e.target.value = v;
+                this.updateCollisionAreaValue('y', v);
+            });
+        }
+        if (this.collisionAreaW) {
+            this.collisionAreaW.addEventListener('input', (e) => {
+                const v = clampNum(parseInt(e.target.value || 1), 1, canvasW);
+                e.target.value = v;
+                this.updateCollisionAreaValue('width', v);
+            });
+        }
+        if (this.collisionAreaH) {
+            this.collisionAreaH.addEventListener('input', (e) => {
+                const v = clampNum(parseInt(e.target.value || 1), 1, canvasH);
+                e.target.value = v;
+                this.updateCollisionAreaValue('height', v);
+            });
         }
     }
     
@@ -647,6 +802,28 @@ class ControlPanel {
         }, 100);
     }
 
+    // Nuevos: actualizar límites máximos de objetos en pantalla
+    updateMaxGoodItems(value) {
+        const v = Math.max(0, parseInt(value));
+        if (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
+            CONFIG.wineGlasses.maxGoodItems = v;
+        }
+        if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+            wineGlassSystem.maxGoodItems = v;
+        }
+        console.log('Máximo de items buenos:', v);
+    }
+    updateMaxBadItems(value) {
+        const v = Math.max(0, parseInt(value));
+        if (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
+            CONFIG.wineGlasses.maxBadItems = v;
+        }
+        if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+            wineGlassSystem.maxBadItems = v;
+        }
+        console.log('Máximo de items malos:', v);
+    }
+
     // Nuevo: actualizar umbral de combo para ganar en tiempo real
     updateWinComboThreshold(value) {
         const v = parseInt(value);
@@ -682,6 +859,57 @@ class ControlPanel {
             }
         }
         console.log('Tiempo de agarre actualizado:', v + 'ms');
+    }
+
+    // === Área de colisión: exponer valores al juego ===
+    updateCollisionAreaEnabled(enabled) {
+        window.collisionArea = window.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
+        window.collisionArea.enabled = !!enabled;
+        console.log('Área de colisión habilitada:', !!enabled);
+    }
+    updateCollisionAreaValue(key, value) {
+        window.collisionArea = window.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
+        window.collisionArea[key] = value;
+        // Asegurar que el rectángulo no salga del canvas
+        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
+        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
+        if (key === 'width') {
+            window.collisionArea.width = Math.min(window.collisionArea.width, canvasW - window.collisionArea.x);
+        }
+        if (key === 'height') {
+            window.collisionArea.height = Math.min(window.collisionArea.height, canvasH - window.collisionArea.y);
+        }
+        // Si cambia X o Y, ajustar ancho/alto para mantener el rectángulo visible
+        if (key === 'x') {
+            const maxW = Math.max(1, canvasW - window.collisionArea.x);
+            if (window.collisionArea.width > maxW) {
+                window.collisionArea.width = maxW;
+                if (this.collisionAreaW) this.collisionAreaW.value = maxW;
+            }
+        }
+        if (key === 'y') {
+            const maxH = Math.max(1, canvasH - window.collisionArea.y);
+            if (window.collisionArea.height > maxH) {
+                window.collisionArea.height = maxH;
+                if (this.collisionAreaH) this.collisionAreaH.value = maxH;
+            }
+        }
+        // Persistir en configData si está disponible
+        if (this.configData && this.configData.gameSettings) {
+            this.configData.gameSettings.collisionArea = this.configData.gameSettings.collisionArea || {};
+            this.configData.gameSettings.collisionArea[key] = window.collisionArea[key];
+        }
+        console.log('Área de colisión actualizada:', window.collisionArea);
+    }
+
+    updateCollisionAreaOverlay(show) {
+        window.collisionArea = window.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
+        window.collisionArea.showOverlay = !!show;
+        if (this.configData && this.configData.gameSettings) {
+            this.configData.gameSettings.collisionArea = this.configData.gameSettings.collisionArea || {};
+            this.configData.gameSettings.collisionArea.showOverlay = !!show;
+        }
+        console.log('Overlay de área de colisión:', !!show);
     }
 
     // Getters auxiliares
@@ -939,7 +1167,9 @@ class ControlPanel {
         this.saveChangesBtn = document.getElementById('saveChangesBtn');
         this.saveStatus = document.getElementById('saveStatus');
         if (this.saveChangesBtn) {
-            this.saveChangesBtn.addEventListener('click', () => {
+            this.saveChangesBtn.addEventListener('click', (e) => {
+                // Evitar cualquier comportamiento por defecto que pudiera provocar recarga
+                if (e && typeof e.preventDefault === 'function') e.preventDefault();
                 try {
                     this.saveConfiguration();
                     this.showSaveNotification('✅ Configuración guardada');

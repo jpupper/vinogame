@@ -787,6 +787,22 @@
                 <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
             </div>
 
+            <!-- Límite de cantidad simultánea de items buenos y malos -->
+            <div class="control-group">
+                <label>
+                    Máximo de objetos simultáneos
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+                    <label for="maxGoodItemsInput">Buenos
+                        <input type="number" id="maxGoodItemsInput" min="0" step="1" value="10">
+                    </label>
+                    <label for="maxBadItemsInput">Malos
+                        <input type="number" id="maxBadItemsInput" min="0" step="1" value="5">
+                    </label>
+                </div>
+                <div class="help-text">No se generarán nuevos objetos si ya hay en pantalla el máximo configurado</div>
+            </div>
+
             <div class="control-group">
                 <label for="hoverTimeSlider">
                     Tiempo de agarre (hover)
@@ -803,6 +819,36 @@
                 </label>
                 <input type="range" id="winComboSlider" min="5" max="50" step="1" value="20">
                 <div class="help-text">Cantidad de aciertos consecutivos necesarios para ganar</div>
+            </div>
+
+            <!-- Área de colisión: limitar cálculo de colisiones a un rectángulo configurable -->
+            <div class="control-group" id="collisionAreaControls">
+                <label>
+                    Área de colisión
+                </label>
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="collisionAreaEnabled">
+                    Habilitar área de colisión (limitar chequeo)
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+                    <label for="collisionAreaX">X
+                        <input type="number" id="collisionAreaX" min="0" step="1">
+                    </label>
+                    <label for="collisionAreaY">Y
+                        <input type="number" id="collisionAreaY" min="0" step="1">
+                    </label>
+                    <label for="collisionAreaW">Ancho
+                        <input type="number" id="collisionAreaW" min="1" step="1">
+                    </label>
+                    <label for="collisionAreaH">Alto
+                        <input type="number" id="collisionAreaH" min="1" step="1">
+                    </label>
+                </div>
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                    <input type="checkbox" id="collisionAreaOverlay">
+                    Mostrar overlay del área de colisión
+                </label>
+                <div class="help-text">Solo se calcularán colisiones dentro del rectángulo definido. Este ajuste se guarda en panel-config.json.</div>
             </div>
             
             <!-- Controles de Halos -->

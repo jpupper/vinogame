@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0.0",
     "created": "2024-01-01",
-    "lastModified": "2025-10-30",
+    "lastModified": "2025-11-01",
     "description": "Configuraciones del panel de control para RGB Madness"
   },
   "gameSettings": {
@@ -56,6 +56,14 @@
       "default": 1000,
       "unit": "ms",
       "description": "Tiempo requerido para agarrar objetos"
+    },
+    "collisionArea": {
+      "showOverlay": true,
+      "width": 1920,
+      "height": 411,
+      "x": 0,
+      "y": 500,
+      "enabled": true
     }
   },
   "haloSettings": {
