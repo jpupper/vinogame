@@ -2,7 +2,6 @@ let Pserver;
 let PNT;
 let wineGlassSystem;
 let particleSystem;
-let trailSystem;
 let dynamicBackground;
 let scoreSystem;
 let medidorIndicator; // antes: barrelIndicator
@@ -239,7 +238,6 @@ function setup() {
   // PNT = new PlayerPntsManager();
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
-  trailSystem = new TrailSystem();
   dynamicBackground = new DynamicBackground();
   scoreSystem = new ScoreSystem();
   medidorIndicator.setup();
@@ -273,7 +271,7 @@ let cachedShaderUniforms = {};
 
 function draw() {
   // Actualizar sistemas
-  dynamicBackground.update();
+  //dynamicBackground.update();
   
   // Actualizar intensidad de efectos (smooth lerp)
   effectIntensity = lerp(effectIntensity, targetEffectIntensity, 0.1);
@@ -505,8 +503,8 @@ function draw() {
         // Blanco suave; se tiñe con el fondo
         compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
         // Grosor y suavizado en coordenadas UV
-        compositeShader.setUniform('u_splitLineThickness', 0.003);
-        compositeShader.setUniform('u_splitLineSoftness', 0.008);
+        compositeShader.setUniform('u_splitLineThickness', 0.001);
+        compositeShader.setUniform('u_splitLineSoftness', 0.001);
         
         feedbackBuffer.rect(0, 0, width, height);
       }
@@ -524,9 +522,6 @@ function draw() {
   // ===== BUFFER DE JUEGO =====
   juegoBuffer.clear();
   if (gameState === 'playing') {
-    // Actualizar y mostrar rastros (en juegoBuffer)
-    trailSystem.update();
-    trailSystem.display(juegoBuffer);
 
     // Actualizar y mostrar copas de vino (en juegoBuffer)
     wineGlassSystem.update();
@@ -780,7 +775,7 @@ function draw() {
     const allPoints = Pserver.getAllPoints();
     for (let i = 0; i < allPoints.length; i++) {
       const p = allPoints[i];
-      trailSystem.addTrail(p.x, p.y, p.id, color(200, 100, 150));
+     
       
       // Añadir ondas al fondo cuando hay movimiento significativo
       if (frameCount % 30 === 0) {
@@ -860,7 +855,6 @@ function resetGame() {
   }
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
-  trailSystem = new TrailSystem();
   
   // Reiniciar sistemas existentes en lugar de crear nuevos
   if (scoreSystem) {

@@ -300,16 +300,16 @@ class Item {
             }
             
             // Barra de progreso
-            //if (this.hoverTime > 0 && captureProgress < 0.95) {
-             //   this.drawProgressBar(ctx);
-           // }
+            if (this.hoverTime > 0 && captureProgress < 0.95) {
+               this.drawProgressBar(ctx);
+            }
         }
         
         ctx.pop();
     }
     
   
- /*drawProgressBar(ctx = window) {
+ drawProgressBar(ctx = window) {
         const barWidth = 40;
         const barHeight = 5;
         const progress = this.hoverTime / this.requiredHoverTime;
@@ -322,5 +322,5 @@ class Item {
         // Progreso
         ctx.fill(255, 200, 0);
         ctx.rect(-barWidth/2, -50, barWidth * progress, barHeight, 2);
-    }*/
+    }
 }

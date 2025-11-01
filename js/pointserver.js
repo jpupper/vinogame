@@ -26,7 +26,7 @@ class PointServer {
 	  
 		// Dibujar conexiones entre puntos cercanos
 		ctx.noStroke();
-		for (let i = 0; i < allPoints.length; i++) {
+		/*for (let i = 0; i < allPoints.length; i++) {
 			for (let j = i + 1; j < allPoints.length; j++) {
 				const d = dist(allPoints[i].x, allPoints[i].y, allPoints[j].x, allPoints[j].y);
 				if (d < CONFIG.points.connectionDistance) {
@@ -53,7 +53,7 @@ class PointServer {
 					ctx.pop();
 				}
 			}
-		}
+		}*/
 		
 		// Dibujar los puntos
 		for (let i = 0; i < allPoints.length; i++) {

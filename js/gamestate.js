@@ -39,9 +39,9 @@ class ModeSelectionScreen {
       const cx = width / 2;
       const cy = height * 0.34 + bob;
       // Brillo suave detrás de la copa
-      ctx.noStroke();
-      ctx.fill(170, 110, 255, 55);
-      ctx.ellipse(cx, cy, imgSize * 1.5 + sin(t * 1.2) * 10, imgSize * 1.2 + sin(t * 1.2) * 8);
+      //ctx.noStroke();
+     // ctx.fill(170, 110, 255, 55);
+    //  ctx.ellipse(cx, cy, imgSize * 1.5 + sin(t * 1.2) * 10, imgSize * 1.2 + sin(t * 1.2) * 8);
       // Copa
       ctx.imageMode(CENTER);
       ctx.image(img, cx, cy, imgSize, imgSize);

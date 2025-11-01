@@ -218,42 +218,7 @@ void main() {
     // ===== COLOR GRADING DINÁMICO (basado en combo) =====
     float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);
     
-    if (safeComboLevel > 0.05) {
-        // Combo bajo (0.05 - 0.4): Tinte morado/magenta
-        vec3 lowComboTint = vec3(1.1, 0.9, 1.2); // Morado sutil
-        
-        // Combo medio (0.4 - 0.7): Tinte naranja
-        vec3 midComboTint = vec3(1.2, 1.0, 0.8); // Naranja
-        
-        // Combo alto (0.7 - 1.0): Tinte dorado
-        vec3 highComboTint = vec3(1.3, 1.1, 0.7); // Dorado
-        
-        // Interpolar entre tintes según el nivel de combo
-        vec3 colorTint;
-        if (safeComboLevel < 0.4) {
-            // Bajo a medio
-            float t = (safeComboLevel - 0.05) / 0.35;
-            colorTint = mix(vec3(1.0), lowComboTint, t);
-        } else if (safeComboLevel < 0.7) {
-            // Medio a alto
-            float t = (safeComboLevel - 0.4) / 0.3;
-            colorTint = mix(lowComboTint, midComboTint, t);
-        } else {
-            // Alto a máximo
-            float t = (safeComboLevel - 0.7) / 0.3;
-            colorTint = mix(midComboTint, highComboTint, t);
-        }
-        
-        // Aplicar color grading
-        finalColor *= colorTint;
-        
-        // Aumentar saturación con combo alto
-        if (safeComboLevel > 0.5) {
-            float saturationBoost = (safeComboLevel - 0.5) * 0.6; // Hasta 30% más saturación
-            float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
-            finalColor = mix(vec3(luminance), finalColor, 1.0 + saturationBoost);
-        }
-    }
+  
     
     // ===== LÍNEA DIVISORIA CON DISTORSIÓN =====
     // Se calcula usando las UV ya distorsionadas para que se mueva con el shader
@@ -268,7 +233,7 @@ void main() {
     finalColor += feedbackColor.rgb * feedbackColor.a * 0.2;
     
     // Brillo adicional con combo
-    finalColor += vec3(safeComboLevel * 0.03);
+    //finalColor += vec3(safeComboLevel * 0.03);
     
     // ===== BLOOM/GLOW EFFECT =====
     // Detectar áreas brillantes
