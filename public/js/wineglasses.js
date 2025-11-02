@@ -8,6 +8,8 @@ class WineGlassSystem {
         this.badItems = [];
         this.lastSpawnTime = 0;
         this.spawnInterval = CONFIG.wineGlasses.spawnInterval;
+        // Modo de aparición: 'top' (desde arriba) o 'random' (posición aleatoria sin velocidad)
+        this.spawnMode = (CONFIG.wineGlasses && CONFIG.wineGlasses.spawnMode) ? CONFIG.wineGlasses.spawnMode : 'top';
         // Nuevos límites máximos de items simultáneos
         this.maxGoodItems = (CONFIG.wineGlasses && typeof CONFIG.wineGlasses.maxGoodItems !== 'undefined') ? CONFIG.wineGlasses.maxGoodItems : 100;
         this.maxBadItems = (CONFIG.wineGlasses && typeof CONFIG.wineGlasses.maxBadItems !== 'undefined') ? CONFIG.wineGlasses.maxBadItems : 100;
@@ -60,6 +62,17 @@ class WineGlassSystem {
         }
         const rand = random(1);
         const x = random(width * 0.1, width * 0.9);
+        // Determinar posición y velocidad inicial según modo
+        let initialY;
+        let initialSpeed;
+        if (this.spawnMode === 'random') {
+            initialY = random(0, height);
+            initialSpeed = 0; // sin velocidad en modo random
+        } else {
+            // modo por defecto: desde arriba
+            initialY = -50;
+            initialSpeed = null; // usar velocidad aleatoria por defecto en Item
+        }
         
         // Gating por máximos configurados: no crear nuevos si ya alcanzó el límite
         const canSpawnBad = this.badItems.length < this.maxBadItems;
@@ -68,17 +81,17 @@ class WineGlassSystem {
         // 30% malo, 70% bueno, pero respetando límites
         if (rand < 0.3) {
             if (canSpawnBad) {
-                this.badItems.push(new Item(x, true)); // isBad = true
+                this.badItems.push(new Item(x, true, initialY, initialSpeed)); // isBad = true
             } else if (canSpawnGood) {
                 // Si no se puede malo, intenta bueno
-                this.glasses.push(new Item(x, false));
+                this.glasses.push(new Item(x, false, initialY, initialSpeed));
             }
         } else {
             if (canSpawnGood) {
-                this.glasses.push(new Item(x, false)); // isBad = false
+                this.glasses.push(new Item(x, false, initialY, initialSpeed)); // isBad = false
             } else if (canSpawnBad) {
                 // Si no se puede bueno, intenta malo
-                this.badItems.push(new Item(x, true));
+                this.badItems.push(new Item(x, true, initialY, initialSpeed));
             }
         }
     }
@@ -153,10 +166,10 @@ class WineGlassSystem {
 
 // Clase ÚNICA para items (buenos y malos)
 class Item {
-    constructor(x, isBad = false) {
+    constructor(x, isBad = false, initialY = null, initialSpeed = null) {
         this.x = x;
-        this.y = -50;
-        this.speed = random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
+        this.y = (typeof initialY === 'number') ? initialY : -50;
+        this.speed = (typeof initialSpeed === 'number') ? initialSpeed : random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
         this.size = CONFIG.wineGlasses.itemSize; // Tamaño único para todos
         this.isBad = isBad; // true = malo, false = bueno
         

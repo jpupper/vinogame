@@ -68,6 +68,26 @@ class ControlPanel {
     async loadConfiguration() {
         this.configData = await this.loadConfigFromFile();
         this.applyConfiguration();
+        // Asegurar valor inicial del modo de aparición de copas
+        try {
+            const modeFromConfig = (this.configData && this.configData.wineGlasses && this.configData.wineGlasses.spawnMode)
+                ? this.configData.wineGlasses.spawnMode
+                : (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses && CONFIG.wineGlasses.spawnMode
+                    ? CONFIG.wineGlasses.spawnMode
+                    : 'top');
+            const normalizedMode = (modeFromConfig === 'random') ? 'random' : 'top';
+            if (this.spawnModeSelect) {
+                this.spawnModeSelect.value = normalizedMode;
+            }
+            if (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
+                CONFIG.wineGlasses.spawnMode = normalizedMode;
+            }
+            if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+                wineGlassSystem.spawnMode = normalizedMode;
+            }
+        } catch (e) {
+            console.warn('No se pudo inicializar el modo de aparición:', e);
+        }
         await this.loadAssetsFromConfig();
         this.loadHaloSettingsFromConfig();
         // Esperar a que AssetManager marque assets listos y volver a renderizar
@@ -458,6 +478,17 @@ class ControlPanel {
         window.goodItemImagePaths = sanitized.objects;
         window.badItemImagePaths = sanitized.badItems;
         window.backgroundImagePaths = sanitized.backgrounds;
+
+        // Guardar modo de aparición de copas
+        if (!this.configData.wineGlasses) this.configData.wineGlasses = {};
+        if (this.spawnModeSelect && this.spawnModeSelect.value) {
+            const m = (this.spawnModeSelect.value === 'random') ? 'random' : 'top';
+            this.configData.wineGlasses.spawnMode = m;
+        } else {
+            // Si no existe el elemento por alguna razón, intenta tomarlo de CONFIG
+            const m = (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses && CONFIG.wineGlasses.spawnMode === 'random') ? 'random' : 'top';
+            this.configData.wineGlasses.spawnMode = m;
+        }
         this.currentAssets.objects = window.goodItemImagePaths.slice();
         this.currentAssets.badItems = window.badItemImagePaths.slice();
         this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
@@ -584,6 +615,8 @@ class ControlPanel {
         // Nuevo: slider de tiempo de agarre
         this.hoverTimeSlider = document.getElementById('hoverTimeSlider');
         this.hoverTimeValue = document.getElementById('hoverTimeValue');
+        // Nuevo: modo de aparición de copas
+        this.spawnModeSelect = document.getElementById('spawnModeSelect');
 
         // Nueva: elementos de área de colisión
         this.collisionAreaEnabled = document.getElementById('collisionAreaEnabled');
@@ -775,6 +808,12 @@ class ControlPanel {
                 this.updateCollisionAreaValue('height', v);
             });
         }
+        // Modo de aparición de copas
+        if (this.spawnModeSelect) {
+            this.spawnModeSelect.addEventListener('change', (e) => {
+                this.updateSpawnMode(e.target.value);
+            });
+        }
     }
     
     toggle() {
@@ -870,6 +909,24 @@ class ControlPanel {
         this._spawnRateLogTimeout = setTimeout(() => {
             console.log('Velocidad de aparición actualizada:', rate + 'ms');
         }, 100);
+    }
+
+    // Nuevo: actualizar el modo de aparición de las copas (arriba/random)
+    updateSpawnMode(mode) {
+        const normalized = (mode === 'random') ? 'random' : 'top';
+        // Actualizar configuración
+        if (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses) {
+            CONFIG.wineGlasses.spawnMode = normalized;
+        }
+        // Actualizar sistema en runtime
+        if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+            wineGlassSystem.spawnMode = normalized;
+        }
+        // Reflejar en UI
+        if (this.spawnModeSelect) {
+            this.spawnModeSelect.value = normalized;
+        }
+        console.log('Modo de aparición actualizado:', normalized);
     }
 
     // Nuevos: actualizar límites máximos de objetos en pantalla

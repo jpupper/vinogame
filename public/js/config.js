@@ -235,6 +235,8 @@ const CONFIG = {
     
     // SISTEMA DE ITEMS QUE CAEN
     wineGlasses: {
+        // Modo de aparición de objetos: 'top' (desde arriba) o 'random' (posición aleatoria sin velocidad)
+        spawnMode: 'top',
         spawnInterval: 2000,          // Intervalo de aparición (ms)
         speed: {
             min: 1.5,
