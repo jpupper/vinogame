@@ -1,0 +1,37 @@
+# === Node/Express standard ignores ===
+node_modules/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS/Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Environment files (commit an .env.example instead)
+.env
+.env.*
+!.env.example
+
+# Runtime uploads and generated assets
+# Imágenes que se suben desde el panel para no inflar el repo
+public/img/custom/
+
+# Caches/temporales (por si se usan)
+tmp/
+cache/
+
+# Configuración local del panel (quitar estas líneas si quieres versionarla)
+panel-config.json
+
+# Nota: NO ignorar package-lock.json para builds reproducibles
+# (deja package-lock.json en el repo)

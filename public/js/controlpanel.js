@@ -68,6 +68,10 @@ class ControlPanel {
         this.applyConfiguration();
         await this.loadAssetsFromConfig();
         this.loadHaloSettingsFromConfig();
+        // Esperar a que AssetManager marque assets listos y volver a renderizar
+        if (typeof window !== 'undefined' && typeof window.ensureAssetsReady === 'function') {
+            try { await window.ensureAssetsReady(); } catch (e) {}
+        }
         this.loadCurrentAssets(); // Renderizar assets en el panel
         console.log('Configuración cargada exitosamente desde panel-config.json');
     }
@@ -110,32 +114,39 @@ class ControlPanel {
     }
 
     async saveConfigToFile(config) {
+        // Intenta guardar en el servidor (Express) si está disponible
         try {
-            // En un entorno web, no podemos escribir directamente archivos
-            // Pero podemos descargar el archivo actualizado
-            const dataStr = JSON.stringify(config, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            // Crear enlace de descarga
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'panel-config.json';
-            
-            // Simular click para descargar
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Limpiar URL
-            URL.revokeObjectURL(url);
-            
-            this.showSaveNotification('✅ Configuración guardada! Reemplaza el archivo panel-config.json en tu proyecto');
+            const res = await fetch('/api/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            this.showSaveNotification('✅ Configuración guardada en el servidor');
             return true;
-        } catch (error) {
-            console.error('Error al guardar configuración:', error);
-            this.showSaveNotification('❌ Error al guardar configuración', 'error');
-            return false;
+        } catch (serverErr) {
+            console.warn('No se pudo guardar en el servidor, usando descarga local:', serverErr);
+            // Fallback: descarga local del archivo actualizado
+            try {
+                const dataStr = JSON.stringify(config, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'panel-config.json';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                this.showSaveNotification('✅ Configuración guardada (descarga local)');
+                return true;
+            } catch (error) {
+                console.error('Error al guardar configuración:', error);
+                this.showSaveNotification('❌ Error al guardar configuración', 'error');
+                return false;
+            }
         }
     }
 
@@ -192,6 +203,22 @@ class ControlPanel {
             window.backgroundImagePaths.length = 0;
             assets.backgrounds.forEach(path => { window.backgroundImagePaths.push(path); });
             await loadCategory(window.backgroundImagePaths, window.backgroundTextures);
+        }
+
+        // Fallback: si alguna categoría quedó vacía, usar los defaults del AssetManager
+        if (typeof window !== 'undefined' && window.AssetManager) {
+            if ((!window.goodItemImagePaths || window.goodItemImagePaths.length === 0) && Array.isArray(window.AssetManager.goodItemImagePaths) && window.AssetManager.goodItemImagePaths.length > 0) {
+                window.goodItemImagePaths = window.AssetManager.goodItemImagePaths.slice();
+                await loadCategory(window.goodItemImagePaths, window.goodItemImages);
+            }
+            if ((!window.badItemImagePaths || window.badItemImagePaths.length === 0) && Array.isArray(window.AssetManager.badItemImagePaths) && window.AssetManager.badItemImagePaths.length > 0) {
+                window.badItemImagePaths = window.AssetManager.badItemImagePaths.slice();
+                await loadCategory(window.badItemImagePaths, window.badItemImages);
+            }
+            if ((!window.backgroundImagePaths || window.backgroundImagePaths.length === 0) && Array.isArray(window.AssetManager.backgroundImagePaths) && window.AssetManager.backgroundImagePaths.length > 0) {
+                window.backgroundImagePaths = window.AssetManager.backgroundImagePaths.slice();
+                await loadCategory(window.backgroundImagePaths, window.backgroundTextures);
+            }
         }
         
         // Actualizar currentAssets con copias
@@ -401,8 +428,19 @@ class ControlPanel {
         if (this.badHaloStrengthSlider) this.configData.haloSettings.badHalo.strength = parseFloat(this.badHaloStrengthSlider.value);
         if (this.badHaloColorInput) this.configData.haloSettings.badHalo.color = this.badHaloColorInput.value;
         
-        // Actualizar assets
+        // Actualizar assets asegurando que sean rutas del servidor (no data URLs)
         if (!this.configData.assets) this.configData.assets = {};
+        const sanitized = await this.ensureAssetsAreServerPaths({
+            objects: window.goodItemImagePaths || [],
+            badItems: window.badItemImagePaths || [],
+            backgrounds: window.backgroundImagePaths || []
+        });
+        window.goodItemImagePaths = sanitized.objects;
+        window.badItemImagePaths = sanitized.badItems;
+        window.backgroundImagePaths = sanitized.backgrounds;
+        this.currentAssets.objects = window.goodItemImagePaths.slice();
+        this.currentAssets.badItems = window.badItemImagePaths.slice();
+        this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
         this.configData.assets.objects = window.goodItemImagePaths.slice();
         this.configData.assets.badItems = window.badItemImagePaths.slice();
         this.configData.assets.backgrounds = window.backgroundImagePaths.slice();
@@ -411,9 +449,10 @@ class ControlPanel {
         this.configData.metadata = this.configData.metadata || {};
         this.configData.metadata.lastModified = new Date().toISOString().split('T')[0];
         
-        // Guardar en archivo JSON
-        await this.saveConfigToFile(this.configData);
-        console.log('Configuración completa guardada en panel-config.json');
+        // Guardar en archivo JSON (servidor si disponible, fallback a descarga local)
+        const ok = await this.saveConfigToFile(this.configData);
+        console.log('Configuración completa guardada en panel-config.json (ok=', ok, ')');
+        return ok;
     }
     
     showSaveNotification(message = '✅ Configuración guardada') {
@@ -1167,15 +1206,21 @@ class ControlPanel {
         this.saveChangesBtn = document.getElementById('saveChangesBtn');
         this.saveStatus = document.getElementById('saveStatus');
         if (this.saveChangesBtn) {
-            this.saveChangesBtn.addEventListener('click', (e) => {
+            this.saveChangesBtn.addEventListener('click', async (e) => {
                 // Evitar cualquier comportamiento por defecto que pudiera provocar recarga
                 if (e && typeof e.preventDefault === 'function') e.preventDefault();
                 try {
-                    this.saveConfiguration();
-                    this.showSaveNotification('✅ Configuración guardada');
-                    if (this.saveStatus) {
-                        this.saveStatus.textContent = 'Guardado';
-                        setTimeout(() => { this.saveStatus.textContent = ''; }, 1500);
+                    if (this.saveStatus) { this.saveStatus.textContent = 'Guardando...'; }
+                    const ok = await this.saveConfiguration();
+                    if (ok) {
+                        this.showSaveNotification('✅ Configuración guardada en el servidor');
+                        if (this.saveStatus) {
+                            this.saveStatus.textContent = 'Guardado';
+                            setTimeout(() => { this.saveStatus.textContent = ''; }, 1500);
+                        }
+                    } else {
+                        this.showSaveNotification('❌ Error al guardar configuración', 'error');
+                        if (this.saveStatus) { this.saveStatus.textContent = 'Error'; }
                     }
                 } catch (e) {
                     this.showSaveNotification('❌ Error al guardar');
@@ -1214,35 +1259,24 @@ class ControlPanel {
                 const files = Array.from(hiddenInput.files || []);
                 if (!files.length || !selectedType) { modal.style.display = 'none'; return; }
 
-                const addDataUrl = (dataURL) => {
+                try {
+                    const serverPaths = await this.uploadFilesToServer(selectedType, files);
                     if (selectedType === 'objects') {
-                        window.goodItemImagePaths = (window.goodItemImagePaths || []).concat([dataURL]);
+                        window.goodItemImagePaths = (window.goodItemImagePaths || []).concat(serverPaths);
                         this.currentAssets.objects = window.goodItemImagePaths.slice();
                     } else if (selectedType === 'badItems') {
-                        window.badItemImagePaths = (window.badItemImagePaths || []).concat([dataURL]);
+                        window.badItemImagePaths = (window.badItemImagePaths || []).concat(serverPaths);
                         this.currentAssets.badItems = window.badItemImagePaths.slice();
                     } else if (selectedType === 'backgrounds') {
-                        window.backgroundImagePaths = (window.backgroundImagePaths || []).concat([dataURL]);
+                        window.backgroundImagePaths = (window.backgroundImagePaths || []).concat(serverPaths);
                         this.currentAssets.backgrounds = window.backgroundImagePaths.slice();
                     }
-                };
-
-                const readers = files.map(file => new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = (e) => reject(e);
-                    reader.readAsDataURL(file);
-                }));
-
-                try {
-                    const urls = await Promise.all(readers);
-                    urls.forEach(addDataUrl);
-                    this.reloadGameImagesFromPaths();
+                    await this.reloadGameImagesFromPaths();
                     this.loadCurrentAssets();
-                    this.showSaveNotification('✅ Asset(s) cargado(s) - Presiona "Guardar cambios" para guardar');
+                    this.showSaveNotification('✅ Imágenes subidas y añadidas. Presiona "Guardar cambios" para guardar');
                 } catch (e) {
-                    console.log('Error al leer archivos:', e);
-                    this.showSaveNotification('❌ Error al cargar asset(s)');
+                    console.log('Error al subir archivos:', e);
+                    this.showSaveNotification('❌ Error al subir imágenes');
                 } finally {
                     modal.style.display = 'none';
                     selectedType = null;
@@ -1273,6 +1307,52 @@ class ControlPanel {
         const targetTab = document.getElementById(`${tabName}-tab`);
         if (targetBtn) targetBtn.classList.add('active');
         if (targetTab) targetTab.classList.add('active');
+    }
+
+    async uploadFilesToServer(category, files) {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        const res = await fetch(`/api/upload-assets/${category}`, { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        const json = await res.json();
+        if (!json.ok) throw new Error('Server rejected upload');
+        return json.paths || [];
+    }
+
+    async ensureAssetsAreServerPaths(assets) {
+        const processCategory = async (category, list) => {
+            const urls = [];
+            const toUploadBlobs = [];
+            for (let i = 0; i < (list || []).length; i++) {
+                const p = list[i];
+                if (typeof p === 'string' && p.startsWith('data:')) {
+                    try {
+                        const blob = await (await fetch(p)).blob();
+                        const ext = (blob.type || 'image/png').split('/')[1] || 'png';
+                        const file = new File([blob], `inline-${Date.now()}-${i}.${ext}`, { type: blob.type });
+                        toUploadBlobs.push(file);
+                    } catch (e) {
+                        console.warn('No se pudo convertir data URL a archivo:', e);
+                    }
+                } else {
+                    urls.push(p);
+                }
+            }
+            if (toUploadBlobs.length > 0) {
+                try {
+                    const newPaths = await this.uploadFilesToServer(category, toUploadBlobs);
+                    urls.push(...newPaths);
+                } catch (e) {
+                    console.error('Falló la subida de data URLs como archivos:', e);
+                }
+            }
+            return urls;
+        };
+
+        const objects = await processCategory('objects', assets.objects || []);
+        const badItems = await processCategory('badItems', assets.badItems || []);
+        const backgrounds = await processCategory('backgrounds', assets.backgrounds || []);
+        return { objects, badItems, backgrounds };
     }
 }
  
