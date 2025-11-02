@@ -71,6 +71,22 @@ class PointServer {
 			ctx.text(str(allPoints[i].id), allPoints[i].x+30, allPoints[i].y-30);
 		}
 	}
+
+	// Dibujo minimal: solo los círculos de los puntos sin texto
+	displayCirclesOnly(ctx = window) {
+		const allPoints = [...this.points, ...this.inputPoints];
+		ctx.noStroke();
+		for (let i = 0; i < allPoints.length; i++) {
+			ctx.fill(
+				CONFIG.points.color[0],
+				CONFIG.points.color[1],
+				CONFIG.points.color[2]
+			);
+			ctx.ellipse(allPoints[i].x, allPoints[i].y, CONFIG.points.size, CONFIG.points.size);
+			ctx.fill(255);
+			ctx.ellipse(allPoints[i].x, allPoints[i].y, 15, 15);
+		}
+	}
 	getAllPoints(){
 		return [...this.points, ...this.inputPoints];
 	}

@@ -527,10 +527,7 @@ function draw() {
     wineGlassSystem.update();
     wineGlassSystem.display(juegoBuffer);
 
-    // Mostrar el servidor de puntos solo en modo debug (elipses)
-    if (isDebug) {
-      Pserver.display(juegoBuffer);
-    }
+    // Actualizar puntos antes de colisiones
     Pserver.update();
 
     // Comprobar colisiones con copas de vino y items malos - optimizado
@@ -654,6 +651,9 @@ function draw() {
       }
     }
 
+    // Dibujar puntos del LIDAR al final para que queden encima
+    Pserver.display(juegoBuffer);
+
     // Indicadores de debug (FPS, cantidad de puntos)
     if (isDebug) {
       const fps = frameRate();
@@ -767,6 +767,8 @@ function draw() {
     rect(ca.x, ca.y, ca.width, ca.height);
     pop();
   }
+  Pserver.displayCirclesOnly();
+  
 
   pop();
 
