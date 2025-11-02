@@ -203,8 +203,9 @@ function setup() {
   // Crear e inicializar medidores (usar assets centralizados)
   medidorIndicator = new MedidorIndicator(); // cooperativo
   // Configurar medidores competitivos
-  medidorIndicatorLeft = new MedidorIndicator({ position: { x: 40, y: 200 } });
-  medidorIndicatorRight = new MedidorIndicator({ position: { x: width - 140 - 40, y: 200 } });
+  // Bajar medidores para mejorar la legibilidad del HUD competitivo
+  medidorIndicatorLeft = new MedidorIndicator({ position: { x: 40, y: 260 } });
+  medidorIndicatorRight = new MedidorIndicator({ position: { x: width - 140 - 40, y: 260 } });
 
   // Pantalla de selección y ranking
   selectionScreen = new ModeSelectionScreen();
@@ -708,7 +709,7 @@ function displayCompetitiveHUD(ctx = window) {
   const lifeSize = CONFIG.lives.size;
   const lifeSpacing = CONFIG.lives.spacing + 6; // más separación
   const leftHeartStartX = 40 + lifeSize + 16; // margen extra
-  const heartsY = 150; // bajar corazones
+  const heartsY = 200; // bajar corazones para que no choquen con medidores
   if (scoreSystemLeft) {
     for (let i = 0; i < leftLivesVal; i++) {
       scoreSystemLeft.drawHeart(leftHeartStartX + i * lifeSpacing, heartsY, lifeSize, ctx);

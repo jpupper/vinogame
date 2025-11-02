@@ -213,7 +213,11 @@ class ScoreSystem {
         }
     }
     
-    display(ctx = window) {
+    display(ctx = window, opts = {}) {
+        // En modo competitivo, el HUD (Score/Combo/Vidas) lo pinta el HUD propio de ese modo.
+        // Aquí podemos ocultarlo para evitar duplicados.
+        const isCompetitive = (typeof gameMode !== 'undefined' && gameMode === 'competitive');
+        const showHUD = (typeof opts.hud === 'boolean') ? opts.hud : !isCompetitive;
         // Mostrar puntuación principal con efecto
         ctx.textAlign(RIGHT, TOP);
         
@@ -258,53 +262,55 @@ class ScoreSystem {
             CONFIG.score.position.y + scoreOffset
         );
         
-        // Sombra de texto
-        ctx.textSize(scoreSize);
-        ctx.fill(0, 0, 0, 150);
-        ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 38, 42 + scoreOffset);
-        
-        // Texto principal con color dinámico
-        ctx.fill(red(scoreColor), green(scoreColor), blue(scoreColor));
-        ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 40, 40 + scoreOffset);
-        
-        // Mostrar combo siempre (incluso si es 0)
-        const comboY = 90;
-        const comboSize = 30;
-        
-        // Calcular color basado en el tamaño del combo
-        ctx.colorMode(HSB, 100);
-        const hue = map(this.comboCount, 0, 10, 10, 100) % 100;
-        const comboColor = this.comboCount > 0 ? color(hue, 80, 100) : color(0, 0, 70);
-        ctx.colorMode(RGB, 255);
-        
-        // Sombra del combo
-        ctx.fill(0, 0, 0, 150);
-        ctx.textSize(comboSize);
-        ctx.text(`Combo x${this.comboCount}`, width - 38, comboY + 2);
-        
-        // Texto del combo
-        ctx.fill(red(comboColor), green(comboColor), blue(comboColor));
-        ctx.text(`Combo x${this.comboCount}`, width - 40, comboY);
-        
-        // Mostrar vidas
-        const lifeSize = CONFIG.lives.size;
-        const lifeY = CONFIG.lives.position.y;
-        const lifeSpacing = CONFIG.lives.spacing;
-        
-        ctx.textAlign(LEFT, TOP);
-        
-        // Sombra del texto de vidas
-        ctx.fill(0, 0, 0, 150);
-        ctx.textSize(lifeSize);
-        ctx.text(`Vidas: `, 42, lifeY + 2);
-        
-        // Texto de vidas
-        ctx.fill(255, 100, 100);
-        ctx.text(`Vidas: `, 40, lifeY);
-        
-        // Dibujar corazones para las vidas
-        for (let i = 0; i < this.lives; i++) {
-            this.drawHeart(CONFIG.lives.position.x + i * lifeSpacing, lifeY + lifeSize/2, lifeSize, ctx);
+        if (showHUD) {
+            // Sombra de texto
+            ctx.textSize(scoreSize);
+            ctx.fill(0, 0, 0, 150);
+            ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 38, 42 + scoreOffset);
+
+            // Texto principal con color dinámico
+            ctx.fill(red(scoreColor), green(scoreColor), blue(scoreColor));
+            ctx.text(`Score: ${Math.floor(this.displayScore)}`, width - 40, 40 + scoreOffset);
+
+            // Mostrar combo siempre (incluso si es 0)
+            const comboY = 90;
+            const comboSize = 30;
+
+            // Calcular color basado en el tamaño del combo
+            ctx.colorMode(HSB, 100);
+            const hue = map(this.comboCount, 0, 10, 10, 100) % 100;
+            const comboColor = this.comboCount > 0 ? color(hue, 80, 100) : color(0, 0, 70);
+            ctx.colorMode(RGB, 255);
+
+            // Sombra del combo
+            ctx.fill(0, 0, 0, 150);
+            ctx.textSize(comboSize);
+            ctx.text(`Combo x${this.comboCount}`, width - 38, comboY + 2);
+
+            // Texto del combo
+            ctx.fill(red(comboColor), green(comboColor), blue(comboColor));
+            ctx.text(`Combo x${this.comboCount}`, width - 40, comboY);
+
+            // Mostrar vidas
+            const lifeSize = CONFIG.lives.size;
+            const lifeY = CONFIG.lives.position.y;
+            const lifeSpacing = CONFIG.lives.spacing;
+
+            ctx.textAlign(LEFT, TOP);
+
+            // Sombra del texto de vidas
+            ctx.fill(0, 0, 0, 150);
+            ctx.textSize(lifeSize);
+            ctx.text(`Vidas: `, 42, lifeY + 2);
+
+            // Texto de vidas
+            ctx.fill(255, 100, 100);
+            ctx.text(`Vidas: `, 40, lifeY);
+
+            // Dibujar corazones para las vidas
+            for (let i = 0; i < this.lives; i++) {
+                this.drawHeart(CONFIG.lives.position.x + i * lifeSpacing, lifeY + lifeSize/2, lifeSize, ctx);
+            }
         }
         
         // Mostrar animaciones de puntuación con fases
