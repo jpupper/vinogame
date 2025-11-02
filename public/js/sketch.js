@@ -53,16 +53,37 @@ let scaledGoodItemImages = {};
 let scaledBadItemImages = {};
 let scaledBackgroundImages = {};
 
-// Hacer los arrays accesibles globalmente para el panel de control
-if (typeof window !== 'undefined') {
-    window.goodItemImages = goodItemImages;
-    window.badItemImages = badItemImages;
-    window.backgroundTextures = backgroundTextures;
-    window.goodItemImagePaths = goodItemImagePaths;
-    window.badItemImagePaths = badItemImagePaths;
-    window.backgroundImagePaths = backgroundImagePaths;
-    window.assetsReady = assetsReady;
-    window.showLidarPoints = showLidarPoints;
+// Sistema de Ondas Expansivas
+let waves = [];
+const MAX_WAVES = 5;
+
+// Sistema de Zoom Punch
+let zoomPunch = 1.0;
+let targetZoom = 1.0;
+
+// Seguimiento de punteros en standby para generar ondas en el fondo
+let lastPointerPositions = {};
+
+// Función para exponer variables globalmente
+function exposeGlobalVariables() {
+  if (typeof window !== 'undefined') {
+      window.goodItemImages = goodItemImages;
+      window.badItemImages = badItemImages;
+      window.backgroundTextures = backgroundTextures;
+      window.goodItemImagePaths = goodItemImagePaths;
+      window.badItemImagePaths = badItemImagePaths;
+      window.backgroundImagePaths = backgroundImagePaths;
+      window.assetsReady = assetsReady;
+      window.showLidarPoints = showLidarPoints;
+      // Exponer ondas para el shader
+      window.waves = waves;
+      // Inicializar sistema de ondas de eventos para shaders
+      if (!window.eventRipple) {
+        window.eventRipple = { active: false, x: 0.5, y: 0.5, startTime: 0, color: [1,1,1], strength: 0 };
+      }
+      // Asegurar que window.assetsReady esté sincronizado con la variable local
+      window.assetsReady = assetsReady;
+  }
 }
 
 // Fuente para texto WEBGL
@@ -97,17 +118,6 @@ let vignetteIntensity = 0;
 
 // Motion Blur
 let motionBlurAmount = 0;
-
-// Sistema de Ondas Expansivas
-let waves = [];
-const MAX_WAVES = 5;
-
-// Sistema de Zoom Punch
-let zoomPunch = 1.0;
-let targetZoom = 1.0;
-
-// Seguimiento de punteros en standby para generar ondas en el fondo
-let lastPointerPositions = {};
 
 function preload() {
   // Carga inicial centralizada de imágenes y shaders
@@ -146,7 +156,7 @@ function setup() {
   frameRate(CONFIG.general.frameRate);
   grapeTexturesLoaded = true;
   backgroundTexturesLoaded = true;
-  shaderLoaded = true;
+  shadersLoaded = true;
   
   // NO configurar fuente en WEBGL - causa errores
   // La fuente se configura en los buffers 2D individuales
@@ -200,9 +210,10 @@ function setup() {
 
   // Marcar assets listos para el arranque inicial (preload ya los cargó)
   assetsReady = true;
-  if (typeof window !== 'undefined') {
-    window.assetsReady = true;
-  }
+  
+  // Exponer variables globalmente después de que todo esté inicializado
+  exposeGlobalVariables();
+  
   // Pre-escalar imágenes para optimización
   if (typeof preScaleImages === 'function') {
     preScaleImages();
@@ -557,6 +568,11 @@ function touchEnded() {
 function mousePressed() {
   // Reiniciar el juego si está en estado de Game Over
   if (gameState === 'standby') {
+    // Verificar que selectionScreen esté inicializado
+    if (!selectionScreen) {
+      selectionScreen = new ModeSelectionScreen();
+      selectionScreen.setup();
+    }
     const selected = selectionScreen.handleClick(mouseX, mouseY);
     if (selected) {
       const startPlaying = () => {
@@ -628,6 +644,8 @@ function createWave(x, y) {
     active: true
   };
   waves.push(wave);
+  // Mantener referencia en window para background.js
+  if (typeof window !== 'undefined') window.waves = waves;
 }
 
 function windowResized() {
@@ -768,6 +786,28 @@ function applyCelebrationEffects(side, celebration) {
 
   // Ajuste sutil de intensidad de feedback, sin ondas ni explosiones
   targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.03 : 0.02));
+
+  // Disparar una onda de evento en el shader (una sola vez por celebración)
+  if (!celebration._rippleTriggered) {
+    const isWin = celebration.type === 'win';
+    // Centro normalizado según modo/side
+    let cx = 0.5, cy = 0.5;
+    if (typeof gameMode !== 'undefined' && gameMode === 'competitive') {
+      cx = side === 'left' ? 0.25 : 0.75;
+      cy = 0.5;
+    }
+    const color = isWin ? [1.0, 0.85, 0.2] : [1.0, 0.25, 0.25];
+    const strength = isWin ? 1.0 : 0.9;
+    if (typeof window !== 'undefined' && window.eventRipple) {
+      window.eventRipple.active = true;
+      window.eventRipple.x = cx;
+      window.eventRipple.y = cy;
+      window.eventRipple.startTime = millis() / 1000.0;
+      window.eventRipple.color = color;
+      window.eventRipple.strength = strength;
+    }
+    celebration._rippleTriggered = true;
+  }
 }
 
 // Overlay visual p5.js por lado (destellos + confetti)
@@ -809,6 +849,11 @@ function returnToStandbyIfDone() {
   leftCelebration = null;
   rightCelebration = null;
   gameEndTime = null;
+
+  // Apagar onda de evento
+  if (typeof window !== 'undefined' && window.eventRipple) {
+    window.eventRipple.active = false;
+  }
 
   resetGame();
   gameState = 'standby';

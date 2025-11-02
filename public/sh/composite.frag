@@ -15,6 +15,13 @@ uniform vec2 u_wavePositions[5];
 uniform float u_waveTimes[5];
 uniform float u_waveActive[5];
 
+// Onda de evento (GANASTE/PERDISTE)
+uniform float u_eventActive;
+uniform vec2  u_eventCenter;
+uniform float u_eventStartTime;
+uniform vec3  u_eventColor;
+uniform float u_eventStrength;
+
 // UVAS (para distorsión gravitacional)
 uniform vec2 u_grapePositions[10];      // Posiciones de hasta 10 uvas
 uniform float u_grapeProgress[10];      // Progreso de captura (0-1)
@@ -88,6 +95,20 @@ void main() {
             // CHROMATIC ABERRATION: Acumular separación RGB
             chromaticAberration += distortionStrength * waveIntensity;
         }
+    }
+
+    // Distorsión por ONDA DE EVENTO (anillo central fuerte)
+    if (u_eventActive > 0.5) {
+        vec2 eCenter = u_eventCenter;
+        eCenter.x *= u_resolution.x / u_resolution.y;
+        float eTime = u_time - u_eventStartTime;
+        float eRadius = eTime * 0.7;
+        float eDist = distance(aspectUV, eCenter);
+        float eIntensity = smoothstep(3.0, 0.0, eTime);
+        float eMask = smoothstep(0.08, 0.0, abs(eDist - eRadius));
+        vec2 dir = normalize(aspectUV - eCenter);
+        displacement += dir * eMask * eIntensity * (WAVE_DISTORTION_STRENGTH * 1.6 * u_eventStrength);
+        chromaticAberration += eMask * eIntensity * 1.2 * u_eventStrength;
     }
     
     // Deshacer corrección de aspect ratio
@@ -230,7 +251,14 @@ void main() {
     
     // ===== APLICAR FEEDBACK COMO EFECTO =====
     vec4 feedbackColor = texture2D(u_feedbackTexture, uv);
-    finalColor += feedbackColor.rgb * feedbackColor.a * 0.2;
+    finalColor += feedbackColor.rgb * feedbackColor.a * 0.25;
+
+    // Tint global suave según evento (veda dorado o rojo)
+    if (u_eventActive > 0.5) {
+        float t = clamp((u_time - u_eventStartTime) / 1.5, 0.0, 1.0);
+        float pulse = 0.5 + 0.5 * sin(u_time * 3.0);
+        finalColor = mix(finalColor, u_eventColor, 0.05 * u_eventStrength * (1.0 - t) * pulse);
+    }
     
     // Brillo adicional con combo
     //finalColor += vec3(safeComboLevel * 0.03);

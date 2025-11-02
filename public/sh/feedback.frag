@@ -17,6 +17,13 @@ uniform vec2 u_wavePositions[5];       // Posiciones de las ondas
 uniform float u_waveTimes[5];          // Tiempo de inicio de cada onda
 uniform float u_waveActive[5];         // Si la onda está activa (1.0 = sí, 0.0 = no)
 
+// Onda de evento (GANASTE/PERDISTE)
+uniform float u_eventActive;           // 1.0 si hay evento activo
+uniform vec2  u_eventCenter;           // Centro de la onda (normalizado)
+uniform float u_eventStartTime;        // Inicio del evento
+uniform vec3  u_eventColor;            // Color del evento
+uniform float u_eventStrength;         // Intensidad del evento
+
 // PUNTEROS MÚLTIPLES (mouse/touch/LIDAR)
 uniform vec2 u_pointerPositions[16];   // Posiciones normalizadas (0-1)
 uniform float u_pointerActive[16];     // 1.0 si el puntero está activo
@@ -147,8 +154,8 @@ void main() {
             // Radio de la onda (expande con el tiempo)
             float waveRadius = waveTime * 0.5; // Velocidad de expansión
             
-            // Grosor de la onda
-            float waveThickness = 0.03;
+            // Grosor de la onda (un poco más visible)
+            float waveThickness = 0.04;
             
             // Intensidad de la onda (fade out con el tiempo)
             float waveIntensity = smoothstep(2.0, 0.0, waveTime); // Dura 2 segundos
@@ -156,13 +163,39 @@ void main() {
             // Dibujar el anillo de la onda
             float ring = smoothstep(waveThickness, 0.0, abs(waveDist - waveRadius));
             
-            // Color de la onda (dorado MUY SUTIL)
-            vec3 waveColor = vec3(1.0, 0.8, 0.3);
+            // Color de la onda (dorado)
+            vec3 waveColor = vec3(1.0, 0.85, 0.3);
             
-            // Agregar la onda al buffer (MUCHO MÁS SUTIL - casi invisible)
-            finalColor.rgb += waveColor * ring * waveIntensity * 0.1; // Reducido de 0.8 a 0.1
-            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.15); // Alpha muy reducido
+            // Agregar la onda al buffer (más visible)
+            finalColor.rgb += waveColor * ring * waveIntensity * 0.6;
+            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.4);
         }
+    }
+
+    // ===== ONDA DE EVENTO (GANASTE/PERDISTE) =====
+    if (u_eventActive > 0.5) {
+        vec2 eCenter = u_eventCenter;
+        eCenter.x *= u_resolution.x / u_resolution.y;
+        float eDist = distance(aspectUV, eCenter);
+        float eTime = u_time - u_eventStartTime;
+        float eRadius = eTime * 0.7; // un poco más rápida
+        float eThickness = 0.05;
+        float eIntensity = smoothstep(3.0, 0.0, eTime); // dura ~3s
+        float eRing = smoothstep(eThickness, 0.0, abs(eDist - eRadius));
+        
+        // Glow interior y exterior
+        float innerGlow = smoothstep(0.08, 0.0, eDist);
+        float outerFade = smoothstep(0.0, 1.5, eTime);
+        
+        vec3 eColor = u_eventColor;
+        float strength = u_eventStrength;
+        
+        // Anillo principal
+        finalColor.rgb += eColor * eRing * eIntensity * (0.8 * strength);
+        finalColor.a = max(finalColor.a, eRing * eIntensity * (0.6 * strength));
+        
+        // Glow central
+        finalColor.rgb += eColor * innerGlow * (0.25 * strength);
     }
     
     // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO (MÁS SUTIL)

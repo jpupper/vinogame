@@ -193,7 +193,9 @@ class DynamicBackground {
 
 function processShaders() {
   // Protección: requerimos buffers y shaders
-  if (typeof fondoBuffer === 'undefined' || typeof feedbackShader === 'undefined') return;
+  if (typeof fondoBuffer === 'undefined' || fondoBuffer === null || 
+      typeof feedbackShader === 'undefined' || feedbackShader === null ||
+      typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
 
   // Actualizar animación de fondo
   if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
@@ -287,6 +289,24 @@ function processShaders() {
   feedbackShader.setUniform('u_waveTimes', waveTimes);
   feedbackShader.setUniform('u_waveActive', waveActive);
 
+  // Onda de evento (GANASTE/PERDISTE)
+  if (typeof window !== 'undefined') {
+    const er = window.eventRipple || null;
+    if (er && er.active) {
+      feedbackShader.setUniform('u_eventActive', 1.0);
+      feedbackShader.setUniform('u_eventCenter', [er.x, er.y]);
+      feedbackShader.setUniform('u_eventStartTime', er.startTime);
+      feedbackShader.setUniform('u_eventColor', er.color || [1.0, 0.85, 0.2]);
+      feedbackShader.setUniform('u_eventStrength', er.strength || 1.0);
+    } else {
+      feedbackShader.setUniform('u_eventActive', 0.0);
+      feedbackShader.setUniform('u_eventCenter', [0.5, 0.5]);
+      feedbackShader.setUniform('u_eventStartTime', 0.0);
+      feedbackShader.setUniform('u_eventColor', [1.0, 0.85, 0.2]);
+      feedbackShader.setUniform('u_eventStrength', 0.0);
+    }
+  }
+
   fondoBuffer.rect(0, 0, width, height);
   fondoBuffer.pop();
 
@@ -299,7 +319,9 @@ function processShaders() {
 }
 
 function renderShaders() {
-  if (typeof feedbackBuffer === 'undefined' || typeof compositeShader === 'undefined') return;
+  if (typeof feedbackBuffer === 'undefined' || feedbackBuffer === null ||
+      typeof compositeShader === 'undefined' || compositeShader === null ||
+      typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
   if (!backgroundTexturesLoaded) return;
 
   const len = Array.isArray(backgroundTextures) ? backgroundTextures.length : 0;
@@ -391,6 +413,24 @@ function renderShaders() {
       compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
       compositeShader.setUniform('u_splitLineThickness', 0.001);
       compositeShader.setUniform('u_splitLineSoftness', 0.001);
+
+      // Onda de evento (GANASTE/PERDISTE)
+      if (typeof window !== 'undefined') {
+        const er = window.eventRipple || null;
+        if (er && er.active) {
+          compositeShader.setUniform('u_eventActive', 1.0);
+          compositeShader.setUniform('u_eventCenter', [er.x, er.y]);
+          compositeShader.setUniform('u_eventStartTime', er.startTime);
+          compositeShader.setUniform('u_eventColor', er.color || [1.0, 0.85, 0.2]);
+          compositeShader.setUniform('u_eventStrength', er.strength || 1.0);
+        } else {
+          compositeShader.setUniform('u_eventActive', 0.0);
+          compositeShader.setUniform('u_eventCenter', [0.5, 0.5]);
+          compositeShader.setUniform('u_eventStartTime', 0.0);
+          compositeShader.setUniform('u_eventColor', [1.0, 0.85, 0.2]);
+          compositeShader.setUniform('u_eventStrength', 0.0);
+        }
+      }
 
       feedbackBuffer.rect(0, 0, width, height);
     }
