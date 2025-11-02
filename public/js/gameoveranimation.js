@@ -62,11 +62,12 @@ class GameOverAnimation {
         const elapsed = millis() - this.startTime;
         const progress = constrain(elapsed / this.duration, 0, 1);
         
-        // Actualizar partículas
+        // Actualizar partículas (evitar bloqueo visual)
         for (let p of this.particles) {
             p.pos.add(p.vel);
-            p.vel.mult(0.97); // Desaceleración
-            p.life -= 1.5;
+            p.vel.mult(0.992);
+            p.vel.add(p5.Vector.random2D().mult(0.12));
+            p.life -= 1.8;
         }
         
         // Filtrar partículas muertas

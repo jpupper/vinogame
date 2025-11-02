@@ -40,8 +40,7 @@
     </script>
 </head>
 <body>
-    <!-- Hint para mostrar el panel -->
-    <div class="panel-toggle-hint" id="panelHint">Presiona 'P' para abrir panel de control</div>
+    <!-- Hint removido -->
     
     <!-- Panel de Control Oculto -->
     <div id="controlPanel">
@@ -50,48 +49,14 @@
         <!-- Navegación por Pestañas -->
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
+            <button class="tab-button" data-tab="particles">✨ Partículas</button>
             <button class="tab-button" data-tab="assets">🎨 Assets</button>
             <button class="tab-button" data-tab="stats">📊 STATS</button>
+            <button class="tab-button" data-tab="collision">🧱 Collision</button>
         </div>
         
         <!-- Pestaña de Controles -->
         <div class="tab-content active" id="controls-tab">
-            <div class="control-group">
-                <label for="fallSpeedSlider">
-                    Velocidad de Caída
-                    <span class="value-display" id="fallSpeedValue">2.25</span>
-                </label>
-                <input type="range" id="fallSpeedSlider" min="0.5" max="5" step="0.25" value="2.25">
-                <div class="help-text">Controla qué tan rápido caen los objetos</div>
-            </div>
-            
-            <div class="control-group">
-                <label for="livesSlider">
-                    Cantidad de Vidas
-                    <span class="value-display" id="livesValue">3</span>
-                </label>
-                <input type="range" id="livesSlider" min="1" max="10" step="1" value="3">
-                <div class="help-text">Número de vidas disponibles en el juego</div>
-            </div>
-            
-            <div class="control-group">
-                <label for="objectSizeSlider">
-                    Tamaño de Objetos
-                    <span class="value-display" id="objectSizeValue">100px</span>
-                </label>
-                <input type="range" id="objectSizeSlider" min="50" max="200" step="10" value="100">
-                <div class="help-text">Controla el tamaño de los objetos que caen</div>
-            </div>
-            
-            <div class="control-group">
-                <label for="spawnRateSlider">
-                    Frecuencia de Caída
-                    <span class="value-display" id="spawnRateValue">2.0s</span>
-                </label>
-                <input type="range" id="spawnRateSlider" min="500" max="5000" step="100" value="2000">
-                <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
-            </div>
-
             <!-- Mostrar/Ocultar puntos del LIDAR -->
             <div class="control-group">
                 <label class="toggle" style="display:flex;align-items:center;gap:8px;">
@@ -99,22 +64,6 @@
                     Mostrar puntos del LIDAR (processJSON)
                 </label>
                 <div class="help-text">Permite ocultar la visualización de los puntos recibidos del LIDAR. Se guarda en panel-config.json.</div>
-            </div>
-
-            <!-- Límite de cantidad simultánea de items buenos y malos -->
-            <div class="control-group">
-                <label>
-                    Máximo de objetos simultáneos
-                </label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
-                    <label for="maxGoodItemsInput">Buenos
-                        <input type="number" id="maxGoodItemsInput" min="0" step="1" value="10">
-                    </label>
-                    <label for="maxBadItemsInput">Malos
-                        <input type="number" id="maxBadItemsInput" min="0" step="1" value="5">
-                    </label>
-                </div>
-                <div class="help-text">No se generarán nuevos objetos si ya hay en pantalla el máximo configurado</div>
             </div>
 
             <div class="control-group">
@@ -133,36 +82,6 @@
                 </label>
                 <input type="range" id="winComboSlider" min="5" max="50" step="1" value="20">
                 <div class="help-text">Cantidad de aciertos consecutivos necesarios para ganar</div>
-            </div>
-
-            <!-- Área de colisión: limitar cálculo de colisiones a un rectángulo configurable -->
-            <div class="control-group" id="collisionAreaControls">
-                <label>
-                    Área de colisión
-                </label>
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" id="collisionAreaEnabled">
-                    Habilitar área de colisión (limitar chequeo)
-                </label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
-                    <label for="collisionAreaX">X
-                        <input type="number" id="collisionAreaX" min="0" step="1">
-                    </label>
-                    <label for="collisionAreaY">Y
-                        <input type="number" id="collisionAreaY" min="0" step="1">
-                    </label>
-                    <label for="collisionAreaW">Ancho
-                        <input type="number" id="collisionAreaW" min="1" step="1">
-                    </label>
-                    <label for="collisionAreaH">Alto
-                        <input type="number" id="collisionAreaH" min="1" step="1">
-                    </label>
-                </div>
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-                    <input type="checkbox" id="collisionAreaOverlay">
-                    Mostrar overlay del área de colisión
-                </label>
-                <div class="help-text">Solo se calcularán colisiones dentro del rectángulo definido. Este ajuste se guarda en panel-config.json.</div>
             </div>
             
             <!-- Controles de Halos -->
@@ -206,6 +125,61 @@
                     💾 Guardar Cambios
                 </button>
                 <div class="save-status" id="saveStatus"></div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Partículas -->
+        <div class="tab-content" id="particles-tab">
+            <div class="control-group">
+                <label for="fallSpeedSlider">
+                    Velocidad de Caída
+                    <span class="value-display" id="fallSpeedValue">2.25</span>
+                </label>
+                <input type="range" id="fallSpeedSlider" min="0.5" max="5" step="0.25" value="2.25">
+                <div class="help-text">Controla qué tan rápido caen los objetos</div>
+            </div>
+
+            <div class="control-group">
+                <label for="livesSlider">
+                    Cantidad de Vidas
+                    <span class="value-display" id="livesValue">3</span>
+                </label>
+                <input type="range" id="livesSlider" min="1" max="10" step="1" value="3">
+                <div class="help-text">Número de vidas disponibles en el juego</div>
+            </div>
+
+            <div class="control-group">
+                <label for="objectSizeSlider">
+                    Tamaño de Objetos
+                    <span class="value-display" id="objectSizeValue">100px</span>
+                </label>
+                <input type="range" id="objectSizeSlider" min="50" max="200" step="10" value="100">
+                <div class="help-text">Controla el tamaño de los objetos que caen</div>
+            </div>
+
+            <div class="control-group">
+                <label for="spawnRateSlider">
+                    Frecuencia de Caída
+                    <span class="value-display" id="spawnRateValue">2.0s</span>
+                </label>
+                <input type="range" id="spawnRateSlider" min="500" max="5000" step="100" value="2000">
+                <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
+            </div>
+
+            <!-- Límite de cantidad simultánea de items buenos y malos -->
+            <div class="control-group">
+                <label>
+                    Máximo de objetos simultáneos
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+                    <label for="maxGoodItemsInput">Buenos
+                        <input type="number" id="maxGoodItemsInput" min="0" step="1" value="10">
+                    </label>
+                    <label for="maxBadItemsInput">Malos
+                        <input type="number" id="maxBadItemsInput" min="0" step="1" value="5">
+                    </label>
+                </div>
+                <div class="help-text">No se generarán nuevos objetos si ya hay en pantalla el máximo configurado</div>
             </div>
         </div>
         
@@ -269,6 +243,39 @@
                     <label>Cantidad de Puntos</label>
                     <span class="metric-value" id="statsPointsCount">0</span>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Collision -->
+        <div class="tab-content" id="collision-tab">
+            <!-- Área de colisión: limitar cálculo de colisiones a un rectángulo configurable -->
+            <div class="control-group" id="collisionAreaControls">
+                <label>
+                    Área de colisión
+                </label>
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="collisionAreaEnabled">
+                    Habilitar área de colisión (limitar chequeo)
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+                    <label for="collisionAreaX">X
+                        <input type="number" id="collisionAreaX" step="any">
+                    </label>
+                    <label for="collisionAreaY">Y
+                        <input type="number" id="collisionAreaY" step="any">
+                    </label>
+                    <label for="collisionAreaW">Ancho
+                        <input type="number" id="collisionAreaW" step="any">
+                    </label>
+                    <label for="collisionAreaH">Alto
+                        <input type="number" id="collisionAreaH" step="any">
+                    </label>
+                </div>
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                    <input type="checkbox" id="collisionAreaOverlay">
+                    Mostrar overlay del área de colisión
+                </label>
+                <div class="help-text">Solo se calcularán colisiones dentro del rectángulo definido. Este ajuste se guarda en panel-config.json.</div>
             </div>
         </div>
     </div>

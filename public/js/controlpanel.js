@@ -559,6 +559,11 @@ class ControlPanel {
     setupElements() {
         this.panel = document.getElementById('controlPanel');
         this.hint = document.getElementById('panelHint');
+        // Remover hint si existe (se pidió eliminarlo)
+        if (this.hint && this.hint.parentNode) {
+            try { this.hint.parentNode.removeChild(this.hint); } catch (e) {}
+            this.hint = null;
+        }
         this.fallSpeedSlider = document.getElementById('fallSpeedSlider');
         this.livesSlider = document.getElementById('livesSlider');
         this.fallSpeedValue = document.getElementById('fallSpeedValue');
@@ -745,34 +750,28 @@ class ControlPanel {
                 this.updateCollisionAreaOverlay(!!e.target.checked);
             });
         }
-        const clampNum = (val, min, max) => Math.max(min, Math.min(max, val));
-        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
-        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
+        // Permitir cualquier número en el módulo de colisión (sin clamps)
         if (this.collisionAreaX) {
             this.collisionAreaX.addEventListener('input', (e) => {
-                const v = clampNum(parseInt(e.target.value || 0), 0, canvasW);
-                e.target.value = v;
+                const v = parseInt(e.target.value || 0);
                 this.updateCollisionAreaValue('x', v);
             });
         }
         if (this.collisionAreaY) {
             this.collisionAreaY.addEventListener('input', (e) => {
-                const v = clampNum(parseInt(e.target.value || 0), 0, canvasH);
-                e.target.value = v;
+                const v = parseInt(e.target.value || 0);
                 this.updateCollisionAreaValue('y', v);
             });
         }
         if (this.collisionAreaW) {
             this.collisionAreaW.addEventListener('input', (e) => {
-                const v = clampNum(parseInt(e.target.value || 1), 1, canvasW);
-                e.target.value = v;
+                const v = parseInt(e.target.value || 1);
                 this.updateCollisionAreaValue('width', v);
             });
         }
         if (this.collisionAreaH) {
             this.collisionAreaH.addEventListener('input', (e) => {
-                const v = clampNum(parseInt(e.target.value || 1), 1, canvasH);
-                e.target.value = v;
+                const v = parseInt(e.target.value || 1);
                 this.updateCollisionAreaValue('height', v);
             });
         }
@@ -941,36 +940,12 @@ class ControlPanel {
     updateCollisionAreaValue(key, value) {
         window.collisionArea = window.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
         window.collisionArea[key] = value;
-        // Asegurar que el rectángulo no salga del canvas
-        const canvasW = (typeof width !== 'undefined' && width > 0) ? width : (window.innerWidth || 1920);
-        const canvasH = (typeof height !== 'undefined' && height > 0) ? height : (window.innerHeight || 1080);
-        if (key === 'width') {
-            window.collisionArea.width = Math.min(window.collisionArea.width, canvasW - window.collisionArea.x);
-        }
-        if (key === 'height') {
-            window.collisionArea.height = Math.min(window.collisionArea.height, canvasH - window.collisionArea.y);
-        }
-        // Si cambia X o Y, ajustar ancho/alto para mantener el rectángulo visible
-        if (key === 'x') {
-            const maxW = Math.max(1, canvasW - window.collisionArea.x);
-            if (window.collisionArea.width > maxW) {
-                window.collisionArea.width = maxW;
-                if (this.collisionAreaW) this.collisionAreaW.value = maxW;
-            }
-        }
-        if (key === 'y') {
-            const maxH = Math.max(1, canvasH - window.collisionArea.y);
-            if (window.collisionArea.height > maxH) {
-                window.collisionArea.height = maxH;
-                if (this.collisionAreaH) this.collisionAreaH.value = maxH;
-            }
-        }
-        // Persistir en configData si está disponible
+        // Persistir tal cual en configData (sin restricciones)
         if (this.configData && this.configData.gameSettings) {
             this.configData.gameSettings.collisionArea = this.configData.gameSettings.collisionArea || {};
             this.configData.gameSettings.collisionArea[key] = window.collisionArea[key];
         }
-        console.log('Área de colisión actualizada:', window.collisionArea);
+        console.log('Área de colisión actualizada (sin clamps):', window.collisionArea);
     }
 
     updateCollisionAreaOverlay(show) {

@@ -63,11 +63,13 @@ class WinAnimation {
         const elapsed = millis() - this.startTime;
         const progress = constrain(elapsed / this.duration, 0, 1);
 
-        // Actualizar partículas
+        // Actualizar partículas (movimiento más fluido, evitar que se "trabajen")
         for (let p of this.particles) {
             p.pos.add(p.vel);
-            p.vel.mult(0.98); // desaceleración suave
-            p.life -= 1.2;
+            // Desacelerar más suavemente y añadir un leve drift aleatorio
+            p.vel.mult(0.992);
+            p.vel.add(p5.Vector.random2D().mult(0.15));
+            p.life -= 2.0;
         }
         this.particles = this.particles.filter(p => p.life > 0);
 

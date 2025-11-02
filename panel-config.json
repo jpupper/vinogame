@@ -63,7 +63,7 @@
       "height": 866,
       "x": 0,
       "y": 500,
-      "enabled": true
+      "enabled": false
     },
     "maxGoodItems": {
       "current": 5,
@@ -72,7 +72,8 @@
     "maxBadItems": {
       "current": 5,
       "default": 5
-    }
+    },
+    "showLidarPoints": true
   },
   "haloSettings": {
     "goodHalo": {
@@ -110,7 +111,8 @@
     ],
     "backgrounds": [
       "img/background/fondo1.jpg",
-      "img/background/fondo5.jpg"
+      "img/background/fondo5.jpg",
+      "/img/custom/backgrounds/1762055538252-arte_generativo.png"
     ]
   },
   "panelSettings": {

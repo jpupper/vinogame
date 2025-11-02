@@ -9,19 +9,20 @@ body {
         display: block;
     }
     
-    /* Panel de Control Oculto */
+    /* Panel de Control (ocultamiento por transform para independizar del ancho) */
     #controlPanel {
         position: fixed;
         top: 20px;
-        right: -420px; /* Inicialmente completamente oculto */
-        width: 380px; /* Ancho aumentado para mejor visualización */
+        right: 20px; /* Punto de anclaje constante */
+        width: 450px; /* Ancho aumentado para mejor visualización */
         max-width: 90vw; /* Responsive para pantallas pequeñas */
         background: rgba(0, 0, 0, 0.9);
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 10px;
         padding: 20px;
         z-index: 1000;
-        transition: right 0.3s ease-in-out;
+        transition: transform 0.3s ease-in-out;
+        transform: translateX(calc(100% + 40px)); /* Oculto completamente */
         backdrop-filter: blur(10px);
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         max-height: 90vh; /* Limitar altura máxima */
@@ -29,7 +30,7 @@ body {
     }
     
     #controlPanel.visible {
-        right: 20px;
+        transform: translateX(0);
     }
     
     #controlPanel h3 {
@@ -101,19 +102,9 @@ body {
         font-style: italic;
     }
     
-    .panel-toggle-hint {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 12px;
-        z-index: 999;
-        transition: opacity 0.3s ease;
-    }
-    
-    .panel-toggle-hint.hidden {
-        opacity: 0;
-    }
+    /* Ocultar cualquier hint residual del panel */
+    .panel-toggle-hint { display: none !important; }
+    .panel-toggle-hint.hidden { display: none !important; }
     
     /* Estilos para métricas en tiempo real */
     .metrics-section {
@@ -145,6 +136,32 @@ body {
         color: rgba(255, 255, 255, 0.8);
         font-size: 13px;
         margin: 0;
+    }
+
+    /* Inputs mejorados para módulo de colisión y en general */
+    #controlPanel input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        outline: none;
+    }
+    #controlPanel input[type="number"]:focus {
+        border-color: rgba(102, 126, 234, 0.6);
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+    }
+    #collision-tab #collisionAreaControls label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    #collision-tab #collisionAreaControls > div {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 8px;
     }
     
     .metric-value {
@@ -691,4 +708,22 @@ body {
     .modal-close-btn:hover {
         background: rgba(255, 255, 255, 0.15);
         color: white;
+    }
+
+    /* Mejora general del estilo del panel de control */
+    #controlPanel .control-group {
+        margin-bottom: 20px;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+    }
+    #controlPanel .control-group label {
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+    #controlPanel input[type="number"],
+    #controlPanel input[type="color"],
+    #controlPanel input[type="range"] {
+        border-radius: 8px;
     }

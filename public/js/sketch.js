@@ -766,29 +766,8 @@ function applyCelebrationEffects(side, celebration) {
   const elapsed = now - celebration.start;
   if (elapsed > celebration.duration) return;
 
-  const xMin = side === 'left' ? 0 : width / 2;
-  const xMax = side === 'left' ? width / 2 : width;
-  const yMin = height * 0.2;
-  const yMax = height * 0.8;
-
-  // Ondas con menor densidad (solo cada 12 frames, 1 onda)
-  if (frameCount % 12 === 0) {
-    const wx = random(xMin + 30, xMax - 30);
-    const wy = random(yMin, yMax);
-    createWave(wx, wy);
-    dynamicBackground.addRipple(wx, wy);
-  }
-
-  const col = celebration.type === 'win' ? color(255, 215, 0) : color(255, 60, 60);
-  // Explosiones de partículas con aún menor densidad (cada 20 frames, menos partículas)
-  if (frameCount % 20 === 0) {
-    const px = random(xMin + 50, xMax - 50);
-    const py = random(yMin, yMax);
-    particleSystem.createExplosion(px, py, col, 20);
-  }
-
-  // Subir la intensidad del shader con incremento más suave
-  targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.08 : 0.05));
+  // Ajuste sutil de intensidad de feedback, sin ondas ni explosiones
+  targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.03 : 0.02));
 }
 
 // Overlay visual p5.js por lado (destellos + confetti)
@@ -797,29 +776,26 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
   const now = millis();
   const elapsed = now - celebration.start;
   if (elapsed > celebration.duration) return;
-
-  const xCenter = side === 'left' ? width * 0.25 : width * 0.75;
   const baseY = height * 0.3;
-  const hue = celebration.type === 'win' ? [255, 215, 0] : [255, 80, 80];
+  const isWin = celebration.type === 'win';
+  const textColor = isWin ? color(255, 215, 0) : color(255, 80, 80);
+  const label = isWin ? 'GANASTE' : 'PERDISTE';
+
+  const leftBound = side === 'left' ? 0 : width / 2;
+  const rectW = width / 2 - 40;
+  const rectH = 120;
 
   ctx.push();
-  ctx.noFill();
-  ctx.stroke(hue[0], hue[1], hue[2], 160);
-  ctx.strokeWeight(2);
-  const t = now / 500.0;
-  for (let i = 0; i < 4; i++) {
-    const r = 40 + i * 12 + sin(t + i) * 6;
-    ctx.arc(xCenter, baseY, r, r, 0, TWO_PI * 0.6);
-  }
-  // Confetti
   ctx.noStroke();
-  for (let i = 0; i < 8; i++) {
-    ctx.fill(hue[0], hue[1], hue[2], 180);
-    const cx = xCenter + random(-120, 120);
-    const cy = baseY + random(-80, 80);
-    const s = random(4, 8);
-    ctx.rect(cx, cy, s, s);
-  }
+  // Fondo semitransparente
+  ctx.fill(0, 0, 0, 120);
+  ctx.rect(leftBound + 20, baseY - rectH / 2, rectW, rectH);
+
+  // Texto
+  ctx.fill(textColor);
+  ctx.textAlign(CENTER, CENTER);
+  ctx.textSize(40);
+  ctx.text(label, leftBound + width / 4, baseY);
   ctx.pop();
 }
 
