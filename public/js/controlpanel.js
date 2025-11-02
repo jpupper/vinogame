@@ -11,6 +11,8 @@ class ControlPanel {
         this.configData = null;
         // Visualización de puntos LIDAR
         this.showLidarPointsCheckbox = null;
+        // Mostrar/Ocultar fondo
+        this.hideBackgroundCheckbox = null;
         
         // Elementos de métricas
         this.frameCount = 0;
@@ -113,7 +115,9 @@ class ControlPanel {
                 hoverTime: { current: 1000, default: 1000 },
                 collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false },
                 // Nuevo: mostrar/ocultar puntos del LIDAR
-                showLidarPoints: true
+                showLidarPoints: true,
+                // Nuevo: ocultar fondo (no renderizar shader)
+                hideBackground: false
             }
         };
         this.configData = defaults;
@@ -336,6 +340,18 @@ class ControlPanel {
             window.showLidarPoints = lidarVisible;
         }
 
+        // Mostrar/Ocultar fondo
+        if (typeof settings.hideBackground === 'undefined') {
+            settings.hideBackground = false;
+        }
+        const hideBg = !!settings.hideBackground;
+        if (this.hideBackgroundCheckbox) {
+            this.hideBackgroundCheckbox.checked = hideBg;
+        }
+        if (typeof window !== 'undefined') {
+            window.hideBackground = hideBg;
+        }
+
         // Nuevos: máximos de objetos simultáneos
         if (this.maxGoodItemsInput && settings.maxGoodItems) {
             this.maxGoodItemsInput.value = parseInt(settings.maxGoodItems.current);
@@ -429,6 +445,10 @@ class ControlPanel {
         this.configData.gameSettings.showLidarPoints = this.showLidarPointsCheckbox
             ? !!this.showLidarPointsCheckbox.checked
             : (typeof window !== 'undefined' ? !!window.showLidarPoints : true);
+        // Persistir ocultar fondo
+        this.configData.gameSettings.hideBackground = this.hideBackgroundCheckbox
+            ? !!this.hideBackgroundCheckbox.checked
+            : (typeof window !== 'undefined' ? !!window.hideBackground : false);
         if (this.maxGoodItemsInput) {
             this.configData.gameSettings.maxGoodItems = this.configData.gameSettings.maxGoodItems || { current: 10, default: 10 };
             this.configData.gameSettings.maxGoodItems.current = parseInt(this.maxGoodItemsInput.value || '0');
@@ -605,6 +625,8 @@ class ControlPanel {
         this.spawnRateValue = document.getElementById('spawnRateValue');
         // Checkbox de visualización de puntos del LIDAR
         this.showLidarPointsCheckbox = document.getElementById('showLidarPointsCheckbox');
+        // Checkbox de ocultar fondo
+        this.hideBackgroundCheckbox = document.getElementById('hideBackgroundCheckbox');
         // Nuevos: máximos de items simultáneos
         this.maxGoodItemsInput = document.getElementById('maxGoodItemsInput');
         this.maxBadItemsInput = document.getElementById('maxBadItemsInput');
@@ -681,6 +703,16 @@ class ControlPanel {
                 const visible = !!event.target.checked;
                 if (typeof window !== 'undefined') {
                     window.showLidarPoints = visible;
+                }
+            });
+        }
+
+        // Toggle de ocultar fondo
+        if (this.hideBackgroundCheckbox) {
+            this.hideBackgroundCheckbox.addEventListener('change', (event) => {
+                const hide = !!event.target.checked;
+                if (typeof window !== 'undefined') {
+                    window.hideBackground = hide;
                 }
             });
         }

@@ -313,8 +313,14 @@ function draw() {
   
   imageMode(CORNER);
   
-  // Dibujar fondo con shader
-  image(feedbackBuffer, 0, 0);
+  // Dibujar fondo con shader (si está habilitado). Si está oculto, dibujamos un plano negro
+  if (!(typeof window !== 'undefined' && window.hideBackground)) {
+    image(feedbackBuffer, 0, 0);
+  } else {
+    noStroke();
+    fill(0);
+    rect(0, 0, width, height);
+  }
   
   // Dibujar juego encima
   image(juegoBuffer, 0, 0);

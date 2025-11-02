@@ -66,6 +66,15 @@
                 <div class="help-text">Permite ocultar la visualización de los puntos recibidos del LIDAR. Se guarda en panel-config.json.</div>
             </div>
 
+            <!-- Nuevo: Ocultar fondo (desactiva shader de background) -->
+            <div class="control-group">
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="hideBackgroundCheckbox">
+                    Ocultar fondo (no renderizar shader de fondo)
+                </label>
+                <div class="help-text">Al activar, no se procesa ni dibuja el fondo; solo se verán los assets en primer plano. Se guarda en panel-config.json.</div>
+            </div>
+
             <div class="control-group">
                 <label for="hoverTimeSlider">
                     Tiempo de agarre (hover)

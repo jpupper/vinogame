@@ -197,6 +197,19 @@ function processShaders() {
       typeof feedbackShader === 'undefined' || feedbackShader === null ||
       typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
 
+  // Si el usuario eligió ocultar el fondo, limpiar el buffer y salir
+  if (typeof window !== 'undefined' && window.hideBackground) {
+    try {
+      fondoBuffer.clear();
+      fondoBuffer.push();
+      fondoBuffer.noStroke();
+      fondoBuffer.fill(0);
+      fondoBuffer.rect(0, 0, width, height); // plano negro
+      fondoBuffer.pop();
+    } catch (e) {}
+    return;
+  }
+
   // Actualizar animación de fondo
   if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
     dynamicBackground.update();
@@ -323,6 +336,19 @@ function renderShaders() {
       typeof compositeShader === 'undefined' || compositeShader === null ||
       typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
   if (!backgroundTexturesLoaded) return;
+
+  // Si el usuario eligió ocultar el fondo, limpiar y no componer
+  if (typeof window !== 'undefined' && window.hideBackground) {
+    try {
+      feedbackBuffer.clear();
+      feedbackBuffer.push();
+      feedbackBuffer.noStroke();
+      feedbackBuffer.fill(0);
+      feedbackBuffer.rect(0, 0, width, height); // plano negro
+      feedbackBuffer.pop();
+    } catch (e) {}
+    return;
+  }
 
   const len = Array.isArray(backgroundTextures) ? backgroundTextures.length : 0;
   const isImgReady = (img) => !!(img && typeof img.width === 'number' && img.width > 0);

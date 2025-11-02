@@ -27,6 +27,7 @@ body {
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         max-height: 90vh; /* Limitar altura máxima */
         overflow-y: auto; /* Scroll vertical si es necesario */
+        overflow-x: hidden; /* Evitar barra de desplazamiento horizontal */
     }
     
     #controlPanel.visible {
@@ -160,10 +161,12 @@ body {
     }
     #collision-tab #collisionAreaControls > div {
         display: grid;
-        grid-template-columns: repeat(2, max-content);
+        grid-template-columns: repeat(2, 1fr); /* Ajuste para evitar overflow horizontal */
         gap: 10px 18px;
         align-items: center;
         margin-top: 8px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     /* Responsive: en pantallas muy chicas los inputs ocupan el ancho disponible */
