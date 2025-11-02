@@ -285,6 +285,7 @@ class ScoreSystem {
             ctx.colorMode(RGB, 255);
 
             // Sombra del combo
+            ctx.textSize(30);
             ctx.fill(0, 0, 0, 150);
             ctx.textSize(comboSize);
             ctx.text(`Combo x${this.comboCount}`, width - 38, comboY + 2);
@@ -321,7 +322,7 @@ class ScoreSystem {
             
             // Solo mostrar el texto si no está en fase de atracción
             if (anim.phase !== 'attracting') {
-                const fontSize = map(Math.abs(anim.points), 1, 20, 20, 40) * anim.scale;
+                const fontSize = map(Math.abs(anim.points), 1, 20, 20, 40) * anim.scale*2.0;
                 
                 // Determinar color basado en si es positivo o negativo
                 let pointColor;
@@ -348,10 +349,10 @@ class ScoreSystem {
                 
                 // Mostrar combo si es relevante
                 if (anim.comboCount > 1 && anim.isPositive) {
-                    const comboFontSize = fontSize * 0.5;
+                    const comboFontSize = fontSize * 0.8;
                     ctx.fill(255, 255, 255, anim.alpha * 0.8);
                     ctx.textSize(comboFontSize);
-                    ctx.text(`x${anim.comboCount}`, anim.x, anim.y + fontSize * 0.7);
+                    ctx.text(`x${anim.comboCount}`, anim.x, anim.y + fontSize * 1.0);
                 }
             }
         }

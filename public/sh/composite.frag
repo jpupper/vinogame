@@ -268,7 +268,7 @@ void main() {
     // Detectar áreas brillantes
     float brightness = dot(finalColor, vec3(0.299, 0.587, 0.114));
     
-    if (brightness > 0.6) {
+    /*if (brightness > 0.6) {
         // Samplear píxeles vecinos para crear bloom
         vec3 bloom = vec3(0.0);
         float bloomRadius = 0.003 + safeComboLevel * 0.002; // Radio crece con combo
@@ -290,7 +290,7 @@ void main() {
         bloomStrength *= (0.3 + safeComboLevel * 0.4); // Más fuerte con combo
         
         finalColor += bloom * bloomStrength;
-    }
+    }*/
     
     // Asegurar que el color final nunca sea negativo
     finalColor = max(finalColor, vec3(0.0));
