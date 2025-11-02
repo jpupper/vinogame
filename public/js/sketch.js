@@ -498,9 +498,9 @@ function dibujarPantallaCompetitiva(ctx) {
   particleSystem.display(ctx);
   scoreSystemLeft.update();
   scoreSystemRight.update();
-  // Mostrar HUDs y animaciones de cada lado (incluye Win/GameOver particles)
-  scoreSystemLeft.display(ctx);
-  scoreSystemRight.display(ctx);
+  // Mostrar solo efectos de puntuación (sin HUD ni animaciones centradas)
+  scoreSystemLeft.display(ctx, { hud: false, animations: false });
+  scoreSystemRight.display(ctx, { hud: false, animations: false });
   const leftWinsCond = (scoreSystemLeft.win || scoreSystemRight.gameOver);
   const leftLosesCond = (scoreSystemLeft.gameOver || scoreSystemRight.win);
   const rightWinsCond = (scoreSystemRight.win || scoreSystemLeft.gameOver);
@@ -516,6 +516,10 @@ function dibujarPantallaCompetitiva(ctx) {
   }
   applyCelebrationEffects('left', leftCelebration);
   applyCelebrationEffects('right', rightCelebration);
+  // Overlays por lado (GANASTE/PERDISTE) en competitivo
+  drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
+  drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
+  // HUD básico (etiquetas, score y corazones)
   displayCompetitiveHUD(ctx);
   medidorIndicatorLeft.update(scoreSystemLeft.comboCount, CONFIG.score.winComboThreshold);
   medidorIndicatorLeft.display(ctx);
@@ -539,9 +543,10 @@ function dibujarPantallaGameover(ctx) {
   // Mostrar HUD/animaciones existentes
   if (gameMode === 'competitive') {
     // Asegurar que las animaciones de victoria/derrota y partículas se ACTUALICEN y se dibujen
-    if (scoreSystemLeft) { scoreSystemLeft.update(); scoreSystemLeft.display(ctx); }
-    if (scoreSystemRight) { scoreSystemRight.update(); scoreSystemRight.display(ctx); }
-    displayCompetitiveHUD(ctx);
+    // En gameover competitivo: actualizar sistemas pero evitar sus textos centrados
+    if (scoreSystemLeft) { scoreSystemLeft.update(); }
+    if (scoreSystemRight) { scoreSystemRight.update(); }
+    // Mostrar overlays laterales con el resultado por equipo
     drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
     drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
   } else if (scoreSystem) {
@@ -694,7 +699,7 @@ function getScaledBackgroundImage(index) {
 // HUD para competitivo (dos equipos)
 function displayCompetitiveHUD(ctx = window) {
   ctx.push();
-  // La línea separadora ahora la dibuja el shader composite
+  // Solo HUD: etiquetas, scores y corazones. Sin overlays de GANASTE/PERDISTE ni trofeos.
   ctx.noStroke();
 
   // Izquierda
@@ -732,60 +737,6 @@ function displayCompetitiveHUD(ctx = window) {
     }
   }
 
-  // Overlay híbrido de Ganaste/Perdiste por lado
-  const leftWins = (scoreSystemLeft && scoreSystemLeft.win) || (scoreSystemRight && scoreSystemRight.gameOver);
-  const rightWins = (scoreSystemRight && scoreSystemRight.win) || (scoreSystemLeft && scoreSystemLeft.gameOver);
-  const leftLoses = (scoreSystemLeft && scoreSystemLeft.gameOver) || (scoreSystemRight && scoreSystemRight.win);
-  const rightLoses = (scoreSystemRight && scoreSystemRight.gameOver) || (scoreSystemLeft && scoreSystemLeft.win);
-
-  const bigSize = Math.min(64, height * 0.08);
-  ctx.textSize(bigSize);
-  ctx.textAlign(CENTER, CENTER);
-  const trophy = (typeof window !== 'undefined' ? window.trophyImage : null);
-
-  // Lado izquierdo
-  if (leftWins && !leftLoses) {
-    ctx.fill(255, 215, 0);
-    ctx.text('GANASTE', width * 0.25, height * 0.25);
-    if (trophy) {
-      ctx.push();
-      ctx.imageMode(CENTER);
-      ctx.translate(width * 0.25, height * 0.35);
-      const tw = trophy.width || bigSize;
-      const th = trophy.height || bigSize;
-      const s = bigSize / Math.max(tw, th);
-      ctx.scale(s);
-      ctx.image(trophy, 0, 0);
-      ctx.pop();
-    }
-    drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
-  } else if (leftLoses && !leftWins) {
-    ctx.fill(255, 80, 80);
-    ctx.text('PERDISTE', width * 0.25, height * 0.25);
-    drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
-  }
-
-  // Lado derecho
-  if (rightWins && !rightLoses) {
-    ctx.fill(255, 215, 0);
-    ctx.text('GANASTE', width * 0.75, height * 0.25);
-    if (trophy) {
-      ctx.push();
-      ctx.imageMode(CENTER);
-      ctx.translate(width * 0.75, height * 0.35);
-      const tw = trophy.width || bigSize;
-      const th = trophy.height || bigSize;
-      const s = bigSize / Math.max(tw, th);
-      ctx.scale(s);
-      ctx.image(trophy, 0, 0);
-      ctx.pop();
-    }
-    drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
-  } else if (rightLoses && !rightWins) {
-    ctx.fill(255, 80, 80);
-    ctx.text('PERDISTE', width * 0.75, height * 0.25);
-    drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
-  }
   ctx.pop();
 }
 
@@ -879,6 +830,63 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
     ctx.tint(255, 255);
     ctx.image(img, centerX - imgSize * 1.4, baseY - imgSize * 0.5, imgSize, imgSize);
     ctx.pop();
+  }
+
+  // Partículas de celebración por lado
+  // Para victoria: uvas moradas cayendo. Para derrota: gotas rojas discretas.
+  if (!celebration._particlesInitialized) {
+    celebration._particlesInitialized = true;
+    const count = isWin ? 80 : 60;
+    const sideX0 = leftBound + 40;
+    const sideX1 = leftBound + width / 2 - 40;
+    celebration._particles = [];
+    for (let i = 0; i < count; i++) {
+      const x = random(sideX0, sideX1);
+      const y = random(baseY - rectH, baseY - rectH * 0.5);
+      const size = isWin ? random(6, 12) : random(4, 9);
+      const vx = random(-0.6, 0.6);
+      const vy = random(0.5, 1.5);
+      const life = 255;
+      celebration._particles.push({ x, y, vx, vy, size, life });
+    }
+  }
+
+  if (celebration._particles && celebration._particles.length) {
+    for (let i = celebration._particles.length - 1; i >= 0; i--) {
+      const p = celebration._particles[i];
+      // Actualización
+      p.vy += 0.02; // gravedad sutil
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 1.2; // desvanecer
+
+      // Dibujo
+      if (isWin) {
+        // Uvas moradas con brillo
+        const c = [160, 60, 220];
+        const highlight = [240, 200, 255];
+        ctx.noStroke();
+        ctx.fill(c[0] * 0.6, c[1] * 0.6, c[2] * 0.6, p.life);
+        ctx.ellipse(p.x, p.y, p.size * 1.05, p.size * 1.05);
+        ctx.fill(c[0], c[1], c[2], p.life);
+        ctx.ellipse(p.x, p.y, p.size, p.size);
+        ctx.fill(highlight[0], highlight[1], highlight[2], p.life);
+        ctx.ellipse(p.x - p.size * 0.2, p.y - p.size * 0.25, p.size * 0.25, p.size * 0.25);
+      } else {
+        // Gotas rojas discretas
+        const c = [255, 60, 60];
+        ctx.noStroke();
+        ctx.fill(c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, p.life);
+        ctx.ellipse(p.x, p.y, p.size * 1.1, p.size * 1.1);
+        ctx.fill(c[0], c[1], c[2], p.life);
+        ctx.ellipse(p.x, p.y, p.size, p.size);
+      }
+
+      // Remover si salió del área o se desvaneció
+      if (p.y > height - 20 || p.life <= 0) {
+        celebration._particles.splice(i, 1);
+      }
+    }
   }
 
   ctx.pop();

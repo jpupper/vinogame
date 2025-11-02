@@ -2,6 +2,14 @@
 
 Juego interactivo con p5.js donde recolectas copas de vino evitando obstáculos, con efectos de halo configurables y un panel de control.
 
+
+
+## HACER 
+
+-checkear si en modo cooperativo se reinicia si tocas solo con lidar. 
+-Mejorar animaciones de fin de juego (las cambie, ahora son mas simples y van pero creo que tal vez podemos meter un video o no se). 
+-Mejorar los corazoncitos. 
+
 ## Cómo jugar
 
 - Mantén presionado o toca para crear puntos que interactúan con los objetos.

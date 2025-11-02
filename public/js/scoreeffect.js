@@ -218,6 +218,8 @@ class ScoreSystem {
         // Aquí podemos ocultarlo para evitar duplicados.
         const isCompetitive = (typeof gameMode !== 'undefined' && gameMode === 'competitive');
         const showHUD = (typeof opts.hud === 'boolean') ? opts.hud : !isCompetitive;
+        // Permitir ocultar las animaciones centradas (Win/End) si otro overlay las maneja
+        const showAnimations = (typeof opts.animations === 'boolean') ? opts.animations : true;
         // Mostrar puntuación principal con efecto
         ctx.textAlign(RIGHT, TOP);
         
@@ -355,12 +357,12 @@ class ScoreSystem {
         }
         
         // Mostrar animación de Game Over si el juego terminó
-        if (this.gameOver && this.gameOverAnimation) {
+        if (showAnimations && this.gameOver && this.gameOverAnimation) {
             this.gameOverAnimation.display(ctx);
         }
         
         // Mostrar animación de Victoria si ganaste
-        if (this.win && this.winAnimation) {
+        if (showAnimations && this.win && this.winAnimation) {
             this.winAnimation.display(ctx);
         }
     }
