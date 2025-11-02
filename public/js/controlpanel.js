@@ -9,6 +9,8 @@ class ControlPanel {
         this.fallSpeedValue = null;
         this.livesValue = null;
         this.configData = null;
+        // Visualización de puntos LIDAR
+        this.showLidarPointsCheckbox = null;
         
         // Elementos de métricas
         this.frameCount = 0;
@@ -89,7 +91,9 @@ class ControlPanel {
                 maxBadItems: { current: 5, default: 5 },
                 winComboThreshold: { current: 20, default: 20 },
                 hoverTime: { current: 1000, default: 1000 },
-                collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false }
+                collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false },
+                // Nuevo: mostrar/ocultar puntos del LIDAR
+                showLidarPoints: true
             }
         };
         this.configData = defaults;
@@ -300,6 +304,18 @@ class ControlPanel {
             this.updateSpawnRate(settings.spawnRate.current);
         }
 
+        // Mostrar/Ocultar puntos del LIDAR
+        if (typeof settings.showLidarPoints === 'undefined') {
+            settings.showLidarPoints = true;
+        }
+        const lidarVisible = !!settings.showLidarPoints;
+        if (this.showLidarPointsCheckbox) {
+            this.showLidarPointsCheckbox.checked = lidarVisible;
+        }
+        if (typeof window !== 'undefined') {
+            window.showLidarPoints = lidarVisible;
+        }
+
         // Nuevos: máximos de objetos simultáneos
         if (this.maxGoodItemsInput && settings.maxGoodItems) {
             this.maxGoodItemsInput.value = parseInt(settings.maxGoodItems.current);
@@ -389,6 +405,10 @@ class ControlPanel {
         this.configData.gameSettings.lives.current = parseInt(this.livesSlider.value);
         this.configData.gameSettings.objectSize.current = parseInt(this.objectSizeSlider.value);
         this.configData.gameSettings.spawnRate.current = parseInt(this.spawnRateSlider.value);
+        // Persistir visualización de puntos del LIDAR
+        this.configData.gameSettings.showLidarPoints = this.showLidarPointsCheckbox
+            ? !!this.showLidarPointsCheckbox.checked
+            : (typeof window !== 'undefined' ? !!window.showLidarPoints : true);
         if (this.maxGoodItemsInput) {
             this.configData.gameSettings.maxGoodItems = this.configData.gameSettings.maxGoodItems || { current: 10, default: 10 };
             this.configData.gameSettings.maxGoodItems.current = parseInt(this.maxGoodItemsInput.value || '0');
@@ -547,6 +567,8 @@ class ControlPanel {
         this.objectSizeValue = document.getElementById('objectSizeValue');
         this.spawnRateSlider = document.getElementById('spawnRateSlider');
         this.spawnRateValue = document.getElementById('spawnRateValue');
+        // Checkbox de visualización de puntos del LIDAR
+        this.showLidarPointsCheckbox = document.getElementById('showLidarPointsCheckbox');
         // Nuevos: máximos de items simultáneos
         this.maxGoodItemsInput = document.getElementById('maxGoodItemsInput');
         this.maxBadItemsInput = document.getElementById('maxBadItemsInput');
@@ -614,6 +636,16 @@ class ControlPanel {
                 this.toggle();
             }
         });
+
+        // Toggle de puntos del LIDAR
+        if (this.showLidarPointsCheckbox) {
+            this.showLidarPointsCheckbox.addEventListener('change', (event) => {
+                const visible = !!event.target.checked;
+                if (typeof window !== 'undefined') {
+                    window.showLidarPoints = visible;
+                }
+            });
+        }
         
         // Listeners para los sliders
         if (this.fallSpeedSlider) {

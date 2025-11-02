@@ -58,9 +58,9 @@
       "description": "Tiempo requerido para agarrar objetos"
     },
     "collisionArea": {
-      "showOverlay": true,
+      "showOverlay": false,
       "width": 2880,
-      "height": 1018,
+      "height": 866,
       "x": 0,
       "y": 500,
       "enabled": true

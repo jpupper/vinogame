@@ -45,6 +45,8 @@ let badItemImagePaths = [];
 let backgroundImagePaths = [];
 // Estado de carga de assets
 let assetsReady = false;
+// Mostrar/Ocultar puntos del LIDAR (solo visual)
+let showLidarPoints = true;
 
 // Imágenes pre-escaladas para optimización
 let scaledGoodItemImages = {};
@@ -60,6 +62,7 @@ if (typeof window !== 'undefined') {
     window.badItemImagePaths = badItemImagePaths;
     window.backgroundImagePaths = backgroundImagePaths;
     window.assetsReady = assetsReady;
+    window.showLidarPoints = showLidarPoints;
 }
 
 // Fuente para texto WEBGL
@@ -312,7 +315,9 @@ function draw() {
     rect(ca.x, ca.y, ca.width, ca.height);
     pop();
   }
-  Pserver.displayCirclesOnly();
+  if ((typeof window !== 'undefined' && window.showLidarPoints) || (typeof window === 'undefined' && showLidarPoints)) {
+    Pserver.displayCirclesOnly();
+  }
   
 
   pop();
@@ -367,7 +372,9 @@ function dibujarPantallaStandBy(ctx) {
       }
     }
     lastPointerPositions = currentMap;
-    Pserver.display(ctx);
+    if ((typeof window !== 'undefined' && window.showLidarPoints) || (typeof window === 'undefined' && showLidarPoints)) {
+      Pserver.display(ctx);
+    }
 
     const selectedByHover = selectionScreen.updateHoverFromPoints(pts);
     if (selectedByHover) {
@@ -431,7 +438,9 @@ function dibujarPantallaColaborativa(ctx) {
     rankingSaved = true;
     if (!gameEndTime) { gameEndTime = millis(); }
   }
-  Pserver.display(ctx);
+  if ((typeof window !== 'undefined' && window.showLidarPoints) || (typeof window === 'undefined' && showLidarPoints)) {
+    Pserver.display(ctx);
+  }
   if (isDebug) {
     const fps = frameRate();
     const pointsCount = Pserver.getAllPoints().length;
@@ -503,7 +512,9 @@ function dibujarPantallaCompetitiva(ctx) {
     rankingSystem.saveCompetitive(leftScoreFinal, rightScoreFinal, winnerSide);
     rankingSaved = true;
   }
-  Pserver.display(ctx);
+  if ((typeof window !== 'undefined' && window.showLidarPoints) || (typeof window === 'undefined' && showLidarPoints)) {
+    Pserver.display(ctx);
+  }
 }
 
 function dibujarPantallaGameover(ctx) {
