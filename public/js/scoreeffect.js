@@ -49,7 +49,8 @@ class ScoreSystem {
             const threshold = (CONFIG && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
             if (this.comboCount >= threshold && !this.win) {
                 this.win = true;
-                this.winAnimation = new WinAnimation();
+                // Unificar animaciones: usar EndAnimation para victoria
+                this.winAnimation = new EndAnimation({ type: 'win' });
             }
             
             // Aplicar bonificación por combo (más generosa)
@@ -96,38 +97,8 @@ class ScoreSystem {
             trailParticles: [] // Para el efecto de estela
         };
         
-        // Crear partículas para la animación
-        let particleCount;
-        if (abs(totalPoints) < 10) {
-            particleCount = CONFIG.particles.count.scoreSmall;
-        } else if (abs(totalPoints) < 30) {
-            particleCount = CONFIG.particles.count.scoreMedium;
-        } else {
-            particleCount = CONFIG.particles.count.scoreLarge;
-        }
-        
-        for (let i = 0; i < particleCount; i++) {
-            const variation = CONFIG.particles.colors.variation;
-            const baseColor = points > 0 ? 
-                CONFIG.particles.colors.positive : 
-                CONFIG.particles.colors.negative;
-                
-            anim.particles.push({
-                pos: createVector(x + random(-20, 20), y + random(-20, 20)),
-                vel: createVector(
-                    random(CONFIG.particles.speed.initial.min, CONFIG.particles.speed.initial.max),
-                    random(CONFIG.particles.speed.initial.min * 2, CONFIG.particles.speed.initial.min)
-                ),
-                size: random(CONFIG.particles.size.min, CONFIG.particles.size.max),
-                alpha: 255,
-                initialOffset: random(TWO_PI), // Offset inicial para movimiento en espiral
-                color: color(
-                    baseColor[0] + random(-variation, variation),
-                    baseColor[1] + random(-variation, variation),
-                    baseColor[2] + random(-variation, variation)
-                )
-            });
-        }
+        // Partículas de puntuación removidas según pedido del usuario.
+        // Mantener solo el texto "+/− puntos" sin burbujas ni estelas.
         
         this.scoreAnimations.push(anim);
     }
@@ -169,7 +140,8 @@ class ScoreSystem {
         // Si no quedan vidas, activar Game Over
         if (this.lives <= 0) {
             this.gameOver = true;
-            this.gameOverAnimation = new GameOverAnimation();
+            // Unificar animaciones: usar EndAnimation para derrota
+            this.gameOverAnimation = new EndAnimation({ type: 'lose' });
         }
     }
     
@@ -206,11 +178,7 @@ class ScoreSystem {
                 anim.x += anim.velocity.x;
                 anim.velocity.y *= 0.95; // Desaceleración
                 
-                // Actualizar partículas
-                for (let p of anim.particles) {
-                    p.vel.y *= 0.95;
-                    p.pos.add(p.vel);
-                }
+                // Partículas removidas
             } else if (anim.phase === 'falling') {
                 // Fase de caída
                 const progress = (currentTime - anim.phaseStartTime) / anim.phaseDuration.falling;
@@ -220,14 +188,7 @@ class ScoreSystem {
                 anim.x += anim.velocity.x;
                 anim.y += anim.velocity.y;
                 
-                // Actualizar partículas
-                for (let p of anim.particles) {
-                    p.vel.y += anim.gravity;
-                    p.pos.add(p.vel);
-                    
-                    // Reducir tamaño gradualmente
-                    p.size *= 0.99;
-                }
+                // Partículas removidas
                 
                 // Desvanecer
                 anim.alpha = map(progress, 0, 1, 255, 0);
@@ -275,25 +236,7 @@ class ScoreSystem {
             // Desplazamiento vertical
             scoreOffset = sin(progress * PI * 2) * effectIntensity * 0.5;
             
-            // Efecto de partículas de energía alrededor del score
-            if (frameCount % 3 === 0 && this.scoreEffect.intensity > 3) {
-                const particleCount = floor(this.scoreEffect.intensity / 2);
-                for (let i = 0; i < particleCount; i++) {
-                    const scoreWidth = 240;
-                    const scoreHeight = 40;
-                    
-                    // Crear partículas que emanan del score
-                    particleSystem.addParticle(
-                        this.scorePosition.x - random(0, scoreWidth),
-                        this.scorePosition.y + random(-scoreHeight/2, scoreHeight/2),
-                        this.scoreEffect.isPositive ? 
-                            color(50, 255, 50, 150) : 
-                            color(255, 50, 50, 150),
-                        random(3, 8),
-                        createVector(random(-2, 2), random(-2, 2))
-                    );
-                }
-            }
+            // Partículas alrededor del score deshabilitadas (removidas).
             
             // Color basado en si es positivo o negativo
             if (this.scoreEffect.isPositive) {
@@ -366,33 +309,7 @@ class ScoreSystem {
         
         // Mostrar animaciones de puntuación con fases
         for (let anim of this.scoreAnimations) {
-            // Dibujar partículas de estela primero (detrás)
-            if (anim.trailParticles) {
-                for (let tp of anim.trailParticles) {
-                    ctx.noStroke();
-                    ctx.fill(red(tp.color), green(tp.color), blue(tp.color), tp.alpha * 0.5);
-                    ctx.ellipse(tp.pos.x, tp.pos.y, tp.size, tp.size);
-                }
-            }
-            
-            // Dibujar partículas principales
-            for (let p of anim.particles) {
-                // Efecto de brillo
-                if (p.size > 5) {
-                    ctx.noStroke();
-                    ctx.fill(red(p.color), green(p.color), blue(p.color), p.alpha * 0.3);
-                    ctx.ellipse(p.pos.x, p.pos.y, p.size * 1.5, p.size * 1.5);
-                }
-                
-                // Partícula principal
-                ctx.noStroke();
-                ctx.fill(red(p.color), green(p.color), blue(p.color), p.alpha);
-                ctx.ellipse(p.pos.x, p.pos.y, p.size, p.size);
-                
-                // Brillo central
-                ctx.fill(255, 255, 255, p.alpha * 0.7);
-                ctx.ellipse(p.pos.x, p.pos.y, p.size * 0.4, p.size * 0.4);
-            }
+            // Partículas alrededor del texto removidas.
             
             // Solo mostrar el texto si no está en fase de atracción
             if (anim.phase !== 'attracting') {

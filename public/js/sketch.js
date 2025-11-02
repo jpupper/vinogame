@@ -23,7 +23,10 @@ let leftCelebration = null;
 let rightCelebration = null;
 // Retorno automático a inicio al terminar la partida
 let gameEndTime = null;
-let gameEndDelay = 3500; // ms visibles de GANASTE/PERDISTE antes de volver al inicio
+// Duración visible de FIN/GANASTE en base a configuración
+let gameEndDelay = (typeof CONFIG !== 'undefined' && CONFIG.win && CONFIG.win.duration)
+  ? CONFIG.win.duration
+  : 5000;
 
 // Modo debug
 let isDebug = false;
@@ -494,6 +497,9 @@ function dibujarPantallaCompetitiva(ctx) {
   particleSystem.display(ctx);
   scoreSystemLeft.update();
   scoreSystemRight.update();
+  // Mostrar HUDs y animaciones de cada lado (incluye Win/GameOver particles)
+  scoreSystemLeft.display(ctx);
+  scoreSystemRight.display(ctx);
   const leftWinsCond = (scoreSystemLeft.win || scoreSystemRight.gameOver);
   const leftLosesCond = (scoreSystemLeft.gameOver || scoreSystemRight.win);
   const rightWinsCond = (scoreSystemRight.win || scoreSystemLeft.gameOver);
@@ -531,10 +537,15 @@ function dibujarPantallaCompetitiva(ctx) {
 function dibujarPantallaGameover(ctx) {
   // Mostrar HUD/animaciones existentes
   if (gameMode === 'competitive') {
+    // Asegurar que las animaciones de victoria/derrota y partículas se ACTUALICEN y se dibujen
+    if (scoreSystemLeft) { scoreSystemLeft.update(); scoreSystemLeft.display(ctx); }
+    if (scoreSystemRight) { scoreSystemRight.update(); scoreSystemRight.display(ctx); }
     displayCompetitiveHUD(ctx);
     drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
     drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
   } else if (scoreSystem) {
+    // En estado final, seguir actualizando para que las partículas no se congelen
+    scoreSystem.update();
     scoreSystem.display(ctx);
   }
   // Retorno automático al standby si corresponde
@@ -816,26 +827,59 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
   const now = millis();
   const elapsed = now - celebration.start;
   if (elapsed > celebration.duration) return;
-  const baseY = height * 0.3;
-  const isWin = celebration.type === 'win';
-  const textColor = isWin ? color(255, 215, 0) : color(255, 80, 80);
-  const label = isWin ? 'GANASTE' : 'PERDISTE';
 
+  // Progreso normalizado de la animación [0,1]
+  const t = constrain(elapsed / celebration.duration, 0, 1);
+  const easeInOut = (x) => (x < 0.5) ? 2 * x * x : 1 - pow(-2 * x + 2, 2) / 2;
+  const easeOut = (x) => 1 - pow(1 - x, 3);
+
+  const isWin = celebration.type === 'win';
+  const label = isWin ? 'GANASTE' : 'PERDISTE';
+  const textColor = isWin ? color(255, 215, 0) : color(255, 80, 80);
+
+  // Área por lado
   const leftBound = side === 'left' ? 0 : width / 2;
-  const rectW = width / 2 - 40;
-  const rectH = 120;
+  const centerX = leftBound + width / 4;
+  const baseY = height * 0.28;
+
+  // Fondo semitransparente con fade-in/out y esquinas redondeadas
+  const rectW = width / 2 - 80;
+  const rectH = height * 0.18;
+  const bgAlpha = 160 * easeInOut(min(t, 0.6));
+
+  // Efecto de pulso en tamaño del texto
+  const pulse = 1.0 + 0.06 * sin(now * 0.01) * (1.0 - t);
+  const baseTextSize = height * 0.12;
+  const textSizePx = baseTextSize * pulse;
 
   ctx.push();
   ctx.noStroke();
-  // Fondo semitransparente
-  ctx.fill(0, 0, 0, 120);
-  ctx.rect(leftBound + 20, baseY - rectH / 2, rectW, rectH);
+  ctx.fill(0, 0, 0, bgAlpha);
+  if (typeof ctx.rect === 'function') {
+    // p5 permite rect con radio para esquinas redondeadas
+    ctx.rect(leftBound + 40, baseY - rectH / 2, rectW, rectH, 20);
+  } else {
+    ctx.rect(leftBound + 40, baseY - rectH / 2, rectW, rectH);
+  }
 
-  // Texto
-  ctx.fill(textColor);
+  // Texto con contorno para mejorar legibilidad
   ctx.textAlign(CENTER, CENTER);
-  ctx.textSize(40);
-  ctx.text(label, leftBound + width / 4, baseY);
+  ctx.textSize(textSizePx);
+  ctx.stroke(0, 0, 0, 220);
+  ctx.strokeWeight(6);
+  ctx.fill(textColor);
+  ctx.text(label, centerX, baseY);
+
+  // Icono de trofeo en victoria
+  if (isWin && typeof window !== 'undefined' && window.trophyImage) {
+    const img = window.trophyImage;
+    const imgSize = textSizePx * 0.8;
+    ctx.push();
+    ctx.tint(255, 255);
+    ctx.image(img, centerX - imgSize * 1.4, baseY - imgSize * 0.5, imgSize, imgSize);
+    ctx.pop();
+  }
+
   ctx.pop();
 }
 

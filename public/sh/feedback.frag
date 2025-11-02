@@ -73,7 +73,8 @@ void main() {
     vec2 displacement = vec2(0.0);
     if (influence > 0.0) {
         vec2 direction = normalize(aspectUV - mousePos);
-        displacement = direction * influence * 0.015;
+        // Incrementar desplazamiento del cursor para que el displace sea mayor
+        displacement = direction * influence * 0.03;
         // Deshacer la corrección de aspect ratio para el desplazamiento
         displacement.x /= u_resolution.x / u_resolution.y;
     }
@@ -88,7 +89,8 @@ void main() {
             float infP = smoothstep(radius, 0.0, dP);
             if (infP > 0.0) {
                 vec2 dirP = normalize(aspectUV - pPos);
-                vec2 dispP = dirP * infP * 0.015;
+                // Incrementar desplazamiento por punteros (mouse/touch/LIDAR)
+                vec2 dispP = dirP * infP * 0.03;
                 dispP.x /= (u_resolution.x / u_resolution.y);
                 displacement += dispP;
             }
@@ -113,8 +115,9 @@ void main() {
         
         // BLOOM effect en el centro
         float centerGlow = smoothstep(0.05, 0.0, dist);
-        finalColor.rgb += tint * centerGlow * (0.3 + u_effectIntensity * 0.4);
-        finalColor.a = max(finalColor.a, centerGlow * 0.8);
+        // Hacer los puntos del cursor mucho más brillantes
+        finalColor.rgb += tint * centerGlow * (1.2 + u_effectIntensity * 0.8);
+        finalColor.a = max(finalColor.a, centerGlow * 1.0);
     }
 
     // ===== BRILLO PARA PUNTEROS ADICIONALES =====
@@ -132,8 +135,9 @@ void main() {
                     0.5 + 0.5 * sin(u_time * 0.3 + dP * 10.0 + 4.0)
                 );
                 float centerGlowP = smoothstep(0.05, 0.0, dP);
-                finalColor.rgb += ptTint * centerGlowP * (0.25 + u_effectIntensity * 0.35);
-                finalColor.a = max(finalColor.a, centerGlowP * 0.75);
+                // Multiplicar significativamente el brillo de los puntos (mouse + LIDAR)
+                finalColor.rgb += ptTint * centerGlowP * (1.0 + u_effectIntensity * 0.7);
+                finalColor.a = max(finalColor.a, centerGlowP * 0.95);
             }
         }
     }
@@ -167,8 +171,9 @@ void main() {
             vec3 waveColor = vec3(1.0, 0.85, 0.3);
             
             // Agregar la onda al buffer (más visible)
-            finalColor.rgb += waveColor * ring * waveIntensity * 0.6;
-            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.4);
+            // Reducir brillo del anillo de las ondas para que se vea menos luminoso
+            finalColor.rgb += waveColor * ring * waveIntensity * 0.35;
+            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.2);
         }
     }
 
@@ -191,11 +196,12 @@ void main() {
         float strength = u_eventStrength;
         
         // Anillo principal
-        finalColor.rgb += eColor * eRing * eIntensity * (0.8 * strength);
-        finalColor.a = max(finalColor.a, eRing * eIntensity * (0.6 * strength));
-        
-        // Glow central
-        finalColor.rgb += eColor * innerGlow * (0.25 * strength);
+        // Reducir brillo del evento para que el anillo no queme la imagen
+        finalColor.rgb += eColor * eRing * eIntensity * (0.4 * strength);
+        finalColor.a = max(finalColor.a, eRing * eIntensity * (0.25 * strength));
+
+        // Glow central más tenue
+        finalColor.rgb += eColor * innerGlow * (0.12 * strength);
     }
     
     // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO (MÁS SUTIL)

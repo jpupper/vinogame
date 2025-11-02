@@ -2,7 +2,9 @@ class WinAnimation {
     constructor() {
         this.startTime = millis();
         this.duration = (CONFIG.win && CONFIG.win.duration) ? CONFIG.win.duration : 5000;
-        this.particles = [];
+        // Partículas de victoria: uvas pequeñas que caen
+        this.grapes = [];
+        this.particles = []; // mantener compatibilidad interna (no se usa para chispas)
         this.letters = [];
         this.scaledTrophyImage = null;
 
@@ -10,21 +12,18 @@ class WinAnimation {
             ? CONFIG.win.text.color
             : [255, 215, 0]; // Dorado por defecto
 
-        // Crear partículas celebratorias (destellos dorados)
-        const pCount = (CONFIG.win && CONFIG.win.particles && CONFIG.win.particles.count) ? CONFIG.win.particles.count : 120;
-        const pSpeedMin = (CONFIG.win && CONFIG.win.particles && CONFIG.win.particles.speed && CONFIG.win.particles.speed.min) ? CONFIG.win.particles.speed.min : 2;
-        const pSpeedMax = (CONFIG.win && CONFIG.win.particles && CONFIG.win.particles.speed && CONFIG.win.particles.speed.max) ? CONFIG.win.particles.speed.max : 8;
-        const pSizeMin = (CONFIG.win && CONFIG.win.particles && CONFIG.win.particles.size && CONFIG.win.particles.size.min) ? CONFIG.win.particles.size.min : 4;
-        const pSizeMax = (CONFIG.win && CONFIG.win.particles && CONFIG.win.particles.size && CONFIG.win.particles.size.max) ? CONFIG.win.particles.size.max : 14;
+        // Parámetros de "uvas chiquitas"
+        this.grapeColor = [150, 60, 180]; // morado uva
+        this.highlightColor = [255, 220, 255];
+        this.spawnDuration = this.duration * 0.7; // 70% del tiempo caen uvas
+        this.spawnRate = 20; // uvas por segundo
+        this.lastSpawn = this.startTime;
+        this.gravity = 0.18;
+        this.floorY = height - 30; // piso simbólico para que se junten abajo
 
-        for (let i = 0; i < pCount; i++) {
-            this.particles.push({
-                pos: createVector(width/2, height/2),
-                vel: p5.Vector.random2D().mult(random(pSpeedMin, pSpeedMax)),
-                size: random(pSizeMin, pSizeMax),
-                color: color(baseColor[0], baseColor[1], baseColor[2], 255),
-                life: 255
-            });
+        // Pre-spawn inicial para que se vean inmediatamente
+        for (let i = 0; i < 40; i++) {
+            this.grapes.push(this.createGrape(random(0, width), random(-height * 0.4, -10)));
         }
 
         // Configurar letras para "GANASTE"
@@ -59,32 +58,53 @@ class WinAnimation {
         }
     }
 
+    createGrape(x, y) {
+        const size = random(6, 14);
+        return {
+            pos: createVector(x, y),
+            vel: createVector(random(-0.8, 0.8), random(2, 6)),
+            rot: random(TWO_PI),
+            rotSpeed: random(-0.03, 0.03),
+            size: size,
+            life: 255,
+            alphaDecay: random(0.4, 0.8),
+            wobblePhase: random(TWO_PI)
+        };
+    }
+
     update() {
         const elapsed = millis() - this.startTime;
         const progress = constrain(elapsed / this.duration, 0, 1);
 
-        // Actualizar partículas (movimiento más fluido, evitar que se "trabajen")
-        for (let p of this.particles) {
-            p.pos.add(p.vel);
-            // Desacelerar más suavemente y añadir un leve drift aleatorio
-            p.vel.mult(0.992);
-            p.vel.add(p5.Vector.random2D().mult(0.15));
-            p.life -= 2.0;
-        }
-        this.particles = this.particles.filter(p => p.life > 0);
-
-        // Generar más destellos al inicio
-        if (progress < 0.6 && frameCount % 6 === 0) {
-            for (let i = 0; i < 3; i++) {
-                this.particles.push({
-                    pos: createVector(width/2 + random(-width/3, width/3), height/2 + random(-height/3, height/3)),
-                    vel: p5.Vector.random2D().mult(random(1, 4)),
-                    size: random(3, 10),
-                    color: color(255, 215, 120, 255),
-                    life: 255
-                });
+        // Spawner de uvas durante parte de la animación
+        if (elapsed < this.spawnDuration) {
+            const targetSpawns = this.spawnRate * (deltaTime / 1000.0);
+            // emitir un número fraccional aproximado por frame
+            const count = floor(targetSpawns) + (random() < (targetSpawns % 1) ? 1 : 0);
+            for (let i = 0; i < count; i++) {
+                this.grapes.push(this.createGrape(random(0, width), random(-height * 0.1, -10)));
             }
         }
+
+        // Actualizar uvas: caída con gravedad, leve wobble y acumulación en el piso
+        for (let g of this.grapes) {
+            g.vel.y += this.gravity;
+            g.pos.add(g.vel);
+            g.rot += g.rotSpeed;
+            // Wobble horizontal suave
+            g.wobblePhase += 0.05;
+            g.pos.x += sin(g.wobblePhase) * 0.2;
+
+            // Piso
+            if (g.pos.y > this.floorY) {
+                g.pos.y = this.floorY;
+                g.vel.y *= -0.25; // rebote pequeño
+                g.vel.x *= 0.7;
+                // se va apagando lentamente en el piso
+                g.life -= g.alphaDecay;
+            }
+        }
+        this.grapes = this.grapes.filter(g => g.life > 10);
 
         // Actualizar letras con easing
         for (let i = 0; i < this.letters.length; i++) {
@@ -103,14 +123,23 @@ class WinAnimation {
         ctx.push();
 
         // Fondo suave
-        ctx.fill(0, 0, 0, 140);
+        ctx.fill(0, 0, 0, 120);
         ctx.rect(0, 0, width, height);
 
-        // Partículas doradas
-        for (let p of this.particles) {
+        // Uvas caídas: círculos pequeños con brillo y borde sutil
+        for (let g of this.grapes) {
+            const alpha = g.life;
+            const c = this.grapeColor;
+            // Borde oscuro
             ctx.noStroke();
-            ctx.fill(red(p.color), green(p.color), blue(p.color), p.life);
-            ctx.ellipse(p.pos.x, p.pos.y, p.size);
+            ctx.fill(c[0]*0.6, c[1]*0.6, c[2]*0.6, alpha);
+            ctx.ellipse(g.pos.x, g.pos.y, g.size * 1.05, g.size * 1.05);
+            // Cuerpo
+            ctx.fill(c[0], c[1], c[2], alpha);
+            ctx.ellipse(g.pos.x, g.pos.y, g.size, g.size);
+            // Brillo pequeño
+            ctx.fill(this.highlightColor[0], this.highlightColor[1], this.highlightColor[2], alpha);
+            ctx.ellipse(g.pos.x - g.size*0.2, g.pos.y - g.size*0.25, g.size*0.25, g.size*0.25);
         }
 
         // Letras "GANASTE"

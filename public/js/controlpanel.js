@@ -907,7 +907,8 @@ class ControlPanel {
         if (typeof scoreSystem !== 'undefined' && scoreSystem && !scoreSystem.win) {
             if (scoreSystem.comboCount >= v) {
                 scoreSystem.win = true;
-                scoreSystem.winAnimation = new WinAnimation();
+                // Usar animación unificada
+                scoreSystem.winAnimation = new EndAnimation({ type: 'win' });
             }
         }
         console.log('Umbral de combo para ganar actualizado:', v);

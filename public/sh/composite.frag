@@ -56,7 +56,7 @@ void main() {
     float chromaticAberration = 0.0; // Para separación RGB
     
     // FUERZA DE DISTORSIÓN (ajustable)
-    const float WAVE_DISTORTION_STRENGTH = 0.05;  // 5% de distorsión máxima
+    const float WAVE_DISTORTION_STRENGTH = 0.09;  // 9% de distorsión máxima (más fuerte)
     const float SINE_DISTORTION_STRENGTH = 0.002; // 0.2% de distorsión sutil
     const float CHROMATIC_STRENGTH = 0.008;       // Separación RGB
     
@@ -257,7 +257,8 @@ void main() {
     if (u_eventActive > 0.5) {
         float t = clamp((u_time - u_eventStartTime) / 1.5, 0.0, 1.0);
         float pulse = 0.5 + 0.5 * sin(u_time * 3.0);
-        finalColor = mix(finalColor, u_eventColor, 0.05 * u_eventStrength * (1.0 - t) * pulse);
+        // Reducir el tinte global del evento para evitar sobreexposición
+        finalColor = mix(finalColor, u_eventColor, 0.02 * u_eventStrength * (1.0 - t) * pulse);
     }
     
     // Brillo adicional con combo
