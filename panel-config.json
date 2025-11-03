@@ -58,12 +58,12 @@
       "description": "Tiempo requerido para agarrar objetos"
     },
     "collisionArea": {
-      "showOverlay": false,
+      "showOverlay": true,
       "width": 1920,
-      "height": 580,
+      "height": 411,
       "x": 0,
       "y": 500,
-      "enabled": false
+      "enabled": true
     },
     "maxGoodItems": {
       "current": 5,
@@ -169,14 +169,14 @@
     "lastPlayed": null
   },
   "wineGlasses": {
-    "spawnMode": "top"
+    "spawnMode": "random"
   },
   "shaderSettings": {
-    "backgroundBrightness": 0.6,
-    "waveSpeed": 1.4,
-    "waveForce": 0.92,
+    "backgroundBrightness": 1,
+    "waveSpeed": 0.5,
+    "waveForce": 0.09,
     "waveDuration": 2,
-    "cursorHaloSize": 0.11,
-    "cursorHaloStrength": 0.05
+    "cursorHaloSize": 0.08,
+    "cursorHaloStrength": 1
   }
 }

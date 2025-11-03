@@ -238,6 +238,8 @@ const CONFIG = {
         // Modo de aparición de objetos: 'top' (desde arriba) o 'random' (posición aleatoria sin velocidad)
         spawnMode: 'top',
         spawnInterval: 2000,          // Intervalo de aparición (ms)
+        // Duración de la animación de escala al spawnear en modo 'random'
+        randomSpawnScaleDurationMs: 500,
         speed: {
             min: 1.5,
             max: 3

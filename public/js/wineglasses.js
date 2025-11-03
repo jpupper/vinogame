@@ -61,17 +61,26 @@ class WineGlassSystem {
             return;
         }
         const rand = random(1);
-        const x = random(width * 0.1, width * 0.9);
         // Determinar posición y velocidad inicial según modo
-        let initialY;
-        let initialSpeed;
+        let x, initialY, initialSpeed, spawnAnimated;
+        const area = (typeof window !== 'undefined') ? window.collisionArea : null;
         if (this.spawnMode === 'random') {
-            initialY = random(0, height);
+            // Si el área de colisión está habilitada, spawnear SOLO dentro de ella
+            if (area && area.enabled && typeof area.x === 'number') {
+                x = random(area.x, area.x + area.width);
+                initialY = random(area.y, area.y + area.height);
+            } else {
+                x = random(width * 0.1, width * 0.9);
+                initialY = random(0, height);
+            }
             initialSpeed = 0; // sin velocidad en modo random
+            spawnAnimated = true; // efecto de escala de aparición
         } else {
             // modo por defecto: desde arriba
+            x = random(width * 0.1, width * 0.9);
             initialY = -50;
             initialSpeed = null; // usar velocidad aleatoria por defecto en Item
+            spawnAnimated = false;
         }
         
         // Gating por máximos configurados: no crear nuevos si ya alcanzó el límite
@@ -81,17 +90,17 @@ class WineGlassSystem {
         // 30% malo, 70% bueno, pero respetando límites
         if (rand < 0.3) {
             if (canSpawnBad) {
-                this.badItems.push(new Item(x, true, initialY, initialSpeed)); // isBad = true
+                this.badItems.push(new Item(x, true, initialY, initialSpeed, spawnAnimated)); // isBad = true
             } else if (canSpawnGood) {
                 // Si no se puede malo, intenta bueno
-                this.glasses.push(new Item(x, false, initialY, initialSpeed));
+                this.glasses.push(new Item(x, false, initialY, initialSpeed, spawnAnimated));
             }
         } else {
             if (canSpawnGood) {
-                this.glasses.push(new Item(x, false, initialY, initialSpeed)); // isBad = false
+                this.glasses.push(new Item(x, false, initialY, initialSpeed, spawnAnimated)); // isBad = false
             } else if (canSpawnBad) {
                 // Si no se puede bueno, intenta malo
-                this.badItems.push(new Item(x, true, initialY, initialSpeed));
+                this.badItems.push(new Item(x, true, initialY, initialSpeed, spawnAnimated));
             }
         }
     }
@@ -166,12 +175,28 @@ class WineGlassSystem {
 
 // Clase ÚNICA para items (buenos y malos)
 class Item {
-    constructor(x, isBad = false, initialY = null, initialSpeed = null) {
+    constructor(x, isBad = false, initialY = null, initialSpeed = null, spawnAnimated = false) {
         this.x = x;
         this.y = (typeof initialY === 'number') ? initialY : -50;
         this.speed = (typeof initialSpeed === 'number') ? initialSpeed : random(CONFIG.wineGlasses.speed.min, CONFIG.wineGlasses.speed.max);
         this.size = CONFIG.wineGlasses.itemSize; // Tamaño único para todos
         this.isBad = isBad; // true = malo, false = bueno
+        // Aparición con escala (modo random)
+        this.spawnAnimated = !!spawnAnimated;
+        this.spawnStartTime = (typeof millis === 'function') ? millis() : Date.now();
+        this.spawnDuration = (typeof CONFIG !== 'undefined' && CONFIG.wineGlasses && CONFIG.wineGlasses.randomSpawnScaleDurationMs)
+            ? CONFIG.wineGlasses.randomSpawnScaleDurationMs
+            : 500; // ms
+        this.spawnScale = this.spawnAnimated ? 0.0 : 1.0;
+
+        // Vida/desvanecimiento controlada desde la sección de partículas
+        this.birthTime = (typeof millis === 'function') ? millis() : Date.now();
+        const defaultLife = (CONFIG && CONFIG.particles && CONFIG.particles.lifespan && CONFIG.particles.lifespan.attracting)
+            ? CONFIG.particles.lifespan.attracting
+            : 6000; // ms
+        this.lifeMs = (typeof window !== 'undefined' && typeof window.objectLifeMs === 'number') ? window.objectLifeMs : defaultLife;
+        this.fadeMs = (typeof window !== 'undefined' && typeof window.objectFadeMs === 'number') ? window.objectFadeMs : 1200; // ms
+        this.alpha = 255;
         
         if (isBad) {
             // ITEM MALO
@@ -217,6 +242,21 @@ class Item {
         const ts = (typeof timeScale !== 'undefined') ? timeScale : 1.0;
         this.y += this.speed * ts;
         this.pulsePhase += 0.05 * ts;
+        // Actualizar escala de aparición
+        if (this.spawnAnimated && this.spawnScale < 1.0) {
+            const t = ((typeof millis === 'function') ? millis() : Date.now()) - this.spawnStartTime;
+            const p = constrain(t / this.spawnDuration, 0, 1);
+            const eased = 1 - pow(1 - p, 3);
+            this.spawnScale = eased;
+        }
+        // Vida y desvanecimiento
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        const age = now - this.birthTime;
+        if (age >= this.lifeMs) {
+            const fadeAge = age - this.lifeMs;
+            const p = constrain(fadeAge / this.fadeMs, 0, 1);
+            this.alpha = 255 * (1 - p);
+        }
         
         // NO resetear hover - mantener el progreso aunque sueltes
         this.isBeingHovered = false;
@@ -236,7 +276,7 @@ class Item {
     }
 
     isOffScreen() {
-        return this.y > height + 100;
+        return this.y > height + 100 || this.alpha <= 1;
     }
 
     display(ctx = window) {
@@ -250,8 +290,8 @@ class Item {
             // Dibujar imagen del item malo o círculo si no hay imágenes
             if (badItemImages.length > 0 && badItemImages[this.imageIndex]) {
                 ctx.push();
-                ctx.scale(pulseFactor);
-                ctx.tint(255, 100, 100); // Tinte rojizo
+                ctx.scale(pulseFactor * (this.spawnScale || 1));
+                ctx.tint(255, 100, 100, this.alpha); // Tinte rojizo con alpha
                 ctx.imageMode(CENTER);
                 
                 // Usar imagen pre-escalada si está disponible
@@ -273,7 +313,7 @@ class Item {
                 // Fallback: círculo rojo
                 //ctx.noStroke();
                 //ctx.fill(200, 30, 30);
-                //ctx.ellipse(0, 0, this.size * pulseFactor);
+                //ctx.ellipse(0, 0, this.size * pulseFactor * (this.spawnScale || 1));
             }
         } else {
             // ===== ITEM BUENO =====
@@ -285,9 +325,9 @@ class Item {
             // Dibujar imagen del item bueno o círculo si no hay imágenes
             if (goodItemImages.length > 0 && goodItemImages[this.imageIndex]) {
                 ctx.push();
-                ctx.scale(scaleFactor * pulseFactor);
+                ctx.scale(scaleFactor * pulseFactor * (this.spawnScale || 1));
                 const brightness = 1.0 + captureProgress * 0.4;
-                ctx.tint(255 * brightness, 255 * brightness, 255 * brightness);
+                ctx.tint(255 * brightness, 255 * brightness, 255 * brightness, this.alpha);
                 ctx.imageMode(CENTER);
                 
                 // Usar imagen pre-escalada si está disponible
@@ -309,7 +349,7 @@ class Item {
                 // Fallback: círculo dorado
                 //ctx.noStroke();
                 //ctx.fill(255, 215, 80);
-                //ctx.ellipse(0, 0, this.size * pulseFactor * scaleFactor);
+                //ctx.ellipse(0, 0, this.size * pulseFactor * scaleFactor * (this.spawnScale || 1));
             }
             
             // Barra de progreso
