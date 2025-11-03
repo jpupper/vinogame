@@ -301,6 +301,15 @@ function processShaders() {
   feedbackShader.setUniform('u_wavePositions', wavePositions);
   feedbackShader.setUniform('u_waveTimes', waveTimes);
   feedbackShader.setUniform('u_waveActive', waveActive);
+  
+  // Parámetros de ondas expansivas desde el panel de control
+  feedbackShader.setUniform('u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 1.0);
+  feedbackShader.setUniform('u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 1.0);
+  feedbackShader.setUniform('u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
+
+  // Controles de halo del cursor
+  feedbackShader.setUniform('u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
+  feedbackShader.setUniform('u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
 
   // Onda de evento (GANASTE/PERDISTE)
   if (typeof window !== 'undefined') {
@@ -385,6 +394,10 @@ function renderShaders() {
         compositeShader.setUniform('u_waveTimes', window._waveTimes);
         compositeShader.setUniform('u_waveActive', window._waveActive);
       }
+      // Parámetros de ondas expansivas (distorsión en composite)
+      compositeShader.setUniform('u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 0.5);
+      compositeShader.setUniform('u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 0.09);
+      compositeShader.setUniform('u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
 
       // Posiciones de uvas/copas
       let grapePositions = [];
@@ -433,6 +446,9 @@ function renderShaders() {
       compositeShader.setUniform('u_badHaloSize', badHalo.size);
       compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
       compositeShader.setUniform('u_badHaloColor', badHalo.color);
+      
+      // Brillo del fondo desde el panel de control
+      compositeShader.setUniform('u_backgroundBrightness', (typeof window !== 'undefined' && window.backgroundBrightness !== undefined) ? window.backgroundBrightness : 1.0);
 
       const splitEnabled = (typeof gameMode !== 'undefined' && gameMode === 'competitive') ? 1.0 : 0.0;
       compositeShader.setUniform('u_splitLineEnabled', splitEnabled);

@@ -92,6 +92,7 @@ class ControlPanel {
         }
         await this.loadAssetsFromConfig();
         this.loadHaloSettingsFromConfig();
+        this.loadShaderSettingsFromConfig();
         // Esperar a que AssetManager marque assets listos y volver a renderizar
         if (typeof window !== 'undefined' && typeof window.ensureAssetsReady === 'function') {
             try { await window.ensureAssetsReady(); } catch (e) {}
@@ -117,7 +118,16 @@ class ControlPanel {
                 // Nuevo: mostrar/ocultar puntos del LIDAR
                 showLidarPoints: true,
                 // Nuevo: ocultar fondo (no renderizar shader)
-                hideBackground: false
+                hideBackground: false,
+                // Controles de shader de fondo
+                backgroundBrightness: { current: 1.0, default: 1.0 },
+                // Controles de ondas expansivas
+                waveSpeed: { current: 0.5, default: 0.5 },
+                waveForce: { current: 0.09, default: 0.09 },
+                waveDuration: { current: 2.0, default: 2.0 },
+                // Halos del cursor (mouse/touch/LIDAR)
+                cursorHaloSize: { current: 0.08, default: 0.08 },
+                cursorHaloStrength: { current: 1.0, default: 1.0 }
             }
         };
         this.configData = defaults;
@@ -290,6 +300,34 @@ class ControlPanel {
         console.log('Configuración de halos cargada desde JSON');
     }
     
+    loadShaderSettingsFromConfig() {
+        if (!this.configData || !this.configData.shaderSettings) return;
+        
+        const shaderSettings = this.configData.shaderSettings;
+        
+        // Aplicar configuración de shader
+        if (shaderSettings.backgroundBrightness !== undefined) {
+            window.backgroundBrightness = shaderSettings.backgroundBrightness;
+        }
+        if (shaderSettings.waveSpeed !== undefined) {
+            window.waveSpeed = shaderSettings.waveSpeed;
+        }
+        if (shaderSettings.waveForce !== undefined) {
+            window.waveForce = shaderSettings.waveForce;
+        }
+        if (shaderSettings.waveDuration !== undefined) {
+            window.waveDuration = shaderSettings.waveDuration;
+        }
+        if (shaderSettings.cursorHaloSize !== undefined) {
+            window.cursorHaloSize = shaderSettings.cursorHaloSize;
+        }
+        if (shaderSettings.cursorHaloStrength !== undefined) {
+            window.cursorHaloStrength = shaderSettings.cursorHaloStrength;
+        }
+        
+        console.log('Configuración de shader cargada desde JSON');
+    }
+    
     applyConfiguration() {
         if (!this.configData || !this.configData.gameSettings) return;
         const settings = this.configData.gameSettings;
@@ -395,6 +433,36 @@ class ControlPanel {
         if (this.badHaloColorInput && settings.badHaloColor) {
             this.badHaloColorInput.value = settings.badHaloColor.current;
         }
+        
+        // Shader de fondo
+        if (this.backgroundBrightnessSlider && settings.backgroundBrightness) {
+            this.backgroundBrightnessSlider.value = settings.backgroundBrightness.current;
+            this.backgroundBrightnessValue.textContent = settings.backgroundBrightness.current;
+        }
+
+        // Ondas expansivas
+        if (this.waveSpeedSlider && settings.waveSpeed) {
+            this.waveSpeedSlider.value = settings.waveSpeed.current;
+            this.waveSpeedValue.textContent = settings.waveSpeed.current;
+        }
+        if (this.waveForceSlider && settings.waveForce) {
+            this.waveForceSlider.value = settings.waveForce.current;
+            this.waveForceValue.textContent = settings.waveForce.current;
+        }
+        if (this.waveDurationSlider && settings.waveDuration) {
+            this.waveDurationSlider.value = settings.waveDuration.current;
+            this.waveDurationValue.textContent = settings.waveDuration.current + 's';
+        }
+
+        // Halos del cursor
+        if (this.cursorHaloSizeSlider && settings.cursorHaloSize) {
+            this.cursorHaloSizeSlider.value = settings.cursorHaloSize.current;
+            this.updateCursorHaloSize(settings.cursorHaloSize.current);
+        }
+        if (this.cursorHaloStrengthSlider && settings.cursorHaloStrength) {
+            this.cursorHaloStrengthSlider.value = settings.cursorHaloStrength.current;
+            this.updateCursorHaloStrength(settings.cursorHaloStrength.current);
+        }
 
         // Aplicar a juego (valores iniciales)
         this.updateHaloSettings();
@@ -487,6 +555,16 @@ class ControlPanel {
         if (this.badHaloSizeSlider) this.configData.haloSettings.badHalo.size = parseFloat(this.badHaloSizeSlider.value);
         if (this.badHaloStrengthSlider) this.configData.haloSettings.badHalo.strength = parseFloat(this.badHaloStrengthSlider.value);
         if (this.badHaloColorInput) this.configData.haloSettings.badHalo.color = this.badHaloColorInput.value;
+        
+        // Actualizar configuración de shader de fondo
+        if (!this.configData.shaderSettings) this.configData.shaderSettings = {};
+        if (this.backgroundBrightnessSlider) this.configData.shaderSettings.backgroundBrightness = parseFloat(this.backgroundBrightnessSlider.value);
+        if (this.waveSpeedSlider) this.configData.shaderSettings.waveSpeed = parseFloat(this.waveSpeedSlider.value);
+        if (this.waveForceSlider) this.configData.shaderSettings.waveForce = parseFloat(this.waveForceSlider.value);
+        if (this.waveDurationSlider) this.configData.shaderSettings.waveDuration = parseFloat(this.waveDurationSlider.value);
+        // Guardar halos del cursor
+        if (this.cursorHaloSizeSlider) this.configData.shaderSettings.cursorHaloSize = parseFloat(this.cursorHaloSizeSlider.value);
+        if (this.cursorHaloStrengthSlider) this.configData.shaderSettings.cursorHaloStrength = parseFloat(this.cursorHaloStrengthSlider.value);
         
         // Actualizar assets asegurando que sean rutas del servidor (no data URLs)
         if (!this.configData.assets) this.configData.assets = {};
@@ -669,6 +747,22 @@ class ControlPanel {
         this.badHaloSizeSlider = document.getElementById('badHaloSizeSlider');
         this.badHaloStrengthSlider = document.getElementById('badHaloStrengthSlider');
         this.badHaloColorInput = document.getElementById('badHaloColorInput');
+
+        // Halos del cursor
+        this.cursorHaloSizeSlider = document.getElementById('cursorHaloSizeSlider');
+        this.cursorHaloStrengthSlider = document.getElementById('cursorHaloStrengthSlider');
+        
+        // Elementos de shader de fondo
+        this.backgroundBrightnessSlider = document.getElementById('backgroundBrightnessSlider');
+        this.backgroundBrightnessValue = document.getElementById('backgroundBrightnessValue');
+        
+        // Elementos de ondas expansivas
+        this.waveSpeedSlider = document.getElementById('waveSpeedSlider');
+        this.waveSpeedValue = document.getElementById('waveSpeedValue');
+        this.waveForceSlider = document.getElementById('waveForceSlider');
+        this.waveForceValue = document.getElementById('waveForceValue');
+        this.waveDurationSlider = document.getElementById('waveDurationSlider');
+        this.waveDurationValue = document.getElementById('waveDurationValue');
         
         // Elementos de galería
         this.galleryNavButtons = document.querySelectorAll('.gallery-nav-btn');
@@ -802,6 +896,52 @@ class ControlPanel {
         }
         if (this.badHaloColorInput) {
             this.badHaloColorInput.addEventListener('input', () => { this.updateHaloSettings(); });
+        }
+
+        // Eventos de halos del cursor
+        if (this.cursorHaloSizeSlider) {
+            this.cursorHaloSizeSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.updateCursorHaloSize(value);
+            });
+        }
+        if (this.cursorHaloStrengthSlider) {
+            this.cursorHaloStrengthSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.updateCursorHaloStrength(value);
+            });
+        }
+        
+        // Eventos de shader de fondo
+        if (this.backgroundBrightnessSlider) {
+            this.backgroundBrightnessSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.backgroundBrightnessValue.textContent = value;
+                this.updateBackgroundBrightness(value);
+            });
+        }
+        
+        // Eventos de ondas expansivas
+        if (this.waveSpeedSlider) {
+            this.waveSpeedSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.waveSpeedValue.textContent = value;
+                this.updateWaveSpeed(value);
+            });
+        }
+        if (this.waveForceSlider) {
+            this.waveForceSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.waveForceValue.textContent = value;
+                this.updateWaveForce(value);
+            });
+        }
+        if (this.waveDurationSlider) {
+            this.waveDurationSlider.addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                this.waveDurationValue.textContent = value + 's';
+                this.updateWaveDuration(value);
+            });
         }
 
         // Eventos de área de colisión
@@ -1116,6 +1256,43 @@ class ControlPanel {
 
         window.goodHaloSettings = { size: goodSize, strength: goodStrength, color: this.hexToVec3(goodColorHex) };
         window.badHaloSettings = { size: badSize, strength: badStrength, color: this.hexToVec3(badColorHex) };
+    }
+    
+    // === Shader Controls ===
+    updateBackgroundBrightness(value) {
+        if (typeof window !== 'undefined') {
+            window.backgroundBrightness = value;
+        }
+    }
+    
+    updateWaveSpeed(value) {
+        if (typeof window !== 'undefined') {
+            window.waveSpeed = value;
+        }
+    }
+    
+    updateWaveForce(value) {
+        if (typeof window !== 'undefined') {
+            window.waveForce = value;
+        }
+    }
+    
+    updateWaveDuration(value) {
+        if (typeof window !== 'undefined') {
+            window.waveDuration = value;
+        }
+    }
+
+    // === Cursor Halo Controls ===
+    updateCursorHaloSize(value) {
+        if (typeof window !== 'undefined') {
+            window.cursorHaloSize = value;
+        }
+    }
+    updateCursorHaloStrength(value) {
+        if (typeof window !== 'undefined') {
+            window.cursorHaloStrength = value;
+        }
     }
 
     // === Stubs de Assets para evitar errores y desbloquear métricas ===

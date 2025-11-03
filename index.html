@@ -125,6 +125,59 @@
                     <input type="color" id="badHaloColorInput" value="#FF0000">
                 </div>
             </div>
+
+            <!-- Halos del Cursor (mouse/touch/LIDAR) -->
+            <div class="control-group">
+                <label>Halos de Cursor</label>
+                <div style="margin-top:8px">
+                    <label for="cursorHaloSizeSlider">Tamaño</label>
+                    <input type="range" id="cursorHaloSizeSlider" min="0.03" max="0.25" step="0.01" value="0.08">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="cursorHaloStrengthSlider">Fuerza</label>
+                    <input type="range" id="cursorHaloStrengthSlider" min="0.0" max="2.0" step="0.05" value="1.0">
+                </div>
+                <div class="help-text">Controla el tamaño y la intensidad del halo que sigue a los cursores/punteros.</div>
+            </div>
+            
+            <!-- Controles de Shader de Fondo -->
+            <div class="control-group">
+                <label for="backgroundBrightnessSlider">
+                    Brillo del Fondo
+                    <span class="value-display" id="backgroundBrightnessValue">1.0</span>
+                </label>
+                <input type="range" id="backgroundBrightnessSlider" min="0.0" max="2.0" step="0.1" value="1.0">
+                <div class="help-text">Controla el brillo del shader de fondo</div>
+            </div>
+
+            <!-- Controles de Ondas Expansivas -->
+            <div class="control-group">
+                <label>Ondas Expansivas</label>
+                <div style="margin-top:8px">
+                    <label for="waveSpeedSlider">
+                        Velocidad de Expansión
+                        <span class="value-display" id="waveSpeedValue">0.5</span>
+                    </label>
+                    <input type="range" id="waveSpeedSlider" min="0.1" max="2.0" step="0.1" value="0.5">
+                    <div class="help-text">Velocidad de expansión de las ondas</div>
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waveForceSlider">
+                        Fuerza de Distorsión
+                        <span class="value-display" id="waveForceValue">0.09</span>
+                    </label>
+                    <input type="range" id="waveForceSlider" min="0.0" max="1.0" step="0.01" value="0.09">
+                    <div class="help-text">Intensidad de la distorsión visual de las ondas (0 a 1)</div>
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waveDurationSlider">
+                        Duración
+                        <span class="value-display" id="waveDurationValue">2.0</span>
+                    </label>
+                    <input type="range" id="waveDurationSlider" min="0.5" max="5.0" step="0.1" value="2.0">
+                    <div class="help-text">Duración de las ondas en segundos</div>
+                </div>
+            </div>
             
             <!-- Métricas removidas del tab de Controles: ahora se muestran en STATS -->
             

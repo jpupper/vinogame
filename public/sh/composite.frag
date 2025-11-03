@@ -14,6 +14,10 @@ uniform float u_comboLevel;                // Nivel de combo (0-1)
 uniform vec2 u_wavePositions[5];
 uniform float u_waveTimes[5];
 uniform float u_waveActive[5];
+// Parámetros de ondas controlados por interfaz
+uniform float u_waveSpeed;      // Velocidad de expansión del radio
+uniform float u_waveForce;      // Fuerza de distorsión
+uniform float u_waveDuration;   // Duración del fade-out
 
 // Onda de evento (GANASTE/PERDISTE)
 uniform float u_eventActive;
@@ -45,6 +49,9 @@ uniform vec3  u_splitLineColor;         // color RGB de la línea
 uniform float u_splitLineThickness;     // grosor en UV (0-1)
 uniform float u_splitLineSoftness;      // suavizado de borde (0-1)
 
+// BRILLO DEL FONDO
+uniform float u_backgroundBrightness;   // multiplicador de brillo del fondo (0-2)
+
 varying vec2 vTexCoord;
 
 void main() {
@@ -56,7 +63,7 @@ void main() {
     float chromaticAberration = 0.0; // Para separación RGB
     
     // FUERZA DE DISTORSIÓN (ajustable)
-    const float WAVE_DISTORTION_STRENGTH = 0.09;  // 9% de distorsión máxima (más fuerte)
+    const float WAVE_DISTORTION_STRENGTH = 0.09;  // Base de distorsión (se escala con u_waveForce)
     const float SINE_DISTORTION_STRENGTH = 0.002; // 0.2% de distorsión sutil
     const float CHROMATIC_STRENGTH = 0.008;       // Separación RGB
     
@@ -78,10 +85,10 @@ void main() {
             float waveTime = u_time - u_waveTimes[i];
             
             // Radio de la onda (expande con el tiempo)
-            float waveRadius = waveTime * 0.5;
+            float waveRadius = waveTime * u_waveSpeed;
             
             // Intensidad de la onda (fade out con el tiempo)
-            float waveIntensity = smoothstep(2.0, 0.0, waveTime);
+            float waveIntensity = smoothstep(u_waveDuration, 0.0, waveTime);
             
             // Distorsión radial desde el centro de la onda (área más amplia)
             float distortionStrength = smoothstep(0.15, 0.0, abs(waveDist - waveRadius)) * waveIntensity;
@@ -90,10 +97,10 @@ void main() {
             vec2 direction = normalize(aspectUV - wavePos);
             
             // Aplicar distorsión (empuja hacia afuera) - MÁS FUERTE
-            displacement += direction * distortionStrength * WAVE_DISTORTION_STRENGTH;
+            displacement += direction * distortionStrength * WAVE_DISTORTION_STRENGTH * u_waveForce;
             
             // CHROMATIC ABERRATION: Acumular separación RGB
-            chromaticAberration += distortionStrength * waveIntensity;
+            chromaticAberration += distortionStrength * waveIntensity * u_waveForce;
         }
     }
 
@@ -294,6 +301,9 @@ void main() {
     
     // Asegurar que el color final nunca sea negativo
     finalColor = max(finalColor, vec3(0.0));
+    
+    // Aplicar brillo global del fondo desde interfaz
+    finalColor = clamp(finalColor * u_backgroundBrightness, 0.0, 1.0);
     
     gl_FragColor = vec4(finalColor, 1.0);
 }

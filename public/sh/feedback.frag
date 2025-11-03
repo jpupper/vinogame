@@ -11,11 +11,18 @@ uniform sampler2D u_gameTexture;       // Buffer del juego
 uniform float u_effectIntensity;      // Intensidad de efectos especiales (0-1)
 uniform float u_comboLevel;            // Nivel de combo (0-1)
 uniform float u_vignetteIntensity;     // Intensidad del vignette (0-1)
+// Halo del cursor (tamaño y fuerza)
+uniform float u_cursorHaloSize;        // Radio de influencia del cursor
+uniform float u_cursorHaloStrength;    // Multiplicador de brillo del halo del cursor
 
 // ONDAS EXPANSIVAS (hasta 5 ondas simultáneas)
 uniform vec2 u_wavePositions[5];       // Posiciones de las ondas
 uniform float u_waveTimes[5];          // Tiempo de inicio de cada onda
 uniform float u_waveActive[5];         // Si la onda está activa (1.0 = sí, 0.0 = no)
+// Parámetros controlados desde la interfaz
+uniform float u_waveSpeed;             // Velocidad de expansión del radio
+uniform float u_waveForce;             // Fuerza/Brillo de las ondas
+uniform float u_waveDuration;          // Duración del fade-out
 
 // Onda de evento (GANASTE/PERDISTE)
 uniform float u_eventActive;           // 1.0 si hay evento activo
@@ -66,7 +73,7 @@ void main() {
     float dist = distance(aspectUV, mousePos);
     
     // Radio de influencia del cursor (más pequeño)
-    float radius = 0.08;
+    float radius = u_cursorHaloSize;
     float influence = smoothstep(radius, 0.0, dist);
     
     // Desplazamiento basado en la distancia al cursor
@@ -90,7 +97,7 @@ void main() {
             if (infP > 0.0) {
                 vec2 dirP = normalize(aspectUV - pPos);
                 // Incrementar desplazamiento por punteros (mouse/touch/LIDAR)
-                vec2 dispP = dirP * infP * 0.03;
+                vec2 dispP = dirP * infP *0.01;
                 dispP.x /= (u_resolution.x / u_resolution.y);
                 displacement += dispP;
             }
@@ -116,7 +123,7 @@ void main() {
         // BLOOM effect en el centro
         float centerGlow = smoothstep(0.05, 0.0, dist);
         // Hacer los puntos del cursor mucho más brillantes
-        finalColor.rgb += tint * centerGlow * (1.2 + u_effectIntensity * 0.8);
+        finalColor.rgb += tint * centerGlow * (1.2 + u_effectIntensity * 0.8) * 10.0 * u_cursorHaloStrength;
         finalColor.a = max(finalColor.a, centerGlow * 1.0);
     }
 
@@ -136,8 +143,8 @@ void main() {
                 );
                 float centerGlowP = smoothstep(0.05, 0.0, dP);
                 // Multiplicar significativamente el brillo de los puntos (mouse + LIDAR)
-                finalColor.rgb += ptTint * centerGlowP * (1.0 + u_effectIntensity * 0.7);
-                finalColor.a = max(finalColor.a, centerGlowP * 0.95);
+                finalColor.rgb += ptTint * centerGlowP * (1.0 + u_effectIntensity * 0.7) * 10.0 * u_cursorHaloStrength;
+                finalColor.a = max(finalColor.a, centerGlowP * 0.95)*5.;
             }
         }
     }
@@ -156,13 +163,13 @@ void main() {
             float waveTime = u_time - u_waveTimes[i];
             
             // Radio de la onda (expande con el tiempo)
-            float waveRadius = waveTime * 0.5; // Velocidad de expansión
+            float waveRadius = waveTime * u_waveSpeed; // Velocidad de expansión controlada
             
             // Grosor de la onda (un poco más visible)
             float waveThickness = 0.04;
             
             // Intensidad de la onda (fade out con el tiempo)
-            float waveIntensity = smoothstep(2.0, 0.0, waveTime); // Dura 2 segundos
+            float waveIntensity = smoothstep(u_waveDuration, 0.0, waveTime); // Duración controlada
             
             // Dibujar el anillo de la onda
             float ring = smoothstep(waveThickness, 0.0, abs(waveDist - waveRadius));
@@ -172,8 +179,8 @@ void main() {
             
             // Agregar la onda al buffer (más visible)
             // Reducir brillo del anillo de las ondas para que se vea menos luminoso
-            finalColor.rgb += waveColor * ring * waveIntensity * 0.35;
-            finalColor.a = max(finalColor.a, ring * waveIntensity * 0.2);
+            finalColor.rgb += waveColor * ring * waveIntensity * (0.35 * u_waveForce);
+            finalColor.a = max(finalColor.a, ring * waveIntensity * (0.2 * u_waveForce));
         }
     }
 

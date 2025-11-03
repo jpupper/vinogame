@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0.0",
     "created": "2024-01-01",
-    "lastModified": "2025-11-02",
+    "lastModified": "2025-11-03",
     "description": "Configuraciones del panel de control para RGB Madness"
   },
   "gameSettings": {
@@ -59,8 +59,8 @@
     },
     "collisionArea": {
       "showOverlay": false,
-      "width": 2880,
-      "height": 866,
+      "width": 1920,
+      "height": 580,
       "x": 0,
       "y": 500,
       "enabled": false
@@ -73,7 +73,8 @@
       "current": 5,
       "default": 5
     },
-    "showLidarPoints": true
+    "showLidarPoints": false,
+    "hideBackground": false
   },
   "haloSettings": {
     "goodHalo": {
@@ -166,5 +167,16 @@
     "totalPlayTime": 0,
     "configChanges": 0,
     "lastPlayed": null
+  },
+  "wineGlasses": {
+    "spawnMode": "top"
+  },
+  "shaderSettings": {
+    "backgroundBrightness": 0.6,
+    "waveSpeed": 1.4,
+    "waveForce": 0.92,
+    "waveDuration": 2,
+    "cursorHaloSize": 0.11,
+    "cursorHaloStrength": 0.05
   }
 }
