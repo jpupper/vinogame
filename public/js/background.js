@@ -367,26 +367,34 @@ function renderShaders() {
     const idx2 = (dynamicBackground && dynamicBackground.nextTextureIndex < len) ? dynamicBackground.nextTextureIndex : idx1;
     const tex1 = backgroundTextures[idx1] || null;
     const tex2 = backgroundTextures[idx2] || tex1;
-    if (!isImgReady(tex1) || !isImgReady(tex2)) {
-      feedbackBuffer.clear();
-      feedbackBuffer.push();
-      feedbackBuffer.noStroke();
-      feedbackBuffer.fill(0);
-      feedbackBuffer.rect(0, 0, width, height);
-      feedbackBuffer.pop();
-    } else {
-      const blend = (len > 1 && dynamicBackground) ? (dynamicBackground.transitionProgress || 0.0) : 0.0;
-      compositeShader.setUniform('u_backgroundTexture1', tex1);
-      compositeShader.setUniform('u_backgroundTexture2', tex2);
-      compositeShader.setUniform('u_backgroundBlend', blend);
-      compositeShader.setUniform('u_backgroundRotation', dynamicBackground ? dynamicBackground.textureRotation : 0);
-      compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
-      compositeShader.setUniform('u_resolution', [width, height]);
-      compositeShader.setUniform('u_time', (typeof millis === 'function' ? millis() : Date.now()) / 1000.0);
-      const sc = (typeof scoreSystem !== 'undefined' && scoreSystem) ? scoreSystem : null;
-      const winThresh = (typeof CONFIG !== 'undefined' && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
-      const cc = sc && sc.comboCount ? sc.comboCount : 0;
-      compositeShader.setUniform('u_comboLevel', Math.min(1.0, cc / winThresh));
+
+    // Fallbacks: nunca detener el shader por texturas no listas
+    const last1 = (typeof window !== 'undefined') ? window._lastBgTex1 : null;
+    const last2 = (typeof window !== 'undefined') ? window._lastBgTex2 : null;
+    let safeTex1 = isImgReady(tex1) ? tex1 : (isImgReady(last1) ? last1 : (isImgReady(tex2) ? tex2 : (isImgReady(last2) ? last2 : null)));
+    let safeTex2 = isImgReady(tex2) ? tex2 : safeTex1;
+    // Si seguimos sin textura válida, usar el feedback/fondo previo como respaldo
+    if (!isImgReady(safeTex1) && typeof fondoBuffer !== 'undefined') safeTex1 = fondoBuffer;
+    if (!isImgReady(safeTex2)) safeTex2 = safeTex1;
+
+    const blend = (len > 1 && dynamicBackground) ? (dynamicBackground.transitionProgress || 0.0) : 0.0;
+    compositeShader.setUniform('u_backgroundTexture1', safeTex1);
+    compositeShader.setUniform('u_backgroundTexture2', safeTex2);
+    compositeShader.setUniform('u_backgroundBlend', blend);
+    compositeShader.setUniform('u_backgroundRotation', dynamicBackground ? dynamicBackground.textureRotation : 0);
+    compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
+    compositeShader.setUniform('u_resolution', [width, height]);
+    compositeShader.setUniform('u_time', (typeof millis === 'function' ? millis() : Date.now()) / 1000.0);
+    const sc = (typeof scoreSystem !== 'undefined' && scoreSystem) ? scoreSystem : null;
+    const winThresh = (typeof CONFIG !== 'undefined' && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
+    const cc = sc && sc.comboCount ? sc.comboCount : 0;
+    compositeShader.setUniform('u_comboLevel', Math.min(1.0, cc / winThresh));
+
+    // Cachear últimas texturas válidas para próximos frames
+    if (typeof window !== 'undefined') {
+      if (isImgReady(safeTex1)) window._lastBgTex1 = safeTex1;
+      if (isImgReady(safeTex2)) window._lastBgTex2 = safeTex2;
+    }
 
       // Ondas expansivas
       if (window._wavePositions && window._waveTimes && window._waveActive) {
@@ -476,7 +484,7 @@ function renderShaders() {
 
       feedbackBuffer.rect(0, 0, width, height);
     }
-  } else {
+  else {
     // Sin texturas: fondo negro
     feedbackBuffer.clear();
     feedbackBuffer.push();
@@ -491,4 +499,6 @@ function renderShaders() {
 if (typeof window !== 'undefined') {
   window.processShaders = processShaders;
   window.renderShaders = renderShaders;
+  // Exponer la clase para que sketch.js pueda instanciarla aunque el archivo se cargue en distinto orden
+  window.DynamicBackground = DynamicBackground;
 }
