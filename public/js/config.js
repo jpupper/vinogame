@@ -47,7 +47,10 @@ const CONFIG = {
         lifespan: {
             rising: 1800,             // Duración de fase de subida (ms) - mucho más tiempo
             falling: 2200,            // Duración de fase de caída (ms) - mucho más tiempo
-            attracting: 2500          // Duración de fase de atracción (ms) - mucho más tiempo
+            attracting: 2500,         // Duración de fase de atracción (ms) - mucho más tiempo
+            min: 100,                 // Vida mínima de partículas (ms)
+            max: 5000,                // Vida máxima de partículas (ms)
+            default: 1000             // Vida por defecto de partículas (ms)
         }
     },
     

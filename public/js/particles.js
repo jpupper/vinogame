@@ -77,7 +77,8 @@ class ExplosionParticle {
         this.velocity = p5.Vector.random2D();
         this.velocity.mult(random(2, 10));
         this.acceleration = createVector(0, 0.1);
-        this.lifespan = 200;
+        this.lifespanDuration = window.particleLifespan || 1000; // Duración en ms
+        this.birthTime = millis(); // Momento de creación
         
         // Generate a random color based on the base color with some variation
         if (baseColor) {
@@ -100,7 +101,6 @@ class ExplosionParticle {
     update() {
         this.velocity.add(this.acceleration);
         this.position.add(this.velocity);
-        this.lifespan -= 3;
         
         // Add some random movement
         this.velocity.x += random(-0.5, 0.5);
@@ -114,8 +114,10 @@ class ExplosionParticle {
         ctx.push();
         ctx.translate(this.position.x, this.position.y);
         
-        // Calcular opacidad basada en lifespan
-        let alpha = map(this.lifespan, 0, 400, 0, 255);
+        // Calcular tiempo transcurrido y opacidad
+        let elapsed = millis() - this.birthTime;
+        let lifeProgress = elapsed / this.lifespanDuration;
+        let alpha = map(lifeProgress, 0, 1, 255, 0);
         
         // Efecto de brillo pulsante
         let glowIntensity = sin(this.glowPhase) * 0.3 + 0.7;
@@ -139,7 +141,7 @@ class ExplosionParticle {
     }
 
     isDead() {
-        return this.lifespan <= 0;
+        return (millis() - this.birthTime) >= this.lifespanDuration;
     }
 }
 
@@ -150,7 +152,8 @@ class HoverParticle {
             y + random(-30, 30)
         );
         this.velocity = createVector(random(-1, 1), random(-1, 1));
-        this.lifespan = 200;
+        this.lifespanDuration = window.particleLifespan || 1000; // Duración en ms
+        this.birthTime = millis(); // Momento de creación
         
         // Use the base color with some transparency
         if (baseColor) {
@@ -180,7 +183,6 @@ class HoverParticle {
         this.velocity.y += cos(this.floatPhase * 1.2) * 0.15 - 0.08; // Flotar hacia arriba
         
         this.position.add(this.velocity);
-        this.lifespan -= 2;
         
         // Limit velocity for smoother movement
         this.velocity.limit(1.5);
@@ -193,6 +195,11 @@ class HoverParticle {
     display(ctx = window) {
         ctx.push();
         ctx.translate(this.position.x, this.position.y);
+        
+        // Calcular opacidad basada en tiempo
+        let elapsed = millis() - this.birthTime;
+        let lifeProgress = elapsed / this.lifespanDuration;
+        let fadeAlpha = map(lifeProgress, 0, 1, 255, 0);
         
         // Efecto de pulsación
         let pulseScale = sin(this.pulsePhase) * 0.2 + 1;
@@ -208,7 +215,7 @@ class HoverParticle {
         //ctx.ellipse(0, 0, currentSize * 1.8, currentSize * 1.8);
         
         // Cuerpo principal
-        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), fadeAlpha);
         ctx.ellipse(0, 0, currentSize, currentSize);
         
         // Brillo interno
@@ -219,7 +226,7 @@ class HoverParticle {
     }
 
     isDead() {
-        return this.lifespan <= 0;
+        return (millis() - this.birthTime) >= this.lifespanDuration;
     }
 }
 
@@ -229,7 +236,8 @@ class EnergyParticle {
         this.position = createVector(x, y);
         this.velocity = velocity || createVector(random(-2, 2), random(-2, 2));
         this.acceleration = createVector(0, 0);
-        this.lifespan = 255;
+        this.lifespanDuration = window.particleLifespan || 1000; // Duración en ms
+        this.birthTime = millis(); // Momento de creación
         this.color = particleColor || color(255, 255, 255, 200);
         this.size = size || random(5, 12);
         this.initialSize = this.size;
@@ -255,9 +263,10 @@ class EnergyParticle {
         // Limitar velocidad
         this.velocity.limit(2.5);
         
-        // Reducir vida y tamaño gradualmente
-        this.lifespan -= 5;
-        this.size = map(this.lifespan, 255, 0, this.initialSize, 0);
+        // Calcular tamaño basado en tiempo transcurrido
+        let elapsed = millis() - this.birthTime;
+        let lifeProgress = elapsed / this.lifespanDuration;
+        this.size = map(lifeProgress, 0, 1, this.initialSize, 0);
         
         // Actualizar fases de animación
         this.rotationAngle += this.rotationSpeed;
@@ -268,6 +277,11 @@ class EnergyParticle {
     display(ctx = window) {
         ctx.push();
         ctx.translate(this.position.x, this.position.y);
+        
+        // Calcular opacidad basada en tiempo
+        let elapsed = millis() - this.birthTime;
+        let lifeProgress = elapsed / this.lifespanDuration;
+        let fadeAlpha = map(lifeProgress, 0, 1, 255, 0) * 0.7;
         
         // Efecto de pulsación
         let pulseScale = sin(this.pulsePhase) * 0.15 + 1;
@@ -286,7 +300,7 @@ class EnergyParticle {
         }*/
         
         // Cuerpo principal translúcido
-        ctx.fill(red(this.color), green(this.color), blue(this.color), this.lifespan * 0.7);
+        ctx.fill(red(this.color), green(this.color), blue(this.color), fadeAlpha);
         ctx.ellipse(0, 0, currentSize * wobbleX, currentSize * wobbleY);
         
         // Brillo interno (múltiples puntos para efecto más orgánico)
@@ -301,6 +315,6 @@ class EnergyParticle {
     }
 
     isDead() {
-        return this.lifespan <= 0;
+        return (millis() - this.birthTime) >= this.lifespanDuration;
     }
 }

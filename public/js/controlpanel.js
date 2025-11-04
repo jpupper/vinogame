@@ -8,6 +8,8 @@ class ControlPanel {
         this.livesSlider = null;
         this.fallSpeedValue = null;
         this.livesValue = null;
+        this.particleLifespanSlider = null;
+        this.particleLifespanValue = null;
         this.configData = null;
         // Visualización de puntos LIDAR
         this.showLidarPointsCheckbox = null;
@@ -127,7 +129,9 @@ class ControlPanel {
                 waveDuration: { current: 2.0, default: 2.0 },
                 // Halos del cursor (mouse/touch/LIDAR)
                 cursorHaloSize: { current: 0.08, default: 0.08 },
-                cursorHaloStrength: { current: 1.0, default: 1.0 }
+                cursorHaloStrength: { current: 1.0, default: 1.0 },
+                // Vida de los objetos que caen
+                particleLifespan: { current: 6000, default: 6000 }
             }
         };
         this.configData = defaults;
@@ -152,12 +156,23 @@ class ControlPanel {
     }
 
     async saveConfigToFile(config) {
+        // Validar que config sea serializable
+        let configToSave;
+        try {
+            // Crear una copia limpia del config sin referencias circulares
+            configToSave = JSON.parse(JSON.stringify(config));
+        } catch (err) {
+            console.error('Error al serializar config:', err);
+            this.showSaveNotification('❌ Error: Configuración no válida');
+            return false;
+        }
+        
         // Intenta guardar en el servidor (Express) si está disponible
         try {
             const res = await fetch('/api/save-config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
+                body: JSON.stringify(configToSave)
             });
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
@@ -168,7 +183,7 @@ class ControlPanel {
             console.warn('No se pudo guardar en el servidor, usando descarga local:', serverErr);
             // Fallback: descarga local del archivo actualizado
             try {
-                const dataStr = JSON.stringify(config, null, 2);
+                const dataStr = JSON.stringify(configToSave, null, 2);
                 const dataBlob = new Blob([dataStr], {type: 'application/json'});
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
@@ -182,7 +197,7 @@ class ControlPanel {
                 return true;
             } catch (error) {
                 console.error('Error al guardar configuración:', error);
-                this.showSaveNotification('❌ Error al guardar configuración', 'error');
+                this.showSaveNotification('❌ Error al guardar: ' + error.message);
                 return false;
             }
         }
@@ -467,6 +482,13 @@ class ControlPanel {
         // Aplicar a juego (valores iniciales)
         this.updateHaloSettings();
 
+        // Aplicar vida de partículas
+        if (this.particleLifespanSlider && settings.particleLifespan) {
+            this.particleLifespanSlider.value = settings.particleLifespan.current;
+            this.particleLifespanValue.textContent = settings.particleLifespan.current + 'ms';
+            this.updateParticleLifespan(settings.particleLifespan.current);
+        }
+
         // Aplicar área de colisión (si existe)
         const ca = settings.collisionArea || { enabled: false, x: 0, y: 0, width: 0, height: 0 };
         // Si p5.width/p5.height aún no están inicializados, usa window.innerWidth/innerHeight
@@ -565,6 +587,11 @@ class ControlPanel {
         // Guardar halos del cursor
         if (this.cursorHaloSizeSlider) this.configData.shaderSettings.cursorHaloSize = parseFloat(this.cursorHaloSizeSlider.value);
         if (this.cursorHaloStrengthSlider) this.configData.shaderSettings.cursorHaloStrength = parseFloat(this.cursorHaloStrengthSlider.value);
+        
+        // Guardar vida de objetos
+        if (!this.configData.gameSettings) this.configData.gameSettings = {};
+        if (!this.configData.gameSettings.particleLifespan) this.configData.gameSettings.particleLifespan = { current: 6000, default: 6000 };
+        if (this.particleLifespanSlider) this.configData.gameSettings.particleLifespan.current = parseInt(this.particleLifespanSlider.value);
         
         // Actualizar assets asegurando que sean rutas del servidor (no data URLs)
         if (!this.configData.assets) this.configData.assets = {};
@@ -701,6 +728,8 @@ class ControlPanel {
         this.objectSizeValue = document.getElementById('objectSizeValue');
         this.spawnRateSlider = document.getElementById('spawnRateSlider');
         this.spawnRateValue = document.getElementById('spawnRateValue');
+        this.particleLifespanSlider = document.getElementById('particleLifespanSlider');
+        this.particleLifespanValue = document.getElementById('particleLifespanValue');
         // Checkbox de visualización de puntos del LIDAR
         this.showLidarPointsCheckbox = document.getElementById('showLidarPointsCheckbox');
         // Checkbox de ocultar fondo
@@ -841,6 +870,14 @@ class ControlPanel {
                 const value = parseInt(event.target.value);
                 this.spawnRateValue.textContent = (value / 1000).toFixed(1) + 's';
                 this.updateSpawnRate(value);
+            });
+        }
+        
+        if (this.particleLifespanSlider) {
+            this.particleLifespanSlider.addEventListener('input', (event) => {
+                const value = parseInt(event.target.value);
+                this.particleLifespanValue.textContent = value + 'ms';
+                this.updateParticleLifespan(value);
             });
         }
 
@@ -1159,6 +1196,20 @@ class ControlPanel {
             }
         }
         console.log('Tiempo de agarre actualizado:', v + 'ms');
+    }
+
+    // Actualizar vida de los objetos que caen (wineglasses)
+    updateParticleLifespan(value) {
+        const v = parseInt(value);
+        if (isNaN(v)) return;
+        
+        // Actualizar la vida de los objetos que caen (copas de vino y items malos)
+        window.objectLifeMs = v;
+        
+        // También actualizar el fade time (20% de la vida total)
+        window.objectFadeMs = Math.max(200, v * 0.2);
+        
+        console.log('Vida de objetos actualizada:', v + 'ms', 'Fade:', window.objectFadeMs + 'ms');
     }
 
     // === Área de colisión: exponer valores al juego ===

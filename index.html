@@ -201,7 +201,7 @@
                     Velocidad de Caída
                     <span class="value-display" id="fallSpeedValue">2.25</span>
                 </label>
-                <input type="range" id="fallSpeedSlider" min="0.5" max="5" step="0.25" value="2.25">
+                <input type="range" id="fallSpeedSlider" min="0.5" max="50" step="0.1" value="2.25">
                 <div class="help-text">Controla qué tan rápido caen los objetos</div>
             </div>
 
@@ -258,6 +258,16 @@
                     </label>
                 </div>
                 <div class="help-text">No se generarán nuevos objetos si ya hay en pantalla el máximo configurado</div>
+            </div>
+
+            <!-- Vida de los Objetos que Caen -->
+            <div class="control-group">
+                <label for="particleLifespanSlider">
+                    Vida de Objetos
+                    <span class="value-display" id="particleLifespanValue">6000ms</span>
+                </label>
+                <input type="range" id="particleLifespanSlider" min="1000" max="20000" step="500" value="6000">
+                <div class="help-text">Controla cuánto tiempo viven las copas y objetos antes de desvanecerse (1s - 20s)</div>
             </div>
         </div>
         
