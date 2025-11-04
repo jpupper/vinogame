@@ -779,123 +779,26 @@ function applyCelebrationEffects(side, celebration) {
   }
 }
 
-// Overlay visual p5.js por lado (destellos + confetti)
+// Overlay visual p5.js por lado usando EndAnimation unificada
 function drawSideCelebrationOverlay(ctx, side, celebration) {
   if (!celebration) return;
-  const now = millis();
-  const elapsed = now - celebration.start;
-  if (elapsed > celebration.duration) return;
-
-  // Progreso normalizado de la animación [0,1]
-  const t = constrain(elapsed / celebration.duration, 0, 1);
-  const easeInOut = (x) => (x < 0.5) ? 2 * x * x : 1 - pow(-2 * x + 2, 2) / 2;
-  const easeOut = (x) => 1 - pow(1 - x, 3);
-
-  const isWin = celebration.type === 'win';
-  const label = isWin ? 'GANASTE' : 'PERDISTE';
-  const textColor = isWin ? color(255, 215, 0) : color(255, 80, 80);
-
-  // Área por lado
-  const leftBound = side === 'left' ? 0 : width / 2;
-  const centerX = leftBound + width / 4;
-  const baseY = height * 0.28;
-
-  // Fondo semitransparente con fade-in/out y esquinas redondeadas
-  const rectW = width / 2 - 80;
-  const rectH = height * 0.18;
-  const bgAlpha = 160 * easeInOut(min(t, 0.6));
-
-  // Efecto de pulso en tamaño del texto
-  const pulse = 1.0 + 0.06 * sin(now * 0.01) * (1.0 - t);
-  const baseTextSize = height * 0.12;
-  const textSizePx = baseTextSize * pulse;
-
-  ctx.push();
-  ctx.noStroke();
-  ctx.fill(0, 0, 0, bgAlpha);
-  if (typeof ctx.rect === 'function') {
-    // p5 permite rect con radio para esquinas redondeadas
-    ctx.rect(leftBound + 40, baseY - rectH / 2, rectW, rectH, 20);
-  } else {
-    ctx.rect(leftBound + 40, baseY - rectH / 2, rectW, rectH);
+  
+  // Crear instancia de EndAnimation si no existe
+  if (!celebration._endAnimation) {
+    const leftBound = side === 'left' ? 0 : width / 2;
+    celebration._endAnimation = new EndAnimation({
+      type: celebration.type,
+      side: side,
+      x: leftBound,
+      y: 0,
+      areaWidth: width / 2,
+      areaHeight: height
+    });
   }
-
-  // Texto con contorno para mejorar legibilidad
-  ctx.textAlign(CENTER, CENTER);
-  ctx.textSize(textSizePx);
-  ctx.stroke(0, 0, 0, 220);
-  ctx.strokeWeight(6);
-  ctx.fill(textColor);
-  ctx.text(label, centerX, baseY);
-
-  // Icono de trofeo en victoria
-  if (isWin && typeof window !== 'undefined' && window.trophyImage) {
-    const img = window.trophyImage;
-    const imgSize = textSizePx * 0.8;
-    ctx.push();
-    ctx.tint(255, 255);
-    ctx.image(img, centerX - imgSize * 1.4, baseY - imgSize * 0.5, imgSize, imgSize);
-    ctx.pop();
-  }
-
-  // Partículas de celebración por lado
-  // Para victoria: uvas moradas cayendo. Para derrota: gotas rojas discretas.
-  if (!celebration._particlesInitialized) {
-    celebration._particlesInitialized = true;
-    const count = isWin ? 80 : 60;
-    const sideX0 = leftBound + 40;
-    const sideX1 = leftBound + width / 2 - 40;
-    celebration._particles = [];
-    for (let i = 0; i < count; i++) {
-      const x = random(sideX0, sideX1);
-      const y = random(baseY - rectH, baseY - rectH * 0.5);
-      const size = isWin ? random(6, 12) : random(4, 9);
-      const vx = random(-0.6, 0.6);
-      const vy = random(0.5, 1.5);
-      const life = 255;
-      celebration._particles.push({ x, y, vx, vy, size, life });
-    }
-  }
-
-  if (celebration._particles && celebration._particles.length) {
-    for (let i = celebration._particles.length - 1; i >= 0; i--) {
-      const p = celebration._particles[i];
-      // Actualización
-      p.vy += 0.02; // gravedad sutil
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 1.2; // desvanecer
-
-      // Dibujo
-      if (isWin) {
-        // Uvas moradas con brillo
-        const c = [160, 60, 220];
-        const highlight = [240, 200, 255];
-        ctx.noStroke();
-        ctx.fill(c[0] * 0.6, c[1] * 0.6, c[2] * 0.6, p.life);
-        ctx.ellipse(p.x, p.y, p.size * 1.05, p.size * 1.05);
-        ctx.fill(c[0], c[1], c[2], p.life);
-        ctx.ellipse(p.x, p.y, p.size, p.size);
-        ctx.fill(highlight[0], highlight[1], highlight[2], p.life);
-        ctx.ellipse(p.x - p.size * 0.2, p.y - p.size * 0.25, p.size * 0.25, p.size * 0.25);
-      } else {
-        // Gotas rojas discretas
-        const c = [255, 60, 60];
-        ctx.noStroke();
-        ctx.fill(c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, p.life);
-        ctx.ellipse(p.x, p.y, p.size * 1.1, p.size * 1.1);
-        ctx.fill(c[0], c[1], c[2], p.life);
-        ctx.ellipse(p.x, p.y, p.size, p.size);
-      }
-
-      // Remover si salió del área o se desvaneció
-      if (p.y > height - 20 || p.life <= 0) {
-        celebration._particles.splice(i, 1);
-      }
-    }
-  }
-
-  ctx.pop();
+  
+  // Actualizar y mostrar la animación
+  celebration._endAnimation.update();
+  celebration._endAnimation.display(ctx);
 }
 
 // Volver a la pantalla de inicio cuando terminó la animación de fin de juego
