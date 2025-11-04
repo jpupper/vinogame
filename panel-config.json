@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0.0",
     "created": "2024-01-01",
-    "lastModified": "2025-11-03",
+    "lastModified": "2025-11-04",
     "description": "Configuraciones del panel de control para RGB Madness"
   },
   "gameSettings": {
@@ -15,7 +15,7 @@
       "description": "Multiplicador de velocidad de caída de objetos"
     },
     "lives": {
-      "current": 4,
+      "current": 3,
       "min": 1,
       "max": 10,
       "step": 1,
@@ -58,12 +58,12 @@
       "description": "Tiempo requerido para agarrar objetos"
     },
     "collisionArea": {
-      "showOverlay": true,
+      "showOverlay": false,
       "width": 1920,
       "height": 411,
       "x": 0,
       "y": 500,
-      "enabled": true
+      "enabled": false
     },
     "maxGoodItems": {
       "current": 5,
@@ -112,8 +112,7 @@
     ],
     "backgrounds": [
       "img/background/fondo1.jpg",
-      "img/background/fondo5.jpg",
-      "/img/custom/backgrounds/1762055538252-arte_generativo.png"
+      "img/background/fondo5.jpg"
     ]
   },
   "panelSettings": {
