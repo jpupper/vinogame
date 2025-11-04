@@ -6,93 +6,217 @@ class ModeSelectionScreen {
   }
 
   setup() {
-    const bw = Math.min(260, width * 0.3);
-    const bh = Math.min(120, height * 0.15);
-    const spacing = Math.min(40, width * 0.05);
+    const bw = Math.min(300, width * 0.35);
+    const bh = Math.min(150, height * 0.18);
+    const spacing = Math.min(60, width * 0.07);
     const total = 2 * bw + spacing;
     const startX = width / 2 - total / 2;
     // Botones más abajo para mejor composición visual
     const y = height * 0.70 - bh / 2;
 
     this.buttons = [
-      { label: 'Cooperativo', x: startX, y, w: bw, h: bh, mode: 'cooperative', hoverMs: 0 },
-      { label: 'Competitivo', x: startX + bw + spacing, y, w: bw, h: bh, mode: 'competitive', hoverMs: 0 }
+      { 
+        label: 'Cooperativo', 
+        x: startX, 
+        y, 
+        w: bw, 
+        h: bh, 
+        mode: 'cooperative', 
+        hoverMs: 0,
+        glowPhase: 0,
+        color: [100, 200, 255] // Azul cyan
+      },
+      { 
+        label: 'Competitivo', 
+        x: startX + bw + spacing, 
+        y, 
+        w: bw, 
+        h: bh, 
+        mode: 'competitive', 
+        hoverMs: 0,
+        glowPhase: Math.PI,
+        color: [138, 43, 226] // Violeta vino
+      }
     ];
   }
 
   display(ctx = window) {
     ctx.push();
-    // Título
-    ctx.textAlign(CENTER, TOP);
-    ctx.noStroke();
-    ctx.fill(255);
-    ctx.textSize(Math.min(48, height * 0.06));
-    ctx.text(this.title, width / 2, height * 0.18);
+    // Título y logo ahora se manejan en HTML/CSS
+    // Solo dibujamos los botones aquí
 
-    // Imagen de copa (más grande y con animación sutil)
-    const img = (typeof window !== 'undefined' ? window.trophyImage : null);
-    if (img) {
-      // Tamaño mayor y oscilación vertical suave
-      const t = millis() / 1000.0;
-      const imgSize = Math.min(220, height * 0.28);
-      const bob = sin(t * 1.6) * Math.min(8, height * 0.01);
-      const cx = width / 2;
-      const cy = height * 0.34 + bob;
-      // Brillo suave detrás de la copa
-      //ctx.noStroke();
-     // ctx.fill(170, 110, 255, 55);
-    //  ctx.ellipse(cx, cy, imgSize * 1.5 + sin(t * 1.2) * 10, imgSize * 1.2 + sin(t * 1.2) * 8);
-      // Copa
-      ctx.imageMode(CENTER);
-      ctx.image(img, cx, cy, imgSize, imgSize);
-    }
-
-    // Botones
+    // Botones con glow constante y diseño mejorado
+    const t = millis() / 1000.0;
     ctx.rectMode(CORNER);
+    
     for (const btn of this.buttons) {
+      // Actualizar fase de glow
+      btn.glowPhase += 0.025;
+      
       const isHover = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
-
-      // Sombra ligera
+      const hoverProgress = constrain(btn.hoverMs / this.hoverRequiredMs, 0, 1);
+      
+      // Glow pulsante constante (0.6 a 1.0)
+      const glowIntensity = 0.6 + 0.4 * sin(btn.glowPhase);
+      
+      // Escala con hover
+      const scale = 1.0 + hoverProgress * 0.12;
+      
+      // Calcular centro y dimensiones escaladas
+      const centerX = btn.x + btn.w / 2;
+      const centerY = btn.y + btn.h / 2;
+      const scaledW = btn.w * scale;
+      const scaledH = btn.h * scale;
+      const scaledX = centerX - scaledW / 2;
+      const scaledY = centerY - scaledH / 2;
+      
+      ctx.push();
+      
+      // === GLOW EXTERIOR CONSTANTE (múltiples capas) ===
       ctx.noStroke();
-      ctx.fill(0, 0, 0, 120);
-      ctx.rect(btn.x + 5, btn.y + 5, btn.w, btn.h, 14);
-
-      // Fondo del botón con paleta violeta
-      const base = isHover ? [170, 110, 255, 235] : [150, 90, 220, 225];
-      ctx.fill(base[0], base[1], base[2], base[3]);
-      ctx.rect(btn.x, btn.y, btn.w, btn.h, 14);
-
-      // Highlight superior suave para efecto de profundidad
-      ctx.fill(255, 255, 255, isHover ? 40 : 28);
-      ctx.rect(btn.x, btn.y, btn.w, btn.h * 0.45, 14);
-
-      // Borde
-      ctx.stroke(isHover ? 255 : 230, isHover ? 210 : 200, 255, 180);
-      ctx.strokeWeight(2);
+      const c = btn.color;
+      
+      // 6 capas de glow para efecto más difuso y brillante
+      for (let i = 6; i > 0; i--) {
+        const glowSize = i * 18 * glowIntensity;
+        const glowAlpha = (40 / i) * glowIntensity * (0.7 + hoverProgress * 0.3);
+        ctx.fill(c[0], c[1], c[2], glowAlpha);
+        ctx.rect(
+          scaledX - glowSize/2, 
+          scaledY - glowSize/2, 
+          scaledW + glowSize, 
+          scaledH + glowSize, 
+          22 + i*3
+        );
+      }
+      
+      // === SOMBRA PROFUNDA ===
+      ctx.fill(0, 0, 0, 180);
+      ctx.rect(scaledX + 8, scaledY + 8, scaledW, scaledH, 18);
+      
+      // === FONDO DEL BOTÓN (gradiente simulado con capas) ===
+      // Capa oscura base
+      ctx.fill(c[0] * 0.3, c[1] * 0.3, c[2] * 0.3, 250);
+      ctx.rect(scaledX, scaledY, scaledW, scaledH, 18);
+      
+      // Capa media con brillo
+      const brightness = 0.6 + glowIntensity * 0.3 + hoverProgress * 0.4;
+      ctx.fill(c[0] * brightness, c[1] * brightness, c[2] * brightness, 220);
+      ctx.rect(scaledX, scaledY, scaledW, scaledH, 18);
+      
+      // === HIGHLIGHT SUPERIOR (efecto 3D) ===
+      const highlightAlpha = 80 + glowIntensity * 30;
+      ctx.fill(255, 255, 255, highlightAlpha);
+      ctx.rect(scaledX, scaledY, scaledW, scaledH * 0.35, 18);
+      
+      // === BORDE BRILLANTE ANIMADO ===
+      const borderBrightness = 0.8 + glowIntensity * 0.2;
+      ctx.stroke(c[0] * borderBrightness, c[1] * borderBrightness, c[2] * borderBrightness, 255);
+      ctx.strokeWeight(4);
       ctx.noFill();
-      ctx.rect(btn.x, btn.y, btn.w, btn.h, 14);
+      ctx.rect(scaledX, scaledY, scaledW, scaledH, 18);
+      
+      // Borde exterior más tenue
+      ctx.stroke(c[0], c[1], c[2], 120 * glowIntensity);
+      ctx.strokeWeight(2);
+      ctx.rect(scaledX - 3, scaledY - 3, scaledW + 6, scaledH + 6, 20);
       ctx.noStroke();
-
-      // Texto del botón
-      ctx.fill(255);
+      
+      // === PARTÍCULAS FLOTANTES ALREDEDOR DEL BOTÓN ===
+      if (!btn.particles) {
+        btn.particles = [];
+        for (let i = 0; i < 8; i++) {
+          btn.particles.push({
+            angle: (TWO_PI / 8) * i,
+            speed: 0.3 + random(0.2),
+            distance: 1.0,
+            size: 3 + random(4)
+          });
+        }
+      }
+      
+      for (let p of btn.particles) {
+        p.angle += p.speed * 0.02;
+        const px = centerX + cos(p.angle) * (scaledW * 0.6) * p.distance;
+        const py = centerY + sin(p.angle) * (scaledH * 0.6) * p.distance;
+        const particleAlpha = 150 * glowIntensity;
+        
+        // Glow de partícula
+        ctx.fill(c[0], c[1], c[2], particleAlpha * 0.3);
+        ctx.ellipse(px, py, p.size * 3, p.size * 3);
+        
+        // Partícula sólida
+        ctx.fill(255, 255, 255, particleAlpha);
+        ctx.ellipse(px, py, p.size, p.size);
+      }
+      
+      // === TEXTO DEL BOTÓN CON GLOW ===
+      const textSize = Math.min(38, height * 0.052) * scale;
       ctx.textAlign(CENTER, CENTER);
-      ctx.textSize(Math.min(32, height * 0.045));
-      ctx.text(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2);
-
-      // Barra de progreso de hover (arriba del botón)
-      if (btn.hoverMs && btn.hoverMs > 0) {
-        const progress = constrain(btn.hoverMs / this.hoverRequiredMs, 0, 1);
-        const barW = btn.w * 0.8;
-        const barH = 8;
-        const barX = btn.x + (btn.w - barW) / 2;
-        const barY = btn.y - 14;
+      ctx.textSize(textSize);
+      ctx.textFont('Arial Black, sans-serif');
+      
+      // Glow del texto (3 capas)
+      for (let i = 4; i > 0; i--) {
+        const textGlowAlpha = (glowIntensity * 60) / i;
+        ctx.fill(c[0], c[1], c[2], textGlowAlpha);
+        ctx.text(btn.label, centerX, centerY);
+      }
+      
+      // Sombra del texto
+      ctx.fill(0, 0, 0, 200);
+      ctx.text(btn.label, centerX + 2, centerY + 2);
+      
+      // Texto principal
+      ctx.fill(255, 255, 255, 255);
+      ctx.text(btn.label, centerX, centerY);
+      
+      // Highlight del texto
+      ctx.fill(255, 255, 255, 120);
+      ctx.textSize(textSize * 0.95);
+      ctx.text(btn.label, centerX, centerY - textSize * 0.08);
+      
+      ctx.pop();
+      
+      // === BARRA DE PROGRESO DE HOVER ===
+      if (hoverProgress > 0) {
+        const barW = scaledW * 0.88;
+        const barH = 12;
+        const barX = centerX - barW / 2;
+        const barY = scaledY - 25;
+        
         ctx.noStroke();
-        // Fondo
-        ctx.fill(40, 20, 60, 180);
-        ctx.rect(barX, barY, barW, barH, 4);
-        // Progreso (violeta)
-        ctx.fill(160, 120, 255, 220);
-        ctx.rect(barX, barY, barW * progress, barH, 4);
+        
+        // Glow de la barra
+        ctx.fill(c[0], c[1], c[2], 80 * glowIntensity);
+        ctx.rect(barX - 4, barY - 4, barW + 8, barH + 8, 8);
+        
+        // Fondo de la barra
+        ctx.fill(20, 10, 30, 220);
+        ctx.rect(barX, barY, barW, barH, 6);
+        
+        // Progreso
+        const progressW = barW * hoverProgress;
+        
+        // Glow del progreso
+        ctx.fill(c[0], c[1], c[2], 150 * glowIntensity);
+        ctx.rect(barX - 2, barY - 2, progressW + 4, barH + 4, 7);
+        
+        // Barra de progreso
+        ctx.fill(c[0], c[1], c[2], 255);
+        ctx.rect(barX, barY, progressW, barH, 6);
+        
+        // Highlight superior de la barra
+        ctx.fill(255, 255, 255, 150);
+        ctx.rect(barX, barY, progressW, barH * 0.4, 6);
+        
+        // Punto brillante al final de la barra
+        if (progressW > 10) {
+          ctx.fill(255, 255, 255, 200);
+          ctx.ellipse(barX + progressW, barY + barH/2, 8, 8);
+          ctx.fill(c[0], c[1], c[2], 100);
+          ctx.ellipse(barX + progressW, barY + barH/2, 16, 16);
+        }
       }
     }
     ctx.pop();

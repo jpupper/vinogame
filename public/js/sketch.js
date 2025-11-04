@@ -260,6 +260,16 @@ function draw() {
     window.renderShaders();
   }
   
+  // ===== CONTROL DE OVERLAY HTML =====
+  const overlay = document.getElementById('modeSelectionOverlay');
+  if (overlay) {
+    if (gameState === 'standby') {
+      overlay.classList.remove('hidden');
+    } else {
+      overlay.classList.add('hidden');
+    }
+  }
+  
   // ===== BUFFER DE JUEGO =====
   juegoBuffer.clear();
   // Determinar pantalla activa

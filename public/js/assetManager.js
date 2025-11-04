@@ -99,6 +99,9 @@
       // Trofeo
       this.images.trophy = loadImage('img/copa/copa.png');
 
+      // Logo
+      this.images.logo = loadImage('img/logo/logo.png');
+
       // Exponer globales para compatibilidad inmediata
       if (typeof window !== 'undefined') {
         window.goodItemImages = this.goodItemImages;
@@ -108,6 +111,7 @@
         window.badItemImagePaths = this.badItemImagePaths;
         window.backgroundImagePaths = this.backgroundImagePaths;
         window.trophyImage = this.images.trophy;
+        window.logoImage = this.images.logo;
       }
     }
 
