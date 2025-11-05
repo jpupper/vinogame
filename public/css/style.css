@@ -95,7 +95,7 @@ body {
         position: fixed;
         top: 20px;
         right: 20px; /* Punto de anclaje constante */
-        width: 450px; /* Ancho aumentado para mejor visualización */
+        width: 520px; /* Ancho aumentado para evitar cortes */
         max-width: 90vw; /* Responsive para pantallas pequeñas */
         background: rgba(0, 0, 0, 0.9);
         border: 2px solid rgba(255, 255, 255, 0.3);

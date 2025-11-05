@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0.0",
     "created": "2024-01-01",
-    "lastModified": "2025-11-04",
+    "lastModified": "2025-11-05",
     "description": "Configuraciones del panel de control para RGB Madness"
   },
   "gameSettings": {
@@ -15,7 +15,7 @@
       "description": "Multiplicador de velocidad de caída de objetos"
     },
     "lives": {
-      "current": 3,
+      "current": 1,
       "min": 1,
       "max": 10,
       "step": 1,
@@ -41,7 +41,7 @@
       "description": "Frecuencia de aparición de nuevos objetos"
     },
     "winComboThreshold": {
-      "current": 30,
+      "current": 5,
       "min": 5,
       "max": 50,
       "step": 1,
@@ -78,7 +78,9 @@
     "particleLifespan": {
       "current": 20000,
       "default": 6000
-    }
+    },
+    "showCooperativeButton": false,
+    "showCompetitiveButton": true
   },
   "haloSettings": {
     "goodHalo": {
@@ -181,5 +183,27 @@
     "waveDuration": 2,
     "cursorHaloSize": 0.08,
     "cursorHaloStrength": 1
+  },
+  "winLoseSettings": {
+    "textSize": {
+      "current": 0.08,
+      "default": 0.15
+    },
+    "winText": {
+      "current": "Felicitaciones!",
+      "default": "GANASTE"
+    },
+    "loseText": {
+      "current": "Segui participando",
+      "default": "PERDISTE"
+    },
+    "scoreTextSize": {
+      "current": 40,
+      "default": 40
+    },
+    "comboTextSize": {
+      "current": 31,
+      "default": 30
+    }
   }
 }

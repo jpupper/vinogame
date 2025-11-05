@@ -6,38 +6,75 @@ class ModeSelectionScreen {
   }
 
   setup() {
+    this.updateButtonLayout();
+  }
+
+  updateButtonLayout() {
     const bw = Math.min(300, width * 0.35);
     const bh = Math.min(150, height * 0.18);
     const spacing = Math.min(60, width * 0.07);
-    const total = 2 * bw + spacing;
-    const startX = width / 2 - total / 2;
-    // Botones más abajo para mejor composición visual
     const y = height * 0.70 - bh / 2;
 
-    this.buttons = [
-      { 
-        label: 'Cooperativo', 
-        x: startX, 
-        y, 
-        w: bw, 
-        h: bh, 
-        mode: 'cooperative', 
+    // Determinar qué botones mostrar
+    const showCoop = typeof window !== 'undefined' && typeof window.showCooperativeButton !== 'undefined' 
+      ? window.showCooperativeButton : true;
+    const showComp = typeof window !== 'undefined' && typeof window.showCompetitiveButton !== 'undefined' 
+      ? window.showCompetitiveButton : true;
+
+    const visibleButtons = [];
+    
+    if (showCoop) {
+      visibleButtons.push({
+        label: 'Cooperativo',
+        mode: 'cooperative',
+        color: [100, 200, 255],
+        glowPhase: 0
+      });
+    }
+    
+    if (showComp) {
+      visibleButtons.push({
+        label: 'Competitivo',
+        mode: 'competitive',
+        color: [138, 43, 226],
+        glowPhase: Math.PI
+      });
+    }
+
+    // Calcular posiciones según cantidad de botones visibles
+    let startX;
+    if (visibleButtons.length === 1) {
+      // Centrar un solo botón
+      startX = width / 2 - bw / 2;
+    } else {
+      // Dos botones con spacing
+      const total = 2 * bw + spacing;
+      startX = width / 2 - total / 2;
+    }
+
+    // Crear array de botones con posiciones
+    this.buttons = [];
+    for (let i = 0; i < visibleButtons.length; i++) {
+      const btn = visibleButtons[i];
+      const x = visibleButtons.length === 1 ? startX : startX + i * (bw + spacing);
+      
+      this.buttons.push({
+        label: btn.label,
+        x: x,
+        y: y,
+        w: bw,
+        h: bh,
+        mode: btn.mode,
         hoverMs: 0,
-        glowPhase: 0,
-        color: [100, 200, 255] // Azul cyan
-      },
-      { 
-        label: 'Competitivo', 
-        x: startX + bw + spacing, 
-        y, 
-        w: bw, 
-        h: bh, 
-        mode: 'competitive', 
-        hoverMs: 0,
-        glowPhase: Math.PI,
-        color: [138, 43, 226] // Violeta vino
-      }
-    ];
+        glowPhase: btn.glowPhase,
+        color: btn.color
+      });
+    }
+  }
+
+  updateButtonVisibility(showCoop, showComp) {
+    // Actualizar layout cuando cambia la visibilidad
+    this.updateButtonLayout();
   }
 
   display(ctx = window) {

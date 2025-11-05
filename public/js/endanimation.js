@@ -34,8 +34,12 @@ class EndAnimation {
     this.glowColor = this.isWin ? [255, 215, 0] : [255, 60, 60]; // Dorado o Rojo
     this.waveColor = this.isWin ? [255, 215, 0] : [255, 0, 0];
     
-    // Texto a mostrar
-    this.text = this.isWin ? 'GANASTE' : 'PERDISTE';
+    // Texto a mostrar (usar textos personalizados si están disponibles)
+    const defaultWinText = 'GANASTE';
+    const defaultLoseText = 'PERDISTE';
+    const customWinText = (typeof window !== 'undefined' && window.winText) ? window.winText : defaultWinText;
+    const customLoseText = (typeof window !== 'undefined' && window.loseText) ? window.loseText : defaultLoseText;
+    this.text = this.isWin ? customWinText : customLoseText;
     
     // Animación de letras
     this.letters = [];
@@ -165,10 +169,13 @@ class EndAnimation {
   drawText(ctx) {
     const elapsed = millis() - this.startTime;
     
-    // Tamaño de fuente según modo
+    // Tamaño de fuente según modo (usar tamaño personalizado si está disponible)
+    const customSize = (typeof window !== 'undefined' && typeof window.winLoseTextSize !== 'undefined') 
+      ? window.winLoseTextSize : 0.15;
+    // Aplicar tamaño personalizado tanto en modo colaborativo como competitivo
     const baseFontSize = this.isCompetitive ? 
-      this.areaHeight * 0.12 : 
-      height * 0.15;
+      this.areaHeight * customSize : 
+      height * customSize;
     
     ctx.textAlign(CENTER, CENTER);
     ctx.textFont('Arial Black, sans-serif');
@@ -190,22 +197,23 @@ class EndAnimation {
         ctx.translate(x, y);
         ctx.scale(letter.scale);
         
-        // Glow effect (múltiples capas)
-        const glowSize = baseFontSize * (1 + letter.glowIntensity * 0.3);
+        // Glow effect MÍNIMO - solo un toque sutil
         const c = this.glowColor;
         
-        // Glow exterior (más difuso)
-        for (let g = 4; g > 0; g--) {
-          const glowAlpha = letter.alpha * letter.glowIntensity * 0.15 * (g / 4);
+        // Solo 2 capas muy sutiles de glow
+        for (let g = 2; g > 0; g--) {
+          const glowAlpha = letter.alpha * letter.glowIntensity * 0.08 * (g / 2);
           ctx.fill(c[0], c[1], c[2], glowAlpha);
-          ctx.textSize(baseFontSize + g * 8);
+          // Glow muy pequeño: solo 5% extra por capa
+          ctx.textSize(baseFontSize * (1 + g * 0.05));
           ctx.text(letter.char, 0, 0);
         }
         
-        // Sombra
+        // Sombra (escalada proporcionalmente)
         ctx.fill(0, 0, 0, letter.alpha * 0.7);
         ctx.textSize(baseFontSize);
-        ctx.text(letter.char, 3, 3);
+        const shadowOffset = baseFontSize * 0.075; // 7.5% del tamaño
+        ctx.text(letter.char, shadowOffset, shadowOffset);
         
         // Letra principal
         ctx.fill(c[0], c[1], c[2], letter.alpha);
@@ -245,15 +253,20 @@ class EndAnimation {
       ctx.pop();
     }
 
-    // Puntuación final y combo
+    // Puntuación final y combo (usar tamaños configurables)
+    const scoreSize = (typeof window !== 'undefined' && typeof window.scoreTextSize !== 'undefined') 
+      ? window.scoreTextSize : 40;
+    const comboSize = (typeof window !== 'undefined' && typeof window.comboTextSize !== 'undefined') 
+      ? window.comboTextSize : 30;
+    
     const alpha = constrain(map(millis() - this.startTime, this.duration * 0.5, this.duration * 0.7, 0, 255), 0, 255);
     ctx.textAlign(CENTER, CENTER);
-    ctx.textSize(40);
+    ctx.textSize(scoreSize);
     ctx.fill(0, 0, 0, alpha * 0.7);
     ctx.text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2 + 3, height * 0.7 + 3);
     ctx.fill(255, 255, 255, alpha);
     ctx.text(`Puntuación Final: ${Math.floor(scoreSystem.score)}`, width/2, height * 0.7);
-    ctx.textSize(30);
+    ctx.textSize(comboSize);
     ctx.fill(255, 215, 0, alpha);
     ctx.text(`Combo más alto: x${scoreSystem.highestCombo}`, width/2, height * 0.7 + 50);
     

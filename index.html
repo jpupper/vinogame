@@ -20,6 +20,7 @@
     <script src="js/gamestate.js?v=14"></script>
     <script src="js/sketch.js?v=15"></script>
     <script src="js/controlpanel.js?v=16"></script>
+    <script src="js/customButton.js?v=1"></script>
     <script>
         // Forzar recarga sin caché
         console.log('Forzando recarga de scripts v16 - ' + new Date().toISOString());
@@ -54,6 +55,7 @@
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
             <button class="tab-button" data-tab="particles">✨ Partículas</button>
+            <button class="tab-button" data-tab="winlose">🏆 Win/Lose</button>
             <button class="tab-button" data-tab="assets">🎨 Assets</button>
             <button class="tab-button" data-tab="stats">📊 STATS</button>
             <button class="tab-button" data-tab="collision">🧱 Collision</button>
@@ -61,6 +63,22 @@
         
         <!-- Pestaña de Controles -->
         <div class="tab-content active" id="controls-tab">
+            <!-- Mostrar/Ocultar botones de modo de juego -->
+            <div class="control-group">
+                <label>Botones de Modo de Juego</label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+                    <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="showCooperativeButton" checked>
+                        Mostrar Cooperativo
+                    </label>
+                    <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="showCompetitiveButton" checked>
+                        Mostrar Competitivo
+                    </label>
+                </div>
+                <div class="help-text">Controla qué botones se muestran en la pantalla de selección. Si solo hay uno visible, se centrará automáticamente.</div>
+            </div>
+
             <!-- Mostrar/Ocultar puntos del LIDAR -->
             <div class="control-group">
                 <label class="toggle" style="display:flex;align-items:center;gap:8px;">
@@ -268,6 +286,78 @@
                 </label>
                 <input type="range" id="particleLifespanSlider" min="1000" max="20000" step="500" value="6000">
                 <div class="help-text">Controla cuánto tiempo viven las copas y objetos antes de desvanecerse (1s - 20s)</div>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Win/Lose -->
+        <div class="tab-content" id="winlose-tab">
+            <!-- Tamaño de textos GANASTE/PERDISTE -->
+            <div class="control-group">
+                <label for="winLoseTextSizeSlider">
+                    Tamaño de Textos (GANASTE/PERDISTE)
+                    <span class="value-display" id="winLoseTextSizeValue">0.15</span>
+                </label>
+                <input type="range" id="winLoseTextSizeSlider" min="0.05" max="0.30" step="0.01" value="0.15">
+                <div class="help-text">Tamaño relativo a la altura de la pantalla (0.15 = 15% de la altura)</div>
+            </div>
+
+            <!-- Textos personalizados -->
+            <div class="control-group">
+                <label for="winTextInput">
+                    Texto de Victoria
+                </label>
+                <input type="text" id="winTextInput" value="GANASTE" maxlength="20" style="width:100%;padding:8px;font-size:16px;">
+                <div class="help-text">Texto que aparece cuando ganas (máx. 20 caracteres)</div>
+            </div>
+
+            <div class="control-group">
+                <label for="loseTextInput">
+                    Texto de Derrota
+                </label>
+                <input type="text" id="loseTextInput" value="PERDISTE" maxlength="20" style="width:100%;padding:8px;font-size:16px;">
+                <div class="help-text">Texto que aparece cuando pierdes (máx. 20 caracteres)</div>
+            </div>
+
+            <!-- Combo para ganar (movido desde Controles) -->
+            <div class="control-group">
+                <label for="winComboSliderWinLose">
+                    Combo para GANAR
+                    <span class="value-display" id="winComboValueWinLose">20</span>
+                </label>
+                <input type="range" id="winComboSliderWinLose" min="5" max="50" step="1" value="20">
+                <div class="help-text">Cantidad de aciertos consecutivos necesarios para ganar</div>
+            </div>
+
+            <!-- Cantidad de vidas (movido desde Partículas) -->
+            <div class="control-group">
+                <label for="livesSliderWinLose">
+                    Cantidad de Vidas
+                    <span class="value-display" id="livesValueWinLose">3</span>
+                </label>
+                <input type="range" id="livesSliderWinLose" min="1" max="10" step="1" value="3">
+                <div class="help-text">Número de vidas disponibles en el juego</div>
+            </div>
+
+            <!-- Tamaños de textos adicionales en pantalla de victoria -->
+            <div class="control-group">
+                <label>Tamaños de Textos Adicionales (Victoria)</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                    <div>
+                        <label for="scoreTextSizeSlider" style="font-size:13px;">
+                            Puntuación Final
+                            <span class="value-display" id="scoreTextSizeValue">40</span>
+                        </label>
+                        <input type="range" id="scoreTextSizeSlider" min="20" max="80" step="2" value="40">
+                    </div>
+                    <div>
+                        <label for="comboTextSizeSlider" style="font-size:13px;">
+                            Combo Más Alto
+                            <span class="value-display" id="comboTextSizeValue">30</span>
+                        </label>
+                        <input type="range" id="comboTextSizeSlider" min="15" max="60" step="2" value="30">
+                    </div>
+                </div>
+                <div class="help-text">Controla el tamaño de los textos de puntuación y combo en la pantalla de victoria</div>
             </div>
         </div>
         

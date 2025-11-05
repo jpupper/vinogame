@@ -15,6 +15,22 @@ class ControlPanel {
         this.showLidarPointsCheckbox = null;
         // Mostrar/Ocultar fondo
         this.hideBackgroundCheckbox = null;
+        // Mostrar/Ocultar botones de modo de juego
+        this.showCooperativeButton = null;
+        this.showCompetitiveButton = null;
+        // Controles del tab winlose
+        this.winLoseTextSizeSlider = null;
+        this.winLoseTextSizeValue = null;
+        this.winTextInput = null;
+        this.loseTextInput = null;
+        this.winComboSliderWinLose = null;
+        this.winComboValueWinLose = null;
+        this.livesSliderWinLose = null;
+        this.livesValueWinLose = null;
+        this.scoreTextSizeSlider = null;
+        this.scoreTextSizeValue = null;
+        this.comboTextSizeSlider = null;
+        this.comboTextSizeValue = null;
         
         // Elementos de métricas
         this.frameCount = 0;
@@ -131,7 +147,17 @@ class ControlPanel {
                 cursorHaloSize: { current: 0.08, default: 0.08 },
                 cursorHaloStrength: { current: 1.0, default: 1.0 },
                 // Vida de los objetos que caen
-                particleLifespan: { current: 6000, default: 6000 }
+                particleLifespan: { current: 6000, default: 6000 },
+                // Mostrar/ocultar botones de modo de juego
+                showCooperativeButton: true,
+                showCompetitiveButton: true
+            },
+            winLoseSettings: {
+                textSize: { current: 0.15, default: 0.15 },
+                winText: { current: 'GANASTE', default: 'GANASTE' },
+                loseText: { current: 'PERDISTE', default: 'PERDISTE' },
+                scoreTextSize: { current: 40, default: 40 },
+                comboTextSize: { current: 30, default: 30 }
             }
         };
         this.configData = defaults;
@@ -521,6 +547,54 @@ class ControlPanel {
         window.collisionArea.showOverlay = !!(settings.collisionArea && settings.collisionArea.showOverlay);
         // Log de diagnóstico para verificar que los valores del JSON se aplicaron correctamente
         console.log('Configuración de área de colisión aplicada desde JSON:', window.collisionArea);
+
+        // Aplicar visibilidad de botones
+        if (typeof settings.showCooperativeButton !== 'undefined') {
+            if (this.showCooperativeButton) this.showCooperativeButton.checked = !!settings.showCooperativeButton;
+            if (typeof window !== 'undefined') window.showCooperativeButton = !!settings.showCooperativeButton;
+        }
+        if (typeof settings.showCompetitiveButton !== 'undefined') {
+            if (this.showCompetitiveButton) this.showCompetitiveButton.checked = !!settings.showCompetitiveButton;
+            if (typeof window !== 'undefined') window.showCompetitiveButton = !!settings.showCompetitiveButton;
+        }
+
+        // Aplicar configuración de winlose
+        if (this.configData.winLoseSettings) {
+            const wls = this.configData.winLoseSettings;
+            if (this.winLoseTextSizeSlider && wls.textSize) {
+                this.winLoseTextSizeSlider.value = wls.textSize.current;
+                this.winLoseTextSizeValue.textContent = wls.textSize.current.toFixed(2);
+                this.updateWinLoseTextSize(wls.textSize.current);
+            }
+            if (this.winTextInput && wls.winText) {
+                this.winTextInput.value = wls.winText.current;
+                this.updateWinText(wls.winText.current);
+            }
+            if (this.loseTextInput && wls.loseText) {
+                this.loseTextInput.value = wls.loseText.current;
+                this.updateLoseText(wls.loseText.current);
+            }
+            // Sincronizar sliders duplicados
+            if (this.winComboSliderWinLose && settings.winComboThreshold) {
+                this.winComboSliderWinLose.value = settings.winComboThreshold.current;
+                this.winComboValueWinLose.textContent = settings.winComboThreshold.current;
+            }
+            if (this.livesSliderWinLose && settings.lives) {
+                this.livesSliderWinLose.value = settings.lives.current;
+                this.livesValueWinLose.textContent = settings.lives.current;
+            }
+            // Tamaños de textos adicionales
+            if (this.scoreTextSizeSlider && wls.scoreTextSize) {
+                this.scoreTextSizeSlider.value = wls.scoreTextSize.current;
+                this.scoreTextSizeValue.textContent = wls.scoreTextSize.current;
+                this.updateScoreTextSize(wls.scoreTextSize.current);
+            }
+            if (this.comboTextSizeSlider && wls.comboTextSize) {
+                this.comboTextSizeSlider.value = wls.comboTextSize.current;
+                this.comboTextSizeValue.textContent = wls.comboTextSize.current;
+                this.updateComboTextSize(wls.comboTextSize.current);
+            }
+        }
     }
 
     async saveConfiguration() {
@@ -620,6 +694,24 @@ class ControlPanel {
         this.configData.assets.objects = window.goodItemImagePaths.slice();
         this.configData.assets.badItems = window.badItemImagePaths.slice();
         this.configData.assets.backgrounds = window.backgroundImagePaths.slice();
+        
+        // Guardar visibilidad de botones
+        this.configData.gameSettings.showCooperativeButton = this.showCooperativeButton ? !!this.showCooperativeButton.checked : true;
+        this.configData.gameSettings.showCompetitiveButton = this.showCompetitiveButton ? !!this.showCompetitiveButton.checked : true;
+
+        // Guardar configuración de winlose
+        if (!this.configData.winLoseSettings) this.configData.winLoseSettings = {};
+        if (!this.configData.winLoseSettings.textSize) this.configData.winLoseSettings.textSize = { current: 0.15, default: 0.15 };
+        if (!this.configData.winLoseSettings.winText) this.configData.winLoseSettings.winText = { current: 'GANASTE', default: 'GANASTE' };
+        if (!this.configData.winLoseSettings.loseText) this.configData.winLoseSettings.loseText = { current: 'PERDISTE', default: 'PERDISTE' };
+        if (!this.configData.winLoseSettings.scoreTextSize) this.configData.winLoseSettings.scoreTextSize = { current: 40, default: 40 };
+        if (!this.configData.winLoseSettings.comboTextSize) this.configData.winLoseSettings.comboTextSize = { current: 30, default: 30 };
+        
+        if (this.winLoseTextSizeSlider) this.configData.winLoseSettings.textSize.current = parseFloat(this.winLoseTextSizeSlider.value);
+        if (this.winTextInput) this.configData.winLoseSettings.winText.current = this.winTextInput.value || 'GANASTE';
+        if (this.loseTextInput) this.configData.winLoseSettings.loseText.current = this.loseTextInput.value || 'PERDISTE';
+        if (this.scoreTextSizeSlider) this.configData.winLoseSettings.scoreTextSize.current = parseInt(this.scoreTextSizeSlider.value);
+        if (this.comboTextSizeSlider) this.configData.winLoseSettings.comboTextSize.current = parseInt(this.comboTextSizeSlider.value);
         
         // Actualizar metadatos
         this.configData.metadata = this.configData.metadata || {};
@@ -734,6 +826,9 @@ class ControlPanel {
         this.showLidarPointsCheckbox = document.getElementById('showLidarPointsCheckbox');
         // Checkbox de ocultar fondo
         this.hideBackgroundCheckbox = document.getElementById('hideBackgroundCheckbox');
+        // Checkboxes de visibilidad de botones de modo
+        this.showCooperativeButton = document.getElementById('showCooperativeButton');
+        this.showCompetitiveButton = document.getElementById('showCompetitiveButton');
         // Nuevos: máximos de items simultáneos
         this.maxGoodItemsInput = document.getElementById('maxGoodItemsInput');
         this.maxBadItemsInput = document.getElementById('maxBadItemsInput');
@@ -792,6 +887,20 @@ class ControlPanel {
         this.waveForceValue = document.getElementById('waveForceValue');
         this.waveDurationSlider = document.getElementById('waveDurationSlider');
         this.waveDurationValue = document.getElementById('waveDurationValue');
+        
+        // Elementos del tab winlose
+        this.winLoseTextSizeSlider = document.getElementById('winLoseTextSizeSlider');
+        this.winLoseTextSizeValue = document.getElementById('winLoseTextSizeValue');
+        this.winTextInput = document.getElementById('winTextInput');
+        this.loseTextInput = document.getElementById('loseTextInput');
+        this.winComboSliderWinLose = document.getElementById('winComboSliderWinLose');
+        this.winComboValueWinLose = document.getElementById('winComboValueWinLose');
+        this.livesSliderWinLose = document.getElementById('livesSliderWinLose');
+        this.livesValueWinLose = document.getElementById('livesValueWinLose');
+        this.scoreTextSizeSlider = document.getElementById('scoreTextSizeSlider');
+        this.scoreTextSizeValue = document.getElementById('scoreTextSizeValue');
+        this.comboTextSizeSlider = document.getElementById('comboTextSizeSlider');
+        this.comboTextSizeValue = document.getElementById('comboTextSizeValue');
         
         // Elementos de galería
         this.galleryNavButtons = document.querySelectorAll('.gallery-nav-btn');
@@ -1021,6 +1130,75 @@ class ControlPanel {
         if (this.spawnModeSelect) {
             this.spawnModeSelect.addEventListener('change', (e) => {
                 this.updateSpawnMode(e.target.value);
+            });
+        }
+
+        // Checkboxes de visibilidad de botones
+        if (this.showCooperativeButton) {
+            this.showCooperativeButton.addEventListener('change', (e) => {
+                this.updateButtonVisibility();
+            });
+        }
+        if (this.showCompetitiveButton) {
+            this.showCompetitiveButton.addEventListener('change', (e) => {
+                this.updateButtonVisibility();
+            });
+        }
+
+        // Controles del tab winlose
+        if (this.winLoseTextSizeSlider) {
+            this.winLoseTextSizeSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.winLoseTextSizeValue.textContent = value.toFixed(2);
+                this.updateWinLoseTextSize(value);
+            });
+        }
+        if (this.winTextInput) {
+            this.winTextInput.addEventListener('input', (e) => {
+                this.updateWinText(e.target.value);
+            });
+        }
+        if (this.loseTextInput) {
+            this.loseTextInput.addEventListener('input', (e) => {
+                this.updateLoseText(e.target.value);
+            });
+        }
+        if (this.winComboSliderWinLose) {
+            this.winComboSliderWinLose.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.winComboValueWinLose.textContent = value;
+                this.updateWinComboThreshold(value);
+                // Sincronizar con el slider del tab de controles si existe
+                if (this.winComboSlider) {
+                    this.winComboSlider.value = value;
+                    this.winComboValue.textContent = value;
+                }
+            });
+        }
+        if (this.livesSliderWinLose) {
+            this.livesSliderWinLose.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.livesValueWinLose.textContent = value;
+                this.updateGameLives(value);
+                // Sincronizar con el slider del tab de partículas si existe
+                if (this.livesSlider) {
+                    this.livesSlider.value = value;
+                    this.livesValue.textContent = value;
+                }
+            });
+        }
+        if (this.scoreTextSizeSlider) {
+            this.scoreTextSizeSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.scoreTextSizeValue.textContent = value;
+                this.updateScoreTextSize(value);
+            });
+        }
+        if (this.comboTextSizeSlider) {
+            this.comboTextSizeSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.comboTextSizeValue.textContent = value;
+                this.updateComboTextSize(value);
             });
         }
     }
@@ -1344,6 +1522,68 @@ class ControlPanel {
         if (typeof window !== 'undefined') {
             window.cursorHaloStrength = value;
         }
+    }
+
+    // === Button Visibility Controls ===
+    updateButtonVisibility() {
+        const showCoop = this.showCooperativeButton ? this.showCooperativeButton.checked : true;
+        const showComp = this.showCompetitiveButton ? this.showCompetitiveButton.checked : true;
+        
+        if (typeof window !== 'undefined') {
+            window.showCooperativeButton = showCoop;
+            window.showCompetitiveButton = showComp;
+        }
+        
+        // Actualizar la pantalla de selección si existe
+        if (typeof selectionScreen !== 'undefined' && selectionScreen) {
+            selectionScreen.updateButtonVisibility(showCoop, showComp);
+        }
+        
+        console.log('Visibilidad de botones actualizada - Cooperativo:', showCoop, 'Competitivo:', showComp);
+    }
+
+    // === Win/Lose Text Controls ===
+    updateWinLoseTextSize(value) {
+        if (typeof CONFIG !== 'undefined') {
+            if (CONFIG.win && CONFIG.win.text) {
+                CONFIG.win.text.size = value;
+            }
+            if (CONFIG.gameOver && CONFIG.gameOver.text) {
+                CONFIG.gameOver.text.size = value;
+            }
+        }
+        if (typeof window !== 'undefined') {
+            window.winLoseTextSize = value;
+        }
+        console.log('Tamaño de texto win/lose actualizado:', value);
+    }
+
+    updateWinText(text) {
+        if (typeof window !== 'undefined') {
+            window.winText = text || 'GANASTE';
+        }
+        console.log('Texto de victoria actualizado:', text);
+    }
+
+    updateLoseText(text) {
+        if (typeof window !== 'undefined') {
+            window.loseText = text || 'PERDISTE';
+        }
+        console.log('Texto de derrota actualizado:', text);
+    }
+
+    updateScoreTextSize(value) {
+        if (typeof window !== 'undefined') {
+            window.scoreTextSize = value;
+        }
+        console.log('Tamaño de texto de puntuación actualizado:', value);
+    }
+
+    updateComboTextSize(value) {
+        if (typeof window !== 'undefined') {
+            window.comboTextSize = value;
+        }
+        console.log('Tamaño de texto de combo actualizado:', value);
     }
 
     // === Stubs de Assets para evitar errores y desbloquear métricas ===
