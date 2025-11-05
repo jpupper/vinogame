@@ -19,10 +19,13 @@ class PointServer {
 		// Dibujamos todos los puntos (LIDAR + input)
 		const allPoints = [...this.points, ...this.inputPoints];
 
-		ctx.textAlign(LEFT);
-		ctx.fill(255);
-		ctx.textSize(30);
-		ctx.text(`Puntos: ${allPoints.length}`, 40, 40);
+		// Solo mostrar contador si showLidarPoints está activo
+		if (typeof window !== 'undefined' && window.showLidarPoints) {
+			ctx.textAlign(LEFT);
+			ctx.fill(255);
+			ctx.textSize(30);
+			ctx.text(`Puntos: ${allPoints.length}`, 40, 40);
+		}
 	  
 		// Dibujar conexiones entre puntos cercanos
 		ctx.noStroke();

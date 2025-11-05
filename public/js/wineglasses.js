@@ -55,6 +55,26 @@ class WineGlassSystem {
         }
     }
 
+    // Dibujar SOLO los halos (para el shader con feedback)
+    displayHalosOnly(ctx = window) {
+        for (let glass of this.glasses) {
+            glass.displayHaloOnly(ctx);
+        }
+        for (let item of this.badItems) {
+            item.displayHaloOnly(ctx);
+        }
+    }
+
+    // Dibujar SOLO los assets (sin feedback, después del shader)
+    displayAssetsOnly(ctx = window) {
+        for (let glass of this.glasses) {
+            glass.displayAssetOnly(ctx);
+        }
+        for (let item of this.badItems) {
+            item.displayAssetOnly(ctx);
+        }
+    }
+
     spawnItem() {
         // Evitar crear items si los assets aún no están listos
         if (typeof window !== 'undefined' && window.assetsReady === false) {
@@ -359,6 +379,18 @@ class Item {
         }
         
         ctx.pop();
+    }
+
+    // Dibujar SOLO el halo (para el shader)
+    // Los halos se dibujan en el shader de background.js, no aquí
+    displayHaloOnly(ctx = window) {
+        // No hacer nada - los halos se manejan en el shader
+    }
+
+    // Dibujar SOLO el asset (imagen/círculo, sin halo)
+    displayAssetOnly(ctx = window) {
+        // Reutilizar el método display completo ya que solo dibuja assets
+        this.display(ctx);
     }
     
   

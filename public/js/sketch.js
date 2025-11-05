@@ -335,6 +335,11 @@ function draw() {
   // Dibujar juego encima
   image(juegoBuffer, 0, 0);
   
+  // Dibujar assets SIN feedback (después del shader)
+  if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+    wineGlassSystem.displayAssetsOnly();
+  }
+  
   // Overlay visual del área de colisión (opcional)
   if (typeof window !== 'undefined' && window.collisionArea && window.collisionArea.enabled && window.collisionArea.showOverlay) {
     const ca = window.collisionArea;
@@ -436,7 +441,8 @@ function dibujarPantallaStandBy(ctx) {
 
 function dibujarPantallaColaborativa(ctx) {
   wineGlassSystem.update();
-  wineGlassSystem.display(ctx);
+  // NO dibujar assets aquí - solo halos en el shader
+  wineGlassSystem.displayHalosOnly(ctx);
   Pserver.update();
   if (frameCount % 2 === 0) {
     const allPoints = Pserver.getAllPoints();
@@ -490,7 +496,8 @@ function dibujarPantallaCompetitiva(ctx) {
   if (!scoreSystemLeft) scoreSystemLeft = new ScoreSystem();
   if (!scoreSystemRight) scoreSystemRight = new ScoreSystem();
   wineGlassSystem.update();
-  wineGlassSystem.display(ctx);
+  // NO dibujar assets aquí - solo halos en el shader
+  wineGlassSystem.displayHalosOnly(ctx);
   Pserver.update();
   if (frameCount % 2 === 0) {
     const allPoints = Pserver.getAllPoints();
