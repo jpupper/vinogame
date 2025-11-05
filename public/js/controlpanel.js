@@ -134,7 +134,7 @@ class ControlPanel {
                 hoverTime: { current: 1000, default: 1000 },
                 collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false },
                 // Nuevo: mostrar/ocultar puntos del LIDAR
-                showLidarPoints: true,
+                showLidarPoints: false,
                 // Nuevo: ocultar fondo (no renderizar shader)
                 hideBackground: false,
                 // Controles de shader de fondo
@@ -918,6 +918,18 @@ class ControlPanel {
         this.updateValues();
         this.startMetricsUpdate();
         this.startAssetsAutoRefresh();
+        
+        // FORZAR ocultamiento de puntos del LIDAR al inicio
+        setTimeout(() => {
+            if (typeof window !== 'undefined') {
+                window.showLidarPoints = false;
+            }
+        }, 100);
+        setTimeout(() => {
+            if (typeof window !== 'undefined') {
+                window.showLidarPoints = false;
+            }
+        }, 500);
     }
     
     setupEventListeners() {
