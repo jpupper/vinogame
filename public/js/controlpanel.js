@@ -1551,7 +1551,7 @@ class ControlPanel {
             selectionScreen.updateButtonVisibility(showCoop, showComp);
         }
         
-        console.log('Visibilidad de botones actualizada - Cooperativo:', showCoop, 'Competitivo:', showComp);
+        console.log('Visibilidad de botones actualizada - Cooperativo:', showCoop, 'Competir:', showComp);
     }
 
     // === Win/Lose Text Controls ===

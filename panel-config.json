@@ -15,7 +15,7 @@
       "description": "Multiplicador de velocidad de caída de objetos"
     },
     "lives": {
-      "current": 1,
+      "current": 2,
       "min": 1,
       "max": 10,
       "step": 1,
@@ -41,7 +41,7 @@
       "description": "Frecuencia de aparición de nuevos objetos"
     },
     "winComboThreshold": {
-      "current": 5,
+      "current": 26,
       "min": 5,
       "max": 50,
       "step": 1,
@@ -118,7 +118,10 @@
     ],
     "backgrounds": [
       "img/background/fondo1.jpg",
-      "img/background/fondo5.jpg"
+      "img/background/fondo5.jpg",
+      "/img/custom/backgrounds/1762376218202-a_dramatic_high-contrast_image_of_red_and_white_wi.png",
+      "/img/custom/backgrounds/1762376236609-food_photography_of_desserts_and_chocolate_bonbons.png",
+      "/img/custom/backgrounds/1762376254308-gourmet_cold_cuts_and_charcuterie_touches_of_trans.png"
     ]
   },
   "panelSettings": {
@@ -177,7 +180,7 @@
     "spawnMode": "top"
   },
   "shaderSettings": {
-    "backgroundBrightness": 1,
+    "backgroundBrightness": 1.7,
     "waveSpeed": 0.5,
     "waveForce": 0.09,
     "waveDuration": 2,

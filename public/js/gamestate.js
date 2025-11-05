@@ -1,7 +1,7 @@
 class ModeSelectionScreen {
   constructor() {
     this.buttons = [];
-    this.title = 'Selecciona el modo de juego';
+    this.title = 'Compite con alguien para ver quien hace mas puntos!';
     this.hoverRequiredMs = 500; // medio segundo para activar por hover
   }
 
@@ -34,7 +34,7 @@ class ModeSelectionScreen {
     
     if (showComp) {
       visibleButtons.push({
-        label: 'Competitivo',
+        label: 'Competir',
         mode: 'competitive',
         color: [138, 43, 226],
         glowPhase: Math.PI
@@ -96,8 +96,12 @@ class ModeSelectionScreen {
       // Glow pulsante constante (0.6 a 1.0)
       const glowIntensity = 0.6 + 0.4 * sin(btn.glowPhase);
       
-      // Escala con hover
-      const scale = 1.0 + hoverProgress * 0.12;
+      // Escala con hover y animación pulsante para competitivo
+      let scale = 1.0 + hoverProgress * 0.12;
+      if (btn.mode === 'competitive') {
+        const pulseScale = 1.0 + 0.08 * sin(t * 3.0);
+        scale *= pulseScale;
+      }
       
       // Calcular centro y dimensiones escaladas
       const centerX = btn.x + btn.w / 2;
@@ -141,10 +145,12 @@ class ModeSelectionScreen {
       ctx.fill(c[0] * brightness, c[1] * brightness, c[2] * brightness, 220);
       ctx.rect(scaledX, scaledY, scaledW, scaledH, 18);
       
-      // === HIGHLIGHT SUPERIOR (efecto 3D) ===
-      const highlightAlpha = 80 + glowIntensity * 30;
-      ctx.fill(255, 255, 255, highlightAlpha);
-      ctx.rect(scaledX, scaledY, scaledW, scaledH * 0.35, 18);
+      // === HIGHLIGHT SUPERIOR (efecto 3D) - Solo para cooperativo ===
+      if (btn.mode !== 'competitive') {
+        const highlightAlpha = 80 + glowIntensity * 30;
+        ctx.fill(255, 255, 255, highlightAlpha);
+        ctx.rect(scaledX, scaledY, scaledW, scaledH * 0.35, 18);
+      }
       
       // === BORDE BRILLANTE ANIMADO ===
       const borderBrightness = 0.8 + glowIntensity * 0.2;
