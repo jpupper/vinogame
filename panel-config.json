@@ -186,7 +186,7 @@
   },
   "winLoseSettings": {
     "textSize": {
-      "current": 0.08,
+      "current": 0.043,
       "default": 0.15
     },
     "winText": {

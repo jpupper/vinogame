@@ -197,32 +197,21 @@ class EndAnimation {
         ctx.translate(x, y);
         ctx.scale(letter.scale);
         
-        // Glow effect MÍNIMO - solo un toque sutil
         const c = this.glowColor;
         
-        // Solo 2 capas muy sutiles de glow
-        for (let g = 2; g > 0; g--) {
-          const glowAlpha = letter.alpha * letter.glowIntensity * 0.08 * (g / 2);
-          ctx.fill(c[0], c[1], c[2], glowAlpha);
-          // Glow muy pequeño: solo 5% extra por capa
-          ctx.textSize(baseFontSize * (1 + g * 0.05));
-          ctx.text(letter.char, 0, 0);
-        }
-        
-        // Sombra (escalada proporcionalmente)
-        ctx.fill(0, 0, 0, letter.alpha * 0.7);
         ctx.textSize(baseFontSize);
-        const shadowOffset = baseFontSize * 0.075; // 7.5% del tamaño
+        
+        // Sombra suave - SIN stroke
+        ctx.noStroke();
+        ctx.fill(0, 0, 0, letter.alpha * 0.3);
+        const shadowOffset = baseFontSize * 0.04;
         ctx.text(letter.char, shadowOffset, shadowOffset);
         
-        // Letra principal
+        // Letra principal con borde oscuro para legibilidad
+        ctx.strokeWeight(baseFontSize * 0.015);
+        ctx.stroke(0, 0, 0, letter.alpha * 0.8);
         ctx.fill(c[0], c[1], c[2], letter.alpha);
         ctx.text(letter.char, 0, 0);
-        
-        // Highlight interno
-        ctx.fill(255, 255, 255, letter.alpha * 0.6);
-        ctx.textSize(baseFontSize * 0.9);
-        ctx.text(letter.char, 0, -baseFontSize * 0.05);
         
         ctx.pop();
       }
