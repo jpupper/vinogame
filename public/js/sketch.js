@@ -9,11 +9,12 @@ let medidorIndicatorLeft;
 let medidorIndicatorRight;
 
 // Estados y modos de juego
-let gameState = 'standby'; // 'standby' | 'playing'
+let gameState = 'standby'; // 'standby' | 'tutorial' | 'playing'
 let gameMode = null; // 'cooperative' | 'competitive'
-// Pantallas: 0 Standby, 1 Colaborativa, 2 Competitiva, 3 GameOver
+// Pantallas: 0 Standby, 1 Colaborativa, 2 Competitiva, 3 GameOver, 4 Tutorial
 let pantallaActiva = 0;
 let selectionScreen;
+let tutorialScreen;
 let rankingSystem;
 let rankingSaved = false;
 let scoreSystemLeft = null;
@@ -210,6 +211,7 @@ function setup() {
   // Pantalla de selección y ranking
   selectionScreen = new ModeSelectionScreen();
   selectionScreen.setup();
+  tutorialScreen = new TutorialScreen();
   rankingSystem = new RankingSystem();
 
   // Marcar assets listos para el arranque inicial (preload ya los cargó)
@@ -275,6 +277,8 @@ function draw() {
   // Determinar pantalla activa
   if (gameState === 'standby') {
     pantallaActiva = 0;
+  } else if (gameState === 'tutorial') {
+    pantallaActiva = 4;
   } else if (gameState === 'playing') {
     if (gameMode === 'competitive') {
       const ended = (scoreSystemLeft && (scoreSystemLeft.gameOver || scoreSystemLeft.win)) ||
@@ -301,6 +305,9 @@ function draw() {
       break;
     case 3:
       dibujarPantallaGameover(juegoBuffer);
+      break;
+    case 4:
+      dibujarPantallaTutorial(juegoBuffer);
       break;
     default:
       dibujarPantallaStandBy(juegoBuffer);
@@ -416,12 +423,15 @@ function dibujarPantallaStandBy(ctx) {
     if (selectedByHover) {
       const startPlaying = () => {
         gameMode = selectedByHover;
-        gameState = 'playing';
         rankingSaved = false;
+        
+        // Si es modo competitivo, mostrar tutorial primero
         if (gameMode === 'competitive') {
-          scoreSystemLeft = new ScoreSystem();
-          scoreSystemRight = new ScoreSystem();
+          gameState = 'tutorial';
+          tutorialScreen.start();
         } else {
+          // Modo cooperativo inicia directamente
+          gameState = 'playing';
           scoreSystem = new ScoreSystem();
         }
       };
@@ -437,6 +447,20 @@ function dibujarPantallaStandBy(ctx) {
     }
   }
   selectionScreen.display(ctx);
+}
+
+function dibujarPantallaTutorial(ctx) {
+  // Mostrar el tutorial
+  tutorialScreen.display(ctx);
+  
+  // Verificar si el tutorial ha terminado
+  if (tutorialScreen.isFinished()) {
+    // Iniciar el juego competitivo
+    gameState = 'playing';
+    scoreSystemLeft = new ScoreSystem();
+    scoreSystemRight = new ScoreSystem();
+    tutorialScreen.reset();
+  }
 }
 
 function dibujarPantallaColaborativa(ctx) {
@@ -617,13 +641,15 @@ function mousePressed() {
     if (selected) {
       const startPlaying = () => {
         gameMode = selected;
-        gameState = 'playing';
         rankingSaved = false;
-        // Preparar sistemas según el modo
+        
+        // Si es modo competitivo, mostrar tutorial primero
         if (gameMode === 'competitive') {
-          scoreSystemLeft = new ScoreSystem();
-          scoreSystemRight = new ScoreSystem();
+          gameState = 'tutorial';
+          tutorialScreen.start();
         } else {
+          // Modo cooperativo inicia directamente
+          gameState = 'playing';
           scoreSystem = new ScoreSystem();
         }
       };
@@ -840,5 +866,6 @@ function returnToStandbyIfDone() {
   rankingSaved = false;
   if (!selectionScreen) selectionScreen = new ModeSelectionScreen();
   selectionScreen.setup();
+  if (tutorialScreen) tutorialScreen.reset();
 }
 

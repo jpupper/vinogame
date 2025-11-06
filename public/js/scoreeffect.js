@@ -61,8 +61,8 @@ class ScoreSystem {
             totalPoints = points;
         }
         
-        // Incrementar puntuación
-        this.score += totalPoints;
+        // Incrementar puntuación (no permitir que baje de 0)
+        this.score = Math.max(0, this.score + totalPoints);
         
         // Activar efecto visual en el score
         this.scoreEffect = {
