@@ -401,7 +401,7 @@ function collectSceneDataForWater() {
     }
     const prevMx = WaterMultiBuffer.prevMouse.x;
     const prevMy = WaterMultiBuffer.prevMouse.y;
-    const mouseMoved = Math.hypot(mx - prevMx, my - prevMy) > 0.5;
+    const mouseMoved = Math.hypot(mx - prevMx, my - prevMy) > 1.5;
     const mouseActive = ((typeof mouseIsPressed !== 'undefined' && mouseIsPressed) || mouseMoved) ? 1.0 : 0.0;
     WaterMultiBuffer.prevMouse.x = mx;
     WaterMultiBuffer.prevMouse.y = my;
@@ -582,13 +582,13 @@ function processShaders() {
     WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
     WaterMultiBuffer.set1i(gl, prog, 'u_frame', WaterMultiBuffer.frame);
 
-    // Parámetros físicos de agua-nikos
-    WaterMultiBuffer.set1f(gl, prog, 'u_paso', 0.35);
-    WaterMultiBuffer.set1f(gl, prog, 'u_oleaje', 0.38);
-    WaterMultiBuffer.set1f(gl, prog, 'u_amortiguar', 0.84);
-    WaterMultiBuffer.set1f(gl, prog, 'u_fuerza', 0.78);
-    WaterMultiBuffer.set1f(gl, prog, 'u_empuje', 0.88);
-    WaterMultiBuffer.set1f(gl, prog, 'u_radio', 0.42);
+    // Parámetros físicos de agua-nikos (calibrados para propagación sutil y controlada)
+    WaterMultiBuffer.set1f(gl, prog, 'u_paso', 0.28);
+    WaterMultiBuffer.set1f(gl, prog, 'u_oleaje', 0.24);
+    WaterMultiBuffer.set1f(gl, prog, 'u_amortiguar', 0.48);
+    WaterMultiBuffer.set1f(gl, prog, 'u_fuerza', 0.45);
+    WaterMultiBuffer.set1f(gl, prog, 'u_empuje', 0.48);
+    WaterMultiBuffer.set1f(gl, prog, 'u_radio', 0.24);
 
     WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
     WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
@@ -705,14 +705,14 @@ function renderShaders() {
     WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
     WaterMultiBuffer.set1f(gl, prog, 'u_comboLevel', scene.comboLevel);
 
-    // Parámetros ópticos de agua-nikos
-    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', 0.38);
-    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', 0.52);
-    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', 0.50);
-    WaterMultiBuffer.set1f(gl, prog, 'u_especular', 0.62);
-    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', 0.68);
-    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', 0.42);
-    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', 0.55);
+    // Parámetros ópticos de agua-nikos (sutiles para no sobrecargar la escena)
+    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', 0.22);
+    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', 0.32);
+    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', 0.38);
+    WaterMultiBuffer.set1f(gl, prog, 'u_especular', 0.45);
+    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', 0.40);
+    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', 0.20);
+    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', 0.22);
     WaterMultiBuffer.set2f(gl, prog, 'u_foco', 0.52, 0.74);
     WaterMultiBuffer.set3f(gl, prog, 'u_agua', 0.96, 0.95, 1.0);
 

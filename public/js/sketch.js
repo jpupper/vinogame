@@ -379,14 +379,6 @@ function draw() {
 
 // ====== Pantallas específicas ======
 function dibujarPantallaStandBy(ctx) {
-  // Animación sutil en standby: gotas suaves en el agua
-  if (frameCount % 55 === 0) {
-    const wx = random(width * 0.2, width * 0.8);
-    const wy = random(height * 0.25, height * 0.75);
-    createWave(wx, wy);
-    dynamicBackground.addRipple(wx, wy);
-  }
-
   if (Pserver) {
     Pserver.update();
     const pts = Pserver.getAllPoints();
@@ -397,13 +389,7 @@ function dibujarPantallaStandBy(ctx) {
       const prev = lastPointerPositions[p.id];
       if (prev) {
         const d = dist(prev.x, prev.y, p.x, p.y);
-        if (d > 6 && frameCount % 4 === 0) {
-          createWave(p.x, p.y);
-          dynamicBackground.addRipple(p.x, p.y);
-        }
-      } else {
-        if (frameCount % 8 === 0) {
-          createWave(p.x, p.y);
+        if (d > 6 && frameCount % 8 === 0) {
           dynamicBackground.addRipple(p.x, p.y);
         }
       }
