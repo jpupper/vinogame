@@ -1,265 +1,266 @@
-precision mediump float;
+precision highp float;
 
-// Uniforms
-uniform sampler2D u_texture;
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
+// ============================================================================
+//  VINOGAME · BUFFER A (Campo de Agua + MapeoPuntosMaster + Objetos Cayendo)
+//  ----------------------------------------------------------------------------
+//  Basado en:
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=agua-nikos
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=mapeopuntosmaster
+//
+//  Simula la ecuación de onda 2D discreta con laplaciano estable (condición CFL):
+//    .x = altura actual (0.5 = reposo)
+//    .y = altura anterior (t - 1)
+//    .z = energía / espuma (decae sola y sube donde hay empuje)
+//    .w = 1.0 (flag de buffer inicializado)
+//
+//  Fuentes que empujan y modifican el campo de agua en tiempo real:
+//   1. Punteros (LIDAR / Touch / Mouse) con estela por segmento sdSegment
+//      (sistema mapeopuntosmaster)
+//   2. Objetos buenos cayendo (copas, botellas, uvas) + pulso de captura
+//   3. Objetos malos cayendo (bichos) + perturbación en el agua
+//   4. Ondas expansivas de captura/interacción (u_wavePositions)
+//   5. Onda de evento de celebración (Felicitaciones / Seguí participando)
+//   6. Corrientes autónomas suaves (puntoSim / puntoFantasma) cuando está en reposo
+// ============================================================================
+
+uniform sampler2D u_feedbackTexture;   // Estado previo del campo de agua (Buffer A)
+uniform vec2  u_resolution;
+uniform vec2  u_mouse;                 // Posición actual del mouse en px (y=0 arriba)
+uniform vec2  u_mousePrev;             // Posición previa del mouse en px (y=0 arriba)
+uniform float u_mouseActive;           // 1.0 si el mouse está presionado/activo
 uniform float u_time;
-uniform sampler2D u_feedbackTexture;
-uniform sampler2D u_particlesTexture;  // Buffer de partículas
-uniform sampler2D u_gameTexture;       // Buffer del juego
-uniform float u_effectIntensity;      // Intensidad de efectos especiales (0-1)
-uniform float u_comboLevel;            // Nivel de combo (0-1)
-uniform float u_vignetteIntensity;     // Intensidad del vignette (0-1)
-// Halo del cursor (tamaño y fuerza)
-uniform float u_cursorHaloSize;        // Radio de influencia del cursor
-uniform float u_cursorHaloStrength;    // Multiplicador de brillo del halo del cursor
+uniform int   u_frame;
 
-// ONDAS EXPANSIVAS (hasta 5 ondas simultáneas)
-uniform vec2 u_wavePositions[5];       // Posiciones de las ondas
-uniform float u_waveTimes[5];          // Tiempo de inicio de cada onda
-uniform float u_waveActive[5];         // Si la onda está activa (1.0 = sí, 0.0 = no)
-// Parámetros controlados desde la interfaz
-uniform float u_waveSpeed;             // Velocidad de expansión del radio
-uniform float u_waveForce;             // Fuerza/Brillo de las ondas
-uniform float u_waveDuration;          // Duración del fade-out
+// Parámetros de agua (agua-nikos)
+uniform float u_paso;                  // 0..1 separación de vecinos (default 0.35)
+uniform float u_oleaje;                // 0..1 c^2 velocidad de onda (default 0.38)
+uniform float u_amortiguar;            // 0..1 amortiguación k (default 0.82)
+uniform float u_fuerza;                // 0..1 empuje de mouse (default 0.75)
+uniform float u_empuje;                // 0..1 empuje de punteros/LIDAR (default 0.85)
+uniform float u_radio;                 // 0..1 radio base de inyección (default 0.42)
 
-// Onda de evento (GANASTE/PERDISTE)
-uniform float u_eventActive;           // 1.0 si hay evento activo
-uniform vec2  u_eventCenter;           // Centro de la onda (normalizado)
-uniform float u_eventStartTime;        // Inicio del evento
-uniform vec3  u_eventColor;            // Color del evento
-uniform float u_eventStrength;         // Intensidad del evento
+// Halo / tamaño de cursor desde panel
+uniform float u_cursorHaloSize;
+uniform float u_cursorHaloStrength;
 
-// PUNTEROS MÚLTIPLES (mouse/touch/LIDAR)
-uniform vec2 u_pointerPositions[16];   // Posiciones normalizadas (0-1)
-uniform float u_pointerActive[16];     // 1.0 si el puntero está activo
+// Punteros múltiples (mouse/touch/LIDAR) normalizados 0..1 (y=0 arriba)
+uniform vec2  u_pointerPositions[16];
+uniform vec2  u_pointerPrevPositions[16];
+uniform float u_pointerActive[16];
+
+// Objetos buenos cayendo (copas/uvas/botellas) normalizados 0..1 (y=0 arriba)
+uniform vec2  u_grapePositions[10];
+uniform vec2  u_grapePrevPositions[10];
+uniform float u_grapeProgress[10];
+uniform float u_grapeActive[10];
+
+// Objetos malos cayendo (bichos) normalizados 0..1 (y=0 arriba)
+uniform vec2  u_badPositions[10];
+uniform vec2  u_badPrevPositions[10];
+uniform float u_badActive[10];
+
+// Ondas expansivas (normalizadas 0..1, y=0 arriba)
+uniform vec2  u_wavePositions[5];
+uniform float u_waveTimes[5];
+uniform float u_waveActive[5];
+uniform float u_waveSpeed;
+uniform float u_waveForce;
+uniform float u_waveDuration;
+
+// Onda de evento (GANASTE / PERDISTE)
+uniform float u_eventActive;
+uniform vec2  u_eventCenter;
+uniform float u_eventStartTime;
+uniform float u_eventStrength;
 
 varying vec2 vTexCoord;
 
-// Función de ruido 2D
-float noise(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+// Distancia de un punto p al segmento ab (estela continua de mapeopuntosmaster y agua-nikos)
+float sdSeg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+    return length(pa - ba * h);
 }
 
-// Ruido fractal (FBM - Fractional Brownian Motion)
-float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 1.0;
-    
-    for(int i = 0; i < 4; i++) {
-        value += amplitude * noise(p * frequency);
-        frequency *= 2.0;
-        amplitude *= 0.5;
-    }
-    
-    return value;
+// Lee la altura (.x) del campo en una UV; si aún no fue inicializada devuelve 0.5 (reposo)
+float sCampo(vec2 uv) {
+    vec4 s = texture2D(u_feedbackTexture, clamp(uv, vec2(0.0), vec2(1.0)));
+    if (s.a < 0.5 || !(s.x == s.x)) return 0.5;
+    return s.x;
+}
+
+// Barrido simulado (agua-nikos / mapeopuntosmaster) para mantener viva el agua en reposo
+vec2 puntoFantasma(float t, float i, float aspecto) {
+    float a = t * 1.45 + i * 2.399963;
+    float r = 0.18 + 0.14 * (0.5 + 0.5 * sin(t * 0.65 + i * 1.7));
+    return vec2(0.5 + r * cos(a) / max(aspecto, 0.001), 0.5 + r * sin(a));
+}
+
+// Convierte coordenada normalizada de pantalla (y=0 arriba) a píxeles GL (y=0 abajo)
+vec2 screenNormToGLPx(vec2 normPos, vec2 res) {
+    return vec2(normPos.x * res.x, (1.0 - normPos.y) * res.y);
 }
 
 void main() {
-    // Coordenadas UV (corregidas para p5.js)
-    vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
-    //uv.y = 1.0-uv.y;
-    // Corregir aspect ratio
-    vec2 aspectUV = uv;
-    aspectUV.x *= u_resolution.x / u_resolution.y;
-    
-    // Posición del mouse corregida
-    vec2 mousePos = vec2(u_mouse.x / u_resolution.x, 1.0 - (u_mouse.y / u_resolution.y));
-    mousePos.y = 1.0-mousePos.y;
-    mousePos.x *= u_resolution.x / u_resolution.y;
-    
-    float dist = distance(aspectUV, mousePos);
-    
-    // Radio de influencia del cursor (más pequeño)
-    float radius = u_cursorHaloSize;
-    float influence = smoothstep(radius, 0.0, dist);
-    
-    // Desplazamiento basado en la distancia al cursor
-    vec2 displacement = vec2(0.0);
-    if (influence > 0.0) {
-        vec2 direction = normalize(aspectUV - mousePos);
-        // Incrementar desplazamiento del cursor para que el displace sea mayor
-        displacement = direction * influence * 0.03;
-        // Deshacer la corrección de aspect ratio para el desplazamiento
-        displacement.x /= u_resolution.x / u_resolution.y;
+    vec2  frag    = gl_FragCoord.xy;
+    vec2  res     = max(u_resolution, vec2(1.0));
+    vec2  p       = frag / res;
+    float aspecto = res.x / res.y;
+
+    vec4 c = texture2D(u_feedbackTexture, p);
+    // Guardia anti-NaN y arranque limpio en reposo (0.5)
+    if (u_frame < 2 || c.a < 0.5 || !(c.x == c.x) || !(c.y == c.y) || !(c.z == c.z)) {
+        c = vec4(0.5, 0.5, 0.0, 1.0);
     }
 
-    // Aportar desplazamiento por punteros adicionales
+    // ── Los cuatro vecinos (muestreo agua-nikos) ───────────────────────────
+    float paso = 0.7 + clamp(u_paso, 0.0, 1.0) * 2.3;
+    vec2  e    = vec2(paso) / res;
+    float s1 = sCampo(p - vec2(0.0, e.y));
+    float s2 = sCampo(p - vec2(e.x, 0.0));
+    float s3 = sCampo(p + vec2(e.x, 0.0));
+    float s4 = sCampo(p + vec2(0.0, e.y));
+
+    // ── Parámetros de amortiguación e inyección ────────────────────────────
+    float k    = 0.90 + clamp(u_amortiguar, 0.0, 1.0) * 0.092;
+    float perd = 1.0 - k;
+    float minDim = min(res.x, res.y);
+    float rPx  = max(4.0, (2.5 + clamp(u_radio, 0.0, 1.0) * 14.0) * (0.6 + u_cursorHaloSize * 4.5));
+    float iny  = 0.0;
+    float energia = 0.0;
+
+    int activePointers = 0;
+
+    // ── 1. PUNTEROS (LIDAR / Touch / Mouse desde PointServer - mapeopuntosmaster) ──
     for (int i = 0; i < 16; i++) {
         if (u_pointerActive[i] > 0.5) {
-            vec2 pPos = vec2(u_pointerPositions[i].x, 1.0 - u_pointerPositions[i].y);
-            pPos.y = 1.0 - pPos.y; // mantener coherencia con corrección usada en mouse
-            pPos.x *= u_resolution.x / u_resolution.y;
-            float dP = distance(aspectUV, pPos);
-            float infP = smoothstep(radius, 0.0, dP);
-            if (infP > 0.0) {
-                vec2 dirP = normalize(aspectUV - pPos);
-                // Incrementar desplazamiento por punteros (mouse/touch/LIDAR)
-                vec2 dispP = dirP * infP *0.01;
-                dispP.x /= (u_resolution.x / u_resolution.y);
-                displacement += dispP;
-            }
+            activePointers++;
+            vec2 pa = screenNormToGLPx(u_pointerPositions[i], res);
+            vec2 pb = screenNormToGLPx(u_pointerPrevPositions[i], res);
+            float wA = smoothstep(rPx, rPx * 0.15, length(frag - pa));
+            float wS = smoothstep(rPx * 1.75, 0.0, sdSeg(frag, pb, pa)) * 0.68;
+            float emp = clamp(u_empuje, 0.1, 1.5);
+            iny += emp * 0.44 * perd * (wA + wS);
+            energia = max(energia, max(wA, wS) * emp);
         }
-    }
-    
-    // Aplicar desplazamiento
-    vec2 displacedUV = uv + displacement;
-    
-    // ===== FEEDBACK LOOP: Acumular solo efectos (no la imagen base) =====
-    vec4 previousFrame = texture2D(u_feedbackTexture, uv);
-    vec4 finalColor = previousFrame * 0.92; // Decay del feedback (92% del frame anterior)
-    
-    // ===== BRILLO DEL CURSOR =====
-    if (influence > 0.0) {
-        // Tinte de color animado
-        vec3 tint = vec3(
-            0.5 + 0.5 * sin(u_time * 0.5 + dist * 10.0),
-            0.5 + 0.5 * sin(u_time * 0.7 + dist * 10.0 + 2.0),
-            0.5 + 0.5 * sin(u_time * 0.3 + dist * 10.0 + 4.0)
-        );
-        
-        // BLOOM effect en el centro
-        float centerGlow = smoothstep(0.05, 0.0, dist);
-        // Hacer los puntos del cursor mucho más brillantes
-        finalColor.rgb += tint * centerGlow * (1.2 + u_effectIntensity * 0.8) * 10.0 * u_cursorHaloStrength;
-        finalColor.a = max(finalColor.a, centerGlow * 1.0);
     }
 
-    // ===== BRILLO PARA PUNTEROS ADICIONALES =====
-    for (int i = 0; i < 16; i++) {
-        if (u_pointerActive[i] > 0.5) {
-            vec2 pPos = vec2(u_pointerPositions[i].x, 1.0 - u_pointerPositions[i].y);
-            pPos.y = 1.0 - pPos.y;
-            pPos.x *= u_resolution.x / u_resolution.y;
-            float dP = distance(aspectUV, pPos);
-            float infP = smoothstep(radius, 0.0, dP);
-            if (infP > 0.0) {
-                vec3 ptTint = vec3(
-                    0.5 + 0.5 * sin(u_time * 0.5 + dP * 10.0),
-                    0.5 + 0.5 * sin(u_time * 0.7 + dP * 10.0 + 2.0),
-                    0.5 + 0.5 * sin(u_time * 0.3 + dP * 10.0 + 4.0)
-                );
-                float centerGlowP = smoothstep(0.05, 0.0, dP);
-                // Multiplicar significativamente el brillo de los puntos (mouse + LIDAR)
-                finalColor.rgb += ptTint * centerGlowP * (1.0 + u_effectIntensity * 0.7) * 10.0 * u_cursorHaloStrength;
-                finalColor.a = max(finalColor.a, centerGlowP * 0.95)*5.;
-            }
+    // ── 2. MOUSE LOCAL DIRECTO (cuando se mueve o presiona) ────────────────
+    if (u_mouseActive > 0.5) {
+        vec2 ma = vec2(u_mouse.x, res.y - u_mouse.y);
+        vec2 mb = vec2(u_mousePrev.x, res.y - u_mousePrev.y);
+        float wA = smoothstep(rPx, rPx * 0.15, length(frag - ma));
+        float wS = smoothstep(rPx * 1.65, 0.0, sdSeg(frag, mb, ma)) * 0.60;
+        iny += u_fuerza * 0.40 * perd * (wA + wS);
+        energia = max(energia, max(wA, wS) * u_fuerza);
+    }
+
+    // ── 3. OBJETOS BUENOS CAYENDO (Copas, Botellas, Uvas) ──────────────────
+    // Cada objeto cayendo deja una estela de agua real y ondas concéntricas
+    float rObjGood = max(10.0, minDim * 0.036);
+    for (int i = 0; i < 10; i++) {
+        if (u_grapeActive[i] > 0.5) {
+            vec2 ga = screenNormToGLPx(u_grapePositions[i], res);
+            vec2 gb = screenNormToGLPx(u_grapePrevPositions[i], res);
+            float prog = clamp(u_grapeProgress[i], 0.0, 1.0);
+            float rG = rObjGood * (1.0 + prog * 0.55);
+
+            float dAct = length(frag - ga);
+            float dSeg = sdSeg(frag, gb, ga);
+
+            // Empuje del objeto desplazando el agua al caer + ondulación viva
+            float wake = smoothstep(rG, rG * 0.18, dAct);
+            float trail = smoothstep(rG * 1.35, 0.0, dSeg) * 0.55;
+            float rippleOsc = 0.65 + 0.35 * sin(u_time * 7.0 + float(i) * 1.9);
+            float capturePulse = 1.0 + prog * 1.6 * sin(u_time * 14.0 - dAct * 0.12);
+
+            float pushG = (wake * rippleOsc + trail) * (0.58 + prog * 0.65) * capturePulse;
+            iny += pushG * 0.38 * perd;
+            energia = max(energia, (wake * 0.85 + trail * 0.6) * (0.45 + prog * 0.55));
         }
     }
-    
-    // ===== ONDAS EXPANSIVAS =====
+
+    // ── 4. OBJETOS MALOS CAYENDO (Bichos) ──────────────────────────────────
+    float rObjBad = max(10.0, minDim * 0.034);
+    for (int i = 0; i < 10; i++) {
+        if (u_badActive[i] > 0.5) {
+            vec2 ba = screenNormToGLPx(u_badPositions[i], res);
+            vec2 bb = screenNormToGLPx(u_badPrevPositions[i], res);
+            float dAct = length(frag - ba);
+            float dSeg = sdSeg(frag, bb, ba);
+
+            float wakeB = smoothstep(rObjBad, rObjBad * 0.15, dAct);
+            float trailB = smoothstep(rObjBad * 1.3, 0.0, dSeg) * 0.5;
+            float oscB = 0.6 + 0.4 * cos(u_time * 9.0 + float(i) * 2.3);
+
+            // Empuje negativo/turbulento para diferenciar la firma en el agua
+            iny -= (wakeB * oscB + trailB) * 0.32 * perd;
+            energia = max(energia, (wakeB * 0.75 + trailB * 0.5) * 0.45);
+        }
+    }
+
+    // ── 5. ONDAS EXPANSIVAS (al capturar objetos o tocar en standby) ───────
     for (int i = 0; i < 5; i++) {
         if (u_waveActive[i] > 0.5) {
-            // Posición de la onda (corregir aspect ratio)
-            vec2 wavePos = u_wavePositions[i];
-            wavePos.x *= u_resolution.x / u_resolution.y;
-            
-            // Distancia a la onda
-            float waveDist = distance(aspectUV, wavePos);
-            
-            // Tiempo desde que empezó la onda
-            float waveTime = u_time - u_waveTimes[i];
-            
-            // Radio de la onda (expande con el tiempo)
-            float waveRadius = waveTime * u_waveSpeed; // Velocidad de expansión controlada
-            
-            // Grosor de la onda (un poco más visible)
-            float waveThickness = 0.04;
-            
-            // Intensidad de la onda (fade out con el tiempo)
-            float waveIntensity = smoothstep(u_waveDuration, 0.0, waveTime); // Duración controlada
-            
-            // Dibujar el anillo de la onda
-            float ring = smoothstep(waveThickness, 0.0, abs(waveDist - waveRadius));
-            
-            // Color de la onda (dorado)
-            vec3 waveColor = vec3(1.0, 0.85, 0.3);
-            
-            // Agregar la onda al buffer (más visible)
-            // Reducir brillo del anillo de las ondas para que se vea menos luminoso
-            finalColor.rgb += waveColor * ring * waveIntensity * (0.35 * u_waveForce);
-            finalColor.a = max(finalColor.a, ring * waveIntensity * (0.2 * u_waveForce));
+            vec2 wPos = screenNormToGLPx(u_wavePositions[i], res);
+            float wTime = u_time - u_waveTimes[i];
+            if (wTime >= 0.0 && wTime < u_waveDuration) {
+                float wRadPx = wTime * max(u_waveSpeed, 0.2) * minDim * 0.65;
+                float wDist = length(frag - wPos);
+                float band = max(8.0, minDim * 0.022);
+                float ring = smoothstep(band, 0.0, abs(wDist - wRadPx));
+                float fade = smoothstep(u_waveDuration, 0.0, wTime);
+                float wStrength = ring * fade * (0.45 + u_waveForce * 1.8);
+                iny += wStrength * 0.48 * perd * cos((wDist - wRadPx) * 0.15);
+                energia = max(energia, wStrength * 0.75);
+            }
         }
     }
 
-    // ===== ONDA DE EVENTO (GANASTE/PERDISTE) =====
+    // ── 6. ONDA DE EVENTO (Celebración / Fin de partida) ───────────────────
     if (u_eventActive > 0.5) {
-        vec2 eCenter = u_eventCenter;
-        eCenter.x *= u_resolution.x / u_resolution.y;
-        float eDist = distance(aspectUV, eCenter);
-        float eTime = u_time - u_eventStartTime;
-        float eRadius = eTime * 0.7; // un poco más rápida
-        float eThickness = 0.05;
-        float eIntensity = smoothstep(3.0, 0.0, eTime); // dura ~3s
-        float eRing = smoothstep(eThickness, 0.0, abs(eDist - eRadius));
-        
-        // Glow interior y exterior
-        float innerGlow = smoothstep(0.08, 0.0, eDist);
-        float outerFade = smoothstep(0.0, 1.5, eTime);
-        
-        vec3 eColor = u_eventColor;
-        float strength = u_eventStrength;
-        
-        // Anillo principal
-        // Reducir brillo del evento para que el anillo no queme la imagen
-        finalColor.rgb += eColor * eRing * eIntensity * (0.4 * strength);
-        finalColor.a = max(finalColor.a, eRing * eIntensity * (0.25 * strength));
+        vec2 eCenterPx = screenNormToGLPx(u_eventCenter, res);
+        float eTime = max(0.0, u_time - u_eventStartTime);
+        float eDist = length(frag - eCenterPx);
+        for (int kRing = 0; kRing < 3; kRing++) {
+            float delay = float(kRing) * 0.45;
+            float rt = max(0.0, eTime - delay);
+            float eRadPx = rt * minDim * 0.52;
+            float ring = smoothstep(minDim * 0.03, 0.0, abs(eDist - eRadPx));
+            float fade = smoothstep(3.5, 0.0, rt);
+            iny += ring * fade * u_eventStrength * 0.55 * perd;
+            energia = max(energia, ring * fade * 0.85 * u_eventStrength);
+        }
+    }
 
-        // Glow central más tenue
-        finalColor.rgb += eColor * innerGlow * (0.12 * strength);
+    // ── 7. BARRIDO AUTÓNOMO SUAVE (cuando no hay punteros activos) ─────────
+    if (activePointers == 0) {
+        float t = u_time * 0.55;
+        for (int i = 0; i < 12; i++) {
+            float fi   = float(i);
+            float jet  = mod(fi, 3.0);
+            float cola = floor(fi / 3.0);
+            vec2  pf   = puntoFantasma(t - cola * 0.06, jet, aspecto) * res;
+            float fade = 1.0 - cola / 4.0;
+            float w    = smoothstep(rPx * 0.9, rPx * 0.15, length(frag - pf)) * fade;
+            iny += 0.24 * perd * w;
+            energia = max(energia, w * 0.28);
+        }
     }
-    
-    // PATRÓN DE RUIDO BRILLANTE BASADO EN COMBO (MÁS SUTIL)
-    float safeCombo = clamp(u_comboLevel, 0.0, 1.0);
-    if (safeCombo > 0.1) {
-        // Crear patrón de ruido animado (más lento)
-        vec2 noiseCoord = uv * 2.5 + vec2(u_time * 0.15, u_time * 0.12);
-        float noisePattern = fbm(noiseCoord);
-        
-        // Segundo layer de ruido para más complejidad
-        vec2 noiseCoord2 = uv * 4.0 - vec2(u_time * 0.2, u_time * 0.18);
-        float noisePattern2 = fbm(noiseCoord2);
-        
-        // Combinar patrones
-        float combinedNoise = (noisePattern + noisePattern2 * 0.5) / 1.5;
-        
-        // Color del brillo basado en combo (de morado a dorado)
-        vec3 glowColor = mix(
-            vec3(0.6, 0.3, 1.0),  // Morado
-            vec3(1.0, 0.8, 0.2),  // Dorado
-            safeCombo
-        );
-        
-        // Aplicar brillo con el patrón de ruido (EXTREMADAMENTE SUTIL)
-        float glowIntensity = combinedNoise * safeCombo * 0.08; // Reducido de 0.2 a 0.08
-        finalColor.rgb += glowColor * glowIntensity;
-        
-        // Pulso adicional (EXTREMADAMENTE SUTIL)
-        float pulse = 0.5 + 0.5 * sin(u_time * 2.5);
-        finalColor.rgb += glowColor * safeCombo * 0.02 * pulse; // Reducido de 0.05 a 0.02
-        finalColor.a = max(finalColor.a, safeCombo * 0.15); // Alpha muy reducido
-    }
-    
-    // VIGNETTE DINÁMICO (oscurece los bordes cuando tienes pocas vidas)
-    if (u_vignetteIntensity > 0.01) {
-        vec2 center = uv - 0.5;
-        float vignette = length(center);
-        vignette = smoothstep(0.3, 1.2, vignette);
-        finalColor.rgb *= 1.0 - (vignette * u_vignetteIntensity * 0.7);
-        
-        // Tinte rojo en el vignette
-        finalColor.r += vignette * u_vignetteIntensity * 0.2;
-    }
-    
-    // Mezclar con partículas (aditivo para efecto glow)
-    vec4 particlesColor = texture2D(u_particlesTexture, uv);
-    finalColor.rgb += particlesColor.rgb * particlesColor.a * 0.5;
-    
-    // Mezclar con juego
-    vec4 gameColor = texture2D(u_gameTexture, uv);
-    finalColor = mix(finalColor, gameColor, gameColor.a);
-    
-    gl_FragColor = finalColor;
+
+    // ── Ecuación de onda discreta (agua-nikos: laplaciano + condición CFL) ─
+    float a1  = c.x - 0.5;                          // altura (t-1)
+    float a0  = c.y - 0.5;                          // altura (t-2)
+    float lap = (s1 + s2 + s3 + s4) - 4.0 * c.x;    // laplaciano de 4 vecinos
+    float c2  = 0.05 + clamp(u_oleaje, 0.0, 1.0) * 0.43; // c^2 <= 0.48 (CFL estable)
+    float a   = (2.0 * a1 - a0 + c2 * lap) * k;
+    a += iny;
+    if (!(a == a)) a = 0.0;
+    a = clamp(a, -0.48, 0.48);
+
+    // Energía (espuma): decae suavemente y sube con las inyecciones
+    float en = clamp(max(c.z * 0.962, energia), 0.0, 1.5);
+
+    gl_FragColor = vec4(a + 0.5, c.x, en, 1.0);
 }

@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "version": "1.0.0",
+    "version": "2.0.0",
     "created": "2024-01-01",
-    "lastModified": "2025-11-05",
-    "description": "Configuraciones del panel de control para RGB Madness"
+    "lastModified": "2026-10-20",
+    "description": "Configuraciones del panel de control para Deli & Wine Water Shader Edition"
   },
   "gameSettings": {
     "fallSpeed": {
@@ -118,10 +118,10 @@
     ],
     "backgrounds": [
       "img/background/fondo1.jpg",
-      "img/background/fondo5.jpg",
-      "/img/custom/backgrounds/1762376218202-a_dramatic_high-contrast_image_of_red_and_white_wi.png",
-      "/img/custom/backgrounds/1762376236609-food_photography_of_desserts_and_chocolate_bonbons.png",
-      "/img/custom/backgrounds/1762376254308-gourmet_cold_cuts_and_charcuterie_touches_of_trans.png"
+      "img/background/fondo2.jpg",
+      "img/background/fondo3.jpg",
+      "img/background/fondo4.jpg",
+      "img/background/fondo5.jpg"
     ]
   },
   "panelSettings": {
@@ -189,15 +189,15 @@
   },
   "winLoseSettings": {
     "textSize": {
-      "current": 0.043,
+      "current": 0.12,
       "default": 0.15
     },
     "winText": {
-      "current": "Felicitaciones!",
+      "current": "¡Felicitaciones!",
       "default": "GANASTE"
     },
     "loseText": {
-      "current": "Segui participando",
+      "current": "¡Seguí participando!",
       "default": "PERDISTE"
     },
     "scoreTextSize": {

@@ -100,8 +100,9 @@ let particulasBuffer;
 let feedbackBuffer;
 
 // Shaders
-let feedbackShader;      // Shader para efectos de feedback/cursor
-let compositeShader;     // Shader para composición final (texturas + feedback + ondas)
+let feedbackShader;      // Shader multibuffer de agua (agua-nikos + mapeopuntosmaster)
+let compositeShader;     // Shader de composición final (refracción de agua + fondos + halos + puntos)
+let celebrationShader;   // Shader para círculos explosivos de victoria/derrota
 let shadersLoaded = false;
 
 // Sistema de efectos especiales
@@ -139,9 +140,13 @@ function preload() {
   // Cargar shaders
   feedbackShader = loadShader('sh/feedback.vert', 'sh/feedback.frag');
   compositeShader = loadShader('sh/composite.vert', 'sh/composite.frag');
+  celebrationShader = (typeof window !== 'undefined' && window.celebrationShader)
+    ? window.celebrationShader
+    : loadShader('sh/celebration.vert', 'sh/celebration.frag');
+  if (typeof window !== 'undefined') {
+    window.celebrationShader = celebrationShader;
+  }
   
-  // Medidor/trofeo: se cargan desde AssetManager.initialLoad(); instancias se crean en setup()
-
   // Registrar assets cargados en AssetManager para centralizar acceso
   if (typeof window !== 'undefined' && window.AssetManager) {
     window.AssetManager.registerAssets({
@@ -162,11 +167,8 @@ function setup() {
   backgroundTexturesLoaded = true;
   shadersLoaded = true;
   
-  // NO configurar fuente en WEBGL - causa errores
-  // La fuente se configura en los buffers 2D individuales
-  
   // Crear buffers
-  fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback simple
+  fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback
   fondoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
   
   juegoBuffer = createGraphics(width, height);
@@ -177,8 +179,6 @@ function setup() {
   
   feedbackBuffer = createGraphics(width, height, WEBGL); // Composición final
   feedbackBuffer.canvas.getContext('webgl', { willReadFrequently: true });
-  
-
   
   // Inicializar sistemas
   Pserver = new PointServer();
@@ -196,7 +196,7 @@ function setup() {
       window.LM._queue.length = 0;
     }
   }
-  // PNT = new PlayerPntsManager();
+
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
   dynamicBackground = new DynamicBackground();
@@ -204,9 +204,8 @@ function setup() {
   // Crear e inicializar medidores (usar assets centralizados)
   medidorIndicator = new MedidorIndicator(); // cooperativo
   // Configurar medidores competitivos
-  // Bajar medidores para mejorar la legibilidad del HUD competitivo
-  medidorIndicatorLeft = new MedidorIndicator({ position: { x: 40, y: 260 } });
-  medidorIndicatorRight = new MedidorIndicator({ position: { x: width - 140 - 40, y: 260 } });
+  medidorIndicatorLeft = new MedidorIndicator({ position: { x: 40, y: 245 } });
+  medidorIndicatorRight = new MedidorIndicator({ position: { x: width - 140 - 40, y: 245 } });
 
   // Pantalla de selección y ranking
   selectionScreen = new ModeSelectionScreen();
@@ -244,17 +243,16 @@ function draw() {
     }
   }
   
-  // Actualizar ondas expansivas (limpiar ondas viejas) - optimizado para ejecutar menos frecuentemente
+  // Actualizar ondas expansivas (limpiar ondas viejas)
   let currentTime = millis() / 1000.0;
-  if (frameCount % 5 === 0) { // Solo cada 5 frames
+  if (frameCount % 5 === 0) {
     waves = waves.filter(wave => {
       let waveAge = currentTime - wave.startTime;
-      return waveAge < 2.0; // Eliminar ondas que tienen más de 2 segundos
+      return waveAge < 2.5;
     });
   }
-  // Animación sutil en standby (ondas suaves): mover a dibujarPantallaStandBy
 
-  // Pipeline de shaders centralizado
+  // Pipeline de shaders centralizado (Multibuffer de Agua + Composición)
   if (typeof window !== 'undefined' && typeof window.processShaders === 'function') {
     window.processShaders();
   }
@@ -330,7 +328,7 @@ function draw() {
   
   imageMode(CORNER);
   
-  // Dibujar fondo con shader (si está habilitado). Si está oculto, dibujamos un plano negro
+  // Dibujar fondo con shader multibuffer de agua (si está habilitado)
   if (!(typeof window !== 'undefined' && window.hideBackground)) {
     image(feedbackBuffer, 0, 0);
   } else {
@@ -342,8 +340,12 @@ function draw() {
   // Dibujar juego encima
   image(juegoBuffer, 0, 0);
   
-  // Dibujar assets SIN feedback (después del shader)
-  if (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) {
+  // Dibujar assets SIN feedback (después del shader, cuando estamos jugando)
+  if (
+    (pantallaActiva === 1 || pantallaActiva === 2) &&
+    typeof wineGlassSystem !== 'undefined' &&
+    wineGlassSystem
+  ) {
     wineGlassSystem.displayAssetsOnly();
   }
   
@@ -351,7 +353,6 @@ function draw() {
   if (typeof window !== 'undefined' && window.collisionArea && window.collisionArea.enabled && window.collisionArea.showOverlay) {
     const ca = window.collisionArea;
     push();
-    // Rectángulo VERDE semitransparente
     fill(0, 255, 0, 60);
     stroke(0, 255, 0, 200);
     strokeWeight(2);
@@ -361,34 +362,27 @@ function draw() {
   if ((typeof window !== 'undefined' && window.showLidarPoints) || (typeof window === 'undefined' && showLidarPoints)) {
     Pserver.displayCirclesOnly();
   }
-  
 
   pop();
 
-  // Agregar rastros para cada punto del servidor - optimizado
-  if (frameCount % 3 === 0) { // Solo cada 3 frames
+  // Agregar ondas suaves para cada punto activo
+  if (frameCount % 3 === 0) {
     const allPoints = Pserver.getAllPoints();
     for (let i = 0; i < allPoints.length; i++) {
       const p = allPoints[i];
-     
-      
-      // Añadir ondas al fondo cuando hay movimiento significativo
       if (frameCount % 30 === 0) {
         dynamicBackground.addRipple(p.x, p.y);
       }
     }
   }
-
-  
-
 }
 
 // ====== Pantallas específicas ======
 function dibujarPantallaStandBy(ctx) {
-  // Animación sutil en standby: ondas suaves ocasionales
-  if (frameCount % 60 === 0) {
-    const wx = random(width * 0.25, width * 0.75);
-    const wy = random(height * 0.3, height * 0.7);
+  // Animación sutil en standby: gotas suaves en el agua
+  if (frameCount % 55 === 0) {
+    const wx = random(width * 0.2, width * 0.8);
+    const wy = random(height * 0.25, height * 0.75);
     createWave(wx, wy);
     dynamicBackground.addRipple(wx, wy);
   }
@@ -450,6 +444,9 @@ function dibujarPantallaStandBy(ctx) {
 }
 
 function dibujarPantallaTutorial(ctx) {
+  if (Pserver) {
+    Pserver.update();
+  }
   // Mostrar el tutorial
   tutorialScreen.display(ctx);
   
@@ -465,7 +462,6 @@ function dibujarPantallaTutorial(ctx) {
 
 function dibujarPantallaColaborativa(ctx) {
   wineGlassSystem.update();
-  // NO dibujar assets aquí - solo halos en el shader
   wineGlassSystem.displayHalosOnly(ctx);
   Pserver.update();
   if (frameCount % 2 === 0) {
@@ -482,6 +478,7 @@ function dibujarPantallaColaborativa(ctx) {
         scoreSystem.addScore(-bad.penalty, bad.x, bad.y);
         scoreSystem.loseLife();
         dynamicBackground.addRipple(bad.x, bad.y);
+        createWave(bad.x, bad.y);
         scoreSystem.resetCombo();
         targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
         shakeAmount = 15;
@@ -509,9 +506,9 @@ function dibujarPantallaColaborativa(ctx) {
     ctx.textAlign(LEFT, TOP);
     ctx.textSize(20);
     ctx.fill(100, 255, 100);
-    ctx.text(`FPS: ${fps.toFixed(1)}`, 40, 100);
+    ctx.text(`FPS: ${fps.toFixed(1)}`, 40, 110);
     ctx.fill(255, 180, 70);
-    ctx.text(`Puntos (count): ${pointsCount}`, 40, 125);
+    ctx.text(`Puntos (count): ${pointsCount}`, 40, 135);
     ctx.pop();
   }
 }
@@ -520,7 +517,6 @@ function dibujarPantallaCompetitiva(ctx) {
   if (!scoreSystemLeft) scoreSystemLeft = new ScoreSystem();
   if (!scoreSystemRight) scoreSystemRight = new ScoreSystem();
   wineGlassSystem.update();
-  // NO dibujar assets aquí - solo halos en el shader
   wineGlassSystem.displayHalosOnly(ctx);
   Pserver.update();
   if (frameCount % 2 === 0) {
@@ -537,6 +533,7 @@ function dibujarPantallaCompetitiva(ctx) {
       const target = bad.x < width / 2 ? scoreSystemLeft : scoreSystemRight;
       if (!target.gameOver && !target.win) { target.addScore(-bad.penalty, bad.x, bad.y); target.loseLife(); target.resetCombo(); }
       dynamicBackground.addRipple(bad.x, bad.y);
+      createWave(bad.x, bad.y);
       targetEffectIntensity = min(1.0, targetEffectIntensity + 0.5);
       shakeAmount = 15;
     }
@@ -566,7 +563,7 @@ function dibujarPantallaCompetitiva(ctx) {
   // Overlays por lado (GANASTE/PERDISTE) en competitivo
   drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
   drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
-  // HUD básico (etiquetas, score y corazones)
+  // HUD con diseño unificado
   displayCompetitiveHUD(ctx);
   medidorIndicatorLeft.update(scoreSystemLeft.comboCount, CONFIG.score.winComboThreshold);
   medidorIndicatorLeft.display(ctx);
@@ -587,21 +584,22 @@ function dibujarPantallaCompetitiva(ctx) {
 }
 
 function dibujarPantallaGameover(ctx) {
+  if (Pserver) {
+    Pserver.update();
+  }
   // Mostrar HUD/animaciones existentes
   if (gameMode === 'competitive') {
-    // Asegurar que las animaciones de victoria/derrota y partículas se ACTUALICEN y se dibujen
-    // En gameover competitivo: actualizar sistemas pero evitar sus textos centrados
     if (scoreSystemLeft) { scoreSystemLeft.update(); }
     if (scoreSystemRight) { scoreSystemRight.update(); }
-    // Mostrar overlays laterales con el resultado por equipo
+    applyCelebrationEffects('left', leftCelebration);
+    applyCelebrationEffects('right', rightCelebration);
     drawSideCelebrationOverlay(ctx, 'left', leftCelebration);
     drawSideCelebrationOverlay(ctx, 'right', rightCelebration);
+    displayCompetitiveHUD(ctx);
   } else if (scoreSystem) {
-    // En estado final, seguir actualizando para que las partículas no se congelen
     scoreSystem.update();
     scoreSystem.display(ctx);
   }
-  // Retorno automático al standby si corresponde
   returnToStandbyIfDone();
 }
 
@@ -614,25 +612,22 @@ function keyPressed() {
 
 // Touch event handlers for p5.js
 function touchStarted() {
-  // Reiniciar el juego si está en estado de Game Over o Victoria
   if (scoreSystem && (scoreSystem.gameOver || scoreSystem.win)) {
     resetGame();
   }
-  return false; // Prevent default
+  return false;
 }
 
 function touchMoved() {
-  return false; // Prevent default
+  return false;
 }
 
 function touchEnded() {
-  return false; // Prevent default
+  return false;
 }
 
 function mousePressed() {
-  // Reiniciar el juego si está en estado de Game Over
   if (gameState === 'standby') {
-    // Verificar que selectionScreen esté inicializado
     if (!selectionScreen) {
       selectionScreen = new ModeSelectionScreen();
       selectionScreen.setup();
@@ -643,12 +638,10 @@ function mousePressed() {
         gameMode = selected;
         rankingSaved = false;
         
-        // Si es modo competitivo, mostrar tutorial primero
         if (gameMode === 'competitive') {
           gameState = 'tutorial';
           tutorialScreen.start();
         } else {
-          // Modo cooperativo inicia directamente
           gameState = 'playing';
           scoreSystem = new ScoreSystem();
         }
@@ -672,7 +665,6 @@ function mousePressed() {
 }
 
 function resetGame() {
-  // Reiniciar todos los sistemas sin recargar assets
   Pserver = new PointServer();
   if (typeof window !== 'undefined') {
     window.Pserver = Pserver;
@@ -680,23 +672,19 @@ function resetGame() {
   wineGlassSystem = new WineGlassSystem();
   particleSystem = new ParticleSystem();
   
-  // Reiniciar sistemas existentes en lugar de crear nuevos
   if (scoreSystem) {
     scoreSystem.reset();
   } else {
     scoreSystem = new ScoreSystem();
   }
 
-  // Reiniciar sistemas competitivos
   if (scoreSystemLeft) scoreSystemLeft.reset();
   if (scoreSystemRight) scoreSystemRight.reset();
   
-  // Mantener el fondo existente si ya está inicializado
   if (!dynamicBackground) {
     dynamicBackground = new DynamicBackground();
   }
   
-  // Solo crear nueva instancia del medidor si es necesario
   if (!medidorIndicator) {
     medidorIndicator = new MedidorIndicator();
   }
@@ -710,22 +698,29 @@ function createWave(x, y) {
     active: true
   };
   waves.push(wave);
-  // Mantener referencia en window para background.js
   if (typeof window !== 'undefined') window.waves = waves;
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  if (juegoBuffer) juegoBuffer.resizeCanvas(windowWidth, windowHeight);
+  if (particulasBuffer) particulasBuffer.resizeCanvas(windowWidth, windowHeight);
+  if (fondoBuffer) fondoBuffer.resizeCanvas(windowWidth, windowHeight);
+  if (feedbackBuffer) feedbackBuffer.resizeCanvas(windowWidth, windowHeight);
+  if (selectionScreen && typeof selectionScreen.updateButtonLayout === 'function') {
+    selectionScreen.updateButtonLayout();
+  }
+  if (medidorIndicatorRight) {
+    medidorIndicatorRight.position.x = width - 140 - 40;
+  }
 }
 
-// Función para pre-escalar imágenes y optimizar rendimiento
 function preScaleImages() {
   if (typeof window !== 'undefined' && window.AssetManager) {
     window.AssetManager.preScaleImages();
   }
 }
 
-// Función para obtener imagen escalada más cercana
 function getScaledImage(imageArray, index, targetSize, isBad = false) {
   if (typeof window !== 'undefined' && window.AssetManager) {
     return window.AssetManager.getScaledImage(imageArray, index, targetSize, isBad);
@@ -733,7 +728,6 @@ function getScaledImage(imageArray, index, targetSize, isBad = false) {
   return null;
 }
 
-// Función para obtener imagen de fondo escalada
 function getScaledBackgroundImage(index) {
   if (typeof window !== 'undefined' && window.AssetManager) {
     return window.AssetManager.getScaledBackgroundImage(index);
@@ -741,46 +735,105 @@ function getScaledBackgroundImage(index) {
   return null;
 }
 
-// Nota: la función global window.ensureAssetsReady la expone AssetManager.
-// Evitamos redeclararla aquí para no crear envolturas circulares que puedan
-// provocar recursión accidental y desbordes de pila.
-
-// HUD para competitivo (dos equipos)
+// HUD para competitivo (dos equipos) con estilo tipográfico unificado Deli & Wine
 function displayCompetitiveHUD(ctx = window) {
   ctx.push();
-  // Solo HUD: etiquetas, scores y corazones. Sin overlays de GANASTE/PERDISTE ni trofeos.
+  ctx.noStroke();
+  ctx.rectMode(CORNER);
+
+  const cardW = Math.min(340, width * 0.24);
+  const cardH = 195;
+  const padX = 28;
+  const padY = 24;
+
+  // --- TARJETA EQUIPO IZQUIERDA ---
+  ctx.fill(18, 5, 14, 185);
+  ctx.stroke(255, 215, 106, 110);
+  ctx.strokeWeight(1.8);
+  ctx.rect(padX, padY, cardW, cardH, 16);
+
+  ctx.stroke(255, 215, 106, 180);
+  ctx.strokeWeight(2.5);
+  ctx.line(padX + 18, padY + 62, padX + cardW - 18, padY + 62);
   ctx.noStroke();
 
-  // Izquierda
   ctx.textAlign(LEFT, TOP);
-  ctx.fill(255);
-  ctx.textSize(28);
-  ctx.text('Equipo Izquierda', 40, 30);
+  ctx.textFont('Cinzel, Georgia, serif');
+  ctx.textStyle(BOLD);
+  ctx.textSize(22);
+  ctx.fill(0, 0, 0, 180);
+  ctx.text('EQUIPO IZQUIERDA', padX + 20, padY + 20);
+  ctx.fill(255, 223, 128);
+  ctx.text('EQUIPO IZQUIERDA', padX + 18, padY + 18);
+
   const leftScoreVal = scoreSystemLeft ? Math.floor(scoreSystemLeft.displayScore || scoreSystemLeft.score) : 0;
   const leftLivesVal = scoreSystemLeft ? scoreSystemLeft.lives : 0;
-  ctx.text(`Score: ${leftScoreVal}`, 40, 80);
+
+  ctx.textFont('Montserrat, sans-serif');
+  ctx.textStyle(BOLD);
+  ctx.textSize(14);
+  ctx.fill(220, 195, 175, 210);
+  ctx.text('PUNTOS', padX + 18, padY + 74);
+
+  ctx.textFont('Cinzel, Georgia, serif');
+  ctx.textSize(36);
+  ctx.fill(0, 0, 0, 180);
+  ctx.text(`${leftScoreVal}`, padX + 20, padY + 92);
+  ctx.fill(255, 250, 240);
+  ctx.text(`${leftScoreVal}`, padX + 18, padY + 90);
+
   // Corazones (izquierda)
-  const lifeSize = CONFIG.lives.size;
-  const lifeSpacing = CONFIG.lives.spacing + 6; // más separación
-  const leftHeartStartX = 40 + lifeSize + 16; // margen extra
-  const heartsY = 200; // bajar corazones para que no choquen con medidores
+  const lifeSize = Math.min(28, CONFIG.lives.size * 0.85);
+  const lifeSpacing = lifeSize * 1.65;
+  const leftHeartStartX = padX + 34;
+  const heartsY = padY + 158;
   if (scoreSystemLeft) {
     for (let i = 0; i < leftLivesVal; i++) {
       scoreSystemLeft.drawHeart(leftHeartStartX + i * lifeSpacing, heartsY, lifeSize, ctx);
     }
   }
 
-  // Derecha
+  // --- TARJETA EQUIPO DERECHA ---
+  const rightCardX = width - padX - cardW;
+  ctx.fill(18, 5, 14, 185);
+  ctx.stroke(255, 215, 106, 110);
+  ctx.strokeWeight(1.8);
+  ctx.rect(rightCardX, padY, cardW, cardH, 16);
+
+  ctx.stroke(255, 215, 106, 180);
+  ctx.strokeWeight(2.5);
+  ctx.line(rightCardX + 18, padY + 62, rightCardX + cardW - 18, padY + 62);
+  ctx.noStroke();
+
   ctx.textAlign(RIGHT, TOP);
-  ctx.text('Equipo Derecha', width - 40, 30);
+  ctx.textFont('Cinzel, Georgia, serif');
+  ctx.textStyle(BOLD);
+  ctx.textSize(22);
+  ctx.fill(0, 0, 0, 180);
+  ctx.text('EQUIPO DERECHA', width - padX - 16, padY + 20);
+  ctx.fill(255, 223, 128);
+  ctx.text('EQUIPO DERECHA', width - padX - 18, padY + 18);
+
   const rightScoreVal = scoreSystemRight ? Math.floor(scoreSystemRight.displayScore || scoreSystemRight.score) : 0;
   const rightLivesVal = scoreSystemRight ? scoreSystemRight.lives : 0;
-  ctx.text(`Score: ${rightScoreVal}`, width - 40, 80);
+
+  ctx.textFont('Montserrat, sans-serif');
+  ctx.textStyle(BOLD);
+  ctx.textSize(14);
+  ctx.fill(220, 195, 175, 210);
+  ctx.text('PUNTOS', width - padX - 18, padY + 74);
+
+  ctx.textFont('Cinzel, Georgia, serif');
+  ctx.textSize(36);
+  ctx.fill(0, 0, 0, 180);
+  ctx.text(`${rightScoreVal}`, width - padX - 16, padY + 92);
+  ctx.fill(255, 250, 240);
+  ctx.text(`${rightScoreVal}`, width - padX - 18, padY + 90);
+
   // Corazones (derecha)
-  const rightHeartStartX = width - 40 - lifeSize - 16; // margen extra
+  const rightHeartStartX = width - padX - 34;
   if (scoreSystemRight) {
     for (let i = 0; i < rightLivesVal; i++) {
-      // Dibujar desde la derecha hacia la izquierda
       const x = rightHeartStartX - i * lifeSpacing;
       scoreSystemRight.drawHeart(x, heartsY, lifeSize, ctx);
     }
@@ -789,25 +842,22 @@ function displayCompetitiveHUD(ctx = window) {
   ctx.pop();
 }
 
-// Efectos de celebración: distorsiones del shader (ondas) + explosiones de partículas
+// Efectos de celebración: distorsiones del shader de agua (ondas) + pulso de evento
 function applyCelebrationEffects(side, celebration) {
   if (!celebration) return;
   const now = millis();
   const elapsed = now - celebration.start;
   if (elapsed > celebration.duration) return;
 
-  // Ajuste sutil de intensidad de feedback, sin ondas ni explosiones
   targetEffectIntensity = min(1.0, targetEffectIntensity + (celebration.type === 'win' ? 0.03 : 0.02));
 
-  // Disparar una onda de evento en el shader (una sola vez por celebración)
+  let cx = 0.5, cy = 0.5;
+  if (typeof gameMode !== 'undefined' && gameMode === 'competitive') {
+    cx = side === 'left' ? 0.25 : 0.75;
+    cy = 0.5;
+  }
   if (!celebration._rippleTriggered) {
     const isWin = celebration.type === 'win';
-    // Centro normalizado según modo/side
-    let cx = 0.5, cy = 0.5;
-    if (typeof gameMode !== 'undefined' && gameMode === 'competitive') {
-      cx = side === 'left' ? 0.25 : 0.75;
-      cy = 0.5;
-    }
     const color = isWin ? [1.0, 0.85, 0.2] : [1.0, 0.25, 0.25];
     const strength = isWin ? 1.0 : 0.9;
     if (typeof window !== 'undefined' && window.eventRipple) {
@@ -818,7 +868,10 @@ function applyCelebrationEffects(side, celebration) {
       window.eventRipple.color = color;
       window.eventRipple.strength = strength;
     }
+    createWave(cx * width, cy * height);
     celebration._rippleTriggered = true;
+  } else if (frameCount % 22 === 0) {
+    createWave(cx * width + random(-80, 80), cy * height + random(-60, 60));
   }
 }
 
@@ -826,7 +879,6 @@ function applyCelebrationEffects(side, celebration) {
 function drawSideCelebrationOverlay(ctx, side, celebration) {
   if (!celebration) return;
   
-  // Crear instancia de EndAnimation si no existe
   if (!celebration._endAnimation) {
     const leftBound = side === 'left' ? 0 : width / 2;
     celebration._endAnimation = new EndAnimation({
@@ -839,7 +891,6 @@ function drawSideCelebrationOverlay(ctx, side, celebration) {
     });
   }
   
-  // Actualizar y mostrar la animación
   celebration._endAnimation.update();
   celebration._endAnimation.display(ctx);
 }
@@ -850,12 +901,10 @@ function returnToStandbyIfDone() {
   const elapsed = millis() - gameEndTime;
   if (elapsed < gameEndDelay) return;
 
-  // Limpiar estado de celebración y reiniciar sistemas
   leftCelebration = null;
   rightCelebration = null;
   gameEndTime = null;
 
-  // Apagar onda de evento
   if (typeof window !== 'undefined' && window.eventRipple) {
     window.eventRipple.active = false;
   }
@@ -868,4 +917,3 @@ function returnToStandbyIfDone() {
   selectionScreen.setup();
   if (tutorialScreen) tutorialScreen.reset();
 }
-

@@ -1,51 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mega Lidar Game</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Deli & Wine · Interactive Experience</title>
+    <!-- Tipografía unificada Deli & Wine (Cinzel & Montserrat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20">
     <script src="js/p5.min2.js"></script>
     <!-- AssetManager centralizado para imágenes y escalado -->
-    <script src="js/assetManager.js?v=14"></script>
-    <script src="js/config.js?v=14"></script>
-    <script src="js/pointserver.js?v=14"></script>
-    <script src="js/particles.js?v=14"></script>
-    <script src="js/background.js?v=14"></script>
-    <script src="js/scoreeffect.js?v=14"></script>
+    <script src="js/assetManager.js?v=20"></script>
+    <script src="js/config.js?v=20"></script>
+    <script src="js/pointserver.js?v=20"></script>
+    <script src="js/particles.js?v=20"></script>
+    <script src="js/background.js?v=20"></script>
+    <script src="js/scoreeffect.js?v=20"></script>
     <!-- Animación unificada de fin -->
-    <script src="js/endanimation.js?v=1"></script>
-    <script src="js/wineglasses.js?v=14"></script>
-    <script src="js/medidor.js?v=14"></script>
-    <script src="js/gamestate.js?v=14"></script>
-    <script src="js/tutorialscreen.js?v=1"></script>
-    <script src="js/sketch.js?v=15"></script>
-    <script src="js/controlpanel.js?v=16"></script>
-    <script src="js/customButton.js?v=1"></script>
+    <script src="js/endanimation.js?v=20"></script>
+    <script src="js/wineglasses.js?v=20"></script>
+    <script src="js/medidor.js?v=20"></script>
+    <script src="js/gamestate.js?v=20"></script>
+    <script src="js/tutorialscreen.js?v=20"></script>
+    <script src="js/sketch.js?v=20"></script>
+    <script src="js/controlpanel.js?v=20"></script>
+    <script src="js/customButton.js?v=20"></script>
     <script>
-        // Forzar recarga sin caché
-        console.log('Forzando recarga de scripts v16 - ' + new Date().toISOString());
-        
-        // Limpiar caché de localStorage si existe
+        console.log('Deli & Wine Water Shader Edition v20 - ' + new Date().toISOString());
         try {
             localStorage.clear();
             sessionStorage.clear();
-            
-            // Forzar recarga completa si es necesario
-            if (location.href.indexOf('nocache') === -1) {
-                const separator = location.href.indexOf('?') !== -1 ? '&' : '?';
-                // window.location.href = location.href + separator + 'nocache=' + new Date().getTime();
-            }
         } catch (e) {
             console.log('No se pudo limpiar cache');
         }
     </script>
 </head>
 <body>
-    <!-- Pantalla de selección de modo (HTML/CSS) -->
+    <!-- Pantalla de selección de modo (HTML/CSS): Logo protagonista arriba + título unificado -->
     <div id="modeSelectionOverlay" class="mode-selection-overlay">
-        <h1 class="mode-title">Compite con alguien para ver quien hace mas puntos!</h1>
-        <img src="img/logo/logo.png" alt="Deli & Wine Logo" class="mode-logo">
+        <div class="mode-logo-wrapper">
+            <img src="img/logo/logo.png" alt="Deli & Wine Logo" class="mode-logo">
+        </div>
+        <div class="mode-title-card">
+            <span class="mode-kicker">✦ EXPERIENCIA INTERACTIVA DE VENDIMIA ✦</span>
+            <h1 class="mode-title">¡COMPITE CON ALGUIEN PARA VER QUIÉN HACE MÁS PUNTOS!</h1>
+            <div class="mode-divider"><span>◆</span></div>
+        </div>
     </div>
     
     <!-- Panel de Control Oculto -->
@@ -202,8 +203,6 @@
                 </div>
             </div>
             
-            <!-- Métricas removidas del tab de Controles: ahora se muestran en STATS -->
-            
             <!-- Botón de Guardar Cambios -->
             <div class="save-section">
                 <button class="save-changes-btn" id="saveChangesBtn">
@@ -296,10 +295,10 @@
             <div class="control-group">
                 <label for="winLoseTextSizeSlider">
                     Tamaño de Textos (GANASTE/PERDISTE)
-                    <span class="value-display" id="winLoseTextSizeValue">0.15</span>
+                    <span class="value-display" id="winLoseTextSizeValue">0.12</span>
                 </label>
-                <input type="range" id="winLoseTextSizeSlider" min="0.005" max="0.30" step="0.001" value="0.15">
-                <div class="help-text">Tamaño relativo a la altura de la pantalla (0.15 = 15% de la altura)</div>
+                <input type="range" id="winLoseTextSizeSlider" min="0.005" max="0.30" step="0.001" value="0.12">
+                <div class="help-text">Tamaño relativo a la altura de la pantalla (0.12 = 12% de la altura)</div>
             </div>
 
             <!-- Textos personalizados -->
@@ -307,16 +306,16 @@
                 <label for="winTextInput">
                     Texto de Victoria
                 </label>
-                <input type="text" id="winTextInput" value="GANASTE" maxlength="20" style="width:100%;padding:8px;font-size:16px;">
-                <div class="help-text">Texto que aparece cuando ganas (máx. 20 caracteres)</div>
+                <input type="text" id="winTextInput" value="¡FELICITACIONES!" maxlength="24" style="width:100%;padding:8px;font-size:16px;">
+                <div class="help-text">Texto que aparece cuando ganas</div>
             </div>
 
             <div class="control-group">
                 <label for="loseTextInput">
                     Texto de Derrota
                 </label>
-                <input type="text" id="loseTextInput" value="PERDISTE" maxlength="20" style="width:100%;padding:8px;font-size:16px;">
-                <div class="help-text">Texto que aparece cuando pierdes (máx. 20 caracteres)</div>
+                <input type="text" id="loseTextInput" value="¡SEGUÍ PARTICIPANDO!" maxlength="24" style="width:100%;padding:8px;font-size:16px;">
+                <div class="help-text">Texto que aparece cuando pierdes</div>
             </div>
 
             <!-- Combo para ganar (movido desde Controles) -->
@@ -362,9 +361,8 @@
             </div>
         </div>
         
-        <!-- Pestaña de Assets (anteriormente Galería) -->
+        <!-- Pestaña de Assets -->
         <div class="tab-content" id="assets-tab">
-            <!-- Botón para agregar nuevos assets -->
             <div class="add-asset-section">
                 <button class="add-asset-btn" id="addAssetBtn">
                     <span class="plus-icon">+</span>
@@ -380,28 +378,19 @@
             </div>
             
             <div class="gallery-content">
-                <!-- Sección de Objetos -->
                 <div class="gallery-section" id="objects-gallery">
                     <h3>🍷 Objetos del Juego</h3>
-                    <div class="current-assets-grid" id="currentObjectsGrid">
-                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
-                    </div>
+                    <div class="current-assets-grid" id="currentObjectsGrid"></div>
                 </div>
                 
-                <!-- Sección de Personajes Malos -->
                 <div class="gallery-section" id="badItems-gallery">
                     <h3>👾 Personajes Malos</h3>
-                    <div class="current-assets-grid" id="currentBadItemsGrid">
-                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
-                    </div>
+                    <div class="current-assets-grid" id="currentBadItemsGrid"></div>
                 </div>
                 
-                <!-- Sección de Fondos -->
                 <div class="gallery-section" id="backgrounds-gallery">
                     <h3>🌄 Fondos</h3>
-                    <div class="current-assets-grid" id="currentBackgroundsGrid">
-                        <!-- Los assets actuales se cargarán aquí dinámicamente -->
-                    </div>
+                    <div class="current-assets-grid" id="currentBackgroundsGrid"></div>
                 </div>
             </div>
         </div>
@@ -427,11 +416,8 @@
         
         <!-- Pestaña de Collision -->
         <div class="tab-content" id="collision-tab">
-            <!-- Área de colisión: limitar cálculo de colisiones a un rectángulo configurable -->
             <div class="control-group" id="collisionAreaControls">
-                <label>
-                    Área de colisión
-                </label>
+                <label>Área de colisión</label>
                 <label class="toggle" style="display:flex;align-items:center;gap:8px;">
                     <input type="checkbox" id="collisionAreaEnabled">
                     Habilitar área de colisión (limitar chequeo)

@@ -1,309 +1,366 @@
-precision mediump float;
+precision highp float;
 
-// Uniforms
-uniform sampler2D u_backgroundTexture1;    // Textura de fondo 1
-uniform sampler2D u_backgroundTexture2;    // Textura de fondo 2
-uniform float u_backgroundBlend;           // Blend entre texturas (0-1)
-uniform float u_backgroundRotation;        // Rotación de texturas
-uniform sampler2D u_feedbackTexture;       // Feedback del otro shader
-uniform vec2 u_resolution;
+// ============================================================================
+//  VINOGAME · OUTPUT (Agua Nikos + MapeoPuntosMaster + Fondos + Halos)
+//  ----------------------------------------------------------------------------
+//  Basado en:
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=agua-nikos
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=mapeopuntosmaster
+//
+//  Lee el campo de agua simulado en Buffer A (u_feedbackTexture):
+//   · .x = altura actual de la superficie (0.5 = reposo)
+//   · .y = altura del frame anterior (velocidad implícita)
+//   · .z = energía acumulada (espuma)
+//
+//  Aplica:
+//   1. Gradiente espacial de 4 vecinos -> Normal 3D de la superficie del agua
+//   2. Refracción óptica del agua sobre el blend de imágenes de fondo
+//      (u_backgroundTexture1 y u_backgroundTexture2) con aberración cromática sutil
+//   3. Cáusticas dinámicas, espuma de cresta e iluminación especular + Fresnel
+//   4. Halos dorados (objetos buenos) y rojos (objetos malos) refractados por el agua
+//   5. Visualización de punteros estilo mapeopuntosmaster (núcleo + halo + estela sdSegment)
+//   6. Línea divisoria distorsionada por el agua para modo competitivo
+// ============================================================================
+
+uniform sampler2D u_backgroundTexture1;
+uniform sampler2D u_backgroundTexture2;
+uniform float u_backgroundBlend;
+uniform float u_backgroundRotation;
+uniform sampler2D u_feedbackTexture;   // Buffer A: campo de agua (.x altura, .y ant, .z energía)
+uniform vec2  u_resolution;
 uniform float u_time;
-uniform float u_comboLevel;                // Nivel de combo (0-1)
+uniform float u_comboLevel;
 
-// ONDAS EXPANSIVAS (para distorsión)
-uniform vec2 u_wavePositions[5];
+// Parámetros ópticos del agua (agua-nikos)
+uniform float u_refraccion;            // 0..1 cuánto desvía la superficie (default 0.38)
+uniform float u_relieve;               // 0..1 pendiente de la normal (default 0.52)
+uniform float u_profundidad;           // 0..1 componente z de la normal (default 0.50)
+uniform float u_especular;             // 0..1 dureza del brillo especular (default 0.62)
+uniform float u_brillo;                // 0..1 intensidad especular/Fresnel (default 0.68)
+uniform float u_causticas;             // 0..1 intensidad de cáusticas (default 0.42)
+uniform float u_espuma;                // 0..1 espuma donde hubo empuje (default 0.55)
+uniform vec2  u_foco;                  // posición de la luz (default 0.5, 0.72)
+uniform vec3  u_agua;                  // tinte del agua (default 0.96, 0.95, 1.0)
+
+// Ondas expansivas
+uniform vec2  u_wavePositions[5];
 uniform float u_waveTimes[5];
 uniform float u_waveActive[5];
-// Parámetros de ondas controlados por interfaz
-uniform float u_waveSpeed;      // Velocidad de expansión del radio
-uniform float u_waveForce;      // Fuerza de distorsión
-uniform float u_waveDuration;   // Duración del fade-out
+uniform float u_waveSpeed;
+uniform float u_waveForce;
+uniform float u_waveDuration;
 
-// Onda de evento (GANASTE/PERDISTE)
+// Onda de evento (GANASTE / PERDISTE)
 uniform float u_eventActive;
 uniform vec2  u_eventCenter;
 uniform float u_eventStartTime;
 uniform vec3  u_eventColor;
 uniform float u_eventStrength;
 
-// UVAS (para distorsión gravitacional)
-uniform vec2 u_grapePositions[10];      // Posiciones de hasta 10 uvas
-uniform float u_grapeProgress[10];      // Progreso de captura (0-1)
-uniform float u_grapeActive[10];        // Si la uva está activa
+// Objetos buenos (copas, botellas, uvas)
+uniform vec2  u_grapePositions[10];
+uniform float u_grapeProgress[10];
+uniform float u_grapeActive[10];
 
-// ITEMS MALOS (para halos rojos)
-uniform vec2 u_badPositions[10];
+// Objetos malos (bichos)
+uniform vec2  u_badPositions[10];
 uniform float u_badActive[10];
 
-// HALOS CONFIGURABLES
-uniform float u_goodHaloSize;           // tamaño del halo de buenos (radio externo)
-uniform float u_goodHaloStrength;       // fuerza del halo de buenos
-uniform vec3  u_goodHaloColor;          // color del halo de buenos
-uniform float u_badHaloSize;            // tamaño del halo de malos (radio externo)
-uniform float u_badHaloStrength;        // fuerza del halo de malos
-uniform vec3  u_badHaloColor;           // color del halo de malos
+// Punteros mapeopuntosmaster
+uniform vec2  u_pointerPositions[16];
+uniform vec2  u_pointerPrevPositions[16];
+uniform float u_pointerActive[16];
+uniform vec2  u_mouse;
+uniform vec2  u_mousePrev;
+uniform float u_mouseActive;
+uniform float u_cursorHaloSize;
+uniform float u_cursorHaloStrength;
 
-// LÍNEA DIVISORIA (modo competitivo)
-uniform float u_splitLineEnabled;       // 1.0 para mostrar la línea, 0.0 para ocultar
-uniform vec3  u_splitLineColor;         // color RGB de la línea
-uniform float u_splitLineThickness;     // grosor en UV (0-1)
-uniform float u_splitLineSoftness;      // suavizado de borde (0-1)
+// Halos configurables desde el panel de control
+uniform float u_goodHaloSize;
+uniform float u_goodHaloStrength;
+uniform vec3  u_goodHaloColor;
+uniform float u_badHaloSize;
+uniform float u_badHaloStrength;
+uniform vec3  u_badHaloColor;
 
-// BRILLO DEL FONDO
-uniform float u_backgroundBrightness;   // multiplicador de brillo del fondo (0-2)
+// Línea divisoria (modo competitivo)
+uniform float u_splitLineEnabled;
+uniform vec3  u_splitLineColor;
+uniform float u_splitLineThickness;
+uniform float u_splitLineSoftness;
+
+// Brillo global y viñeta de vidas
+uniform float u_backgroundBrightness;
+uniform float u_vignetteIntensity;
 
 varying vec2 vTexCoord;
 
+// ── Helpers de agua-nikos y mapeopuntosmaster ──────────────────────────────
+float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float ruido(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), f.x),
+               mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+// Cáusticas de agua-nikos: células de luz concentradas por la superficie
+float causticas(vec2 q, float t) {
+    float v = 0.0;
+    float a = 1.0;
+    vec2  w = q;
+    for (int i = 0; i < 3; i++) {
+        v += a * (1.0 - abs(ruido(w * (1.7 + float(i))) * 2.0 - 1.0));
+        a *= 0.55;
+        w = w * 2.03 + vec2(t * 0.05, -t * 0.04);
+    }
+    return pow(clamp(v, 0.0, 1.0), 5.0);
+}
+
+// Acumulador de punto estilo mapeopuntosmaster (núcleo + halo exponencial + estela sdSegment)
+void sumarPunto(inout vec3 acc, vec2 frag, vec2 act, vec2 ant, float radio, vec3 colPunto, float glowAmt) {
+    float dAct   = length(frag - act);
+    float nucleo = exp(-pow(dAct / max(radio, 0.5), 2.0) * 2.4);
+    float halo   = exp(-dAct / max(radio * 1.85, 1.0)) * 0.26 * glowAmt;
+    float dSeg   = sdSegment(frag, act, ant);
+    float estela = exp(-pow(dSeg / max(radio * 1.45, 1.0), 2.0)) * 0.72;
+    acc += colPunto * (nucleo + halo + estela);
+}
+
 void main() {
-    // Coordenadas UV
-    vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
-    
-    // ===== CALCULAR DISTORSIÓN DE UVs =====
-    vec2 displacement = vec2(0.0);
-    float chromaticAberration = 0.0; // Para separación RGB
-    
-    // FUERZA DE DISTORSIÓN (ajustable)
-    const float WAVE_DISTORTION_STRENGTH = 0.09;  // Base de distorsión (se escala con u_waveForce)
-    const float SINE_DISTORTION_STRENGTH = 0.002; // 0.2% de distorsión sutil
-    const float CHROMATIC_STRENGTH = 0.008;       // Separación RGB
-    
-    // Corregir aspect ratio para las ondas
-    vec2 aspectUV = uv;
-    aspectUV.x *= u_resolution.x / u_resolution.y;
-    
-    // 1. DISTORSIÓN POR ONDAS EXPANSIVAS (más fuerte + chromatic aberration)
+    vec2  frag    = gl_FragCoord.xy;
+    vec2  res     = max(u_resolution, vec2(1.0));
+    vec2  uv      = frag / res;            // y=0 abajo, y=1 arriba (GL)
+    vec2  texel   = 1.0 / res;
+    float aspecto = res.x / res.y;
+
+    // Coordenada UV en espacio de pantalla (y=0 arriba, y=1 abajo) para distancias con objetos de p5
+    vec2 screenUV = vec2(uv.x, 1.0 - uv.y);
+    vec2 aspectScreenUV = vec2(screenUV.x * aspecto, screenUV.y);
+
+    // ── 1. LEER CAMPO DE AGUA DEL BUFFER A (agua-nikos) ────────────────────
+    vec4 campo = texture2D(u_feedbackTexture, uv);
+    vec2 tc = campo.xy;
+    if (campo.a < 0.5 || !(tc.x == tc.x)) tc.x = 0.5;
+    if (campo.a < 0.5 || !(tc.y == tc.y)) tc.y = 0.5;
+    float energia = (campo.a < 0.5 || !(campo.z == campo.z)) ? 0.0 : clamp(campo.z, 0.0, 1.5);
+
+    float h   = tc.x - 0.5;                // -0.5..0.5 : altura de la superficie (0 = reposo)
+    float vel = tc.x - tc.y;               // velocidad vertical implícita
+
+    // ── 2. NORMAL 3D POR GRADIENTE ESPACIAL DE 4 VECINOS ───────────────────
+    vec2 tx = vec2(texel.x, 0.0);
+    vec2 ty = vec2(0.0, texel.y);
+    vec4 mL = texture2D(u_feedbackTexture, clamp(uv - tx, vec2(0.0), vec2(1.0)));
+    vec4 mR = texture2D(u_feedbackTexture, clamp(uv + tx, vec2(0.0), vec2(1.0)));
+    vec4 mD = texture2D(u_feedbackTexture, clamp(uv - ty, vec2(0.0), vec2(1.0)));
+    vec4 mU = texture2D(u_feedbackTexture, clamp(uv + ty, vec2(0.0), vec2(1.0)));
+    float hL = (mL.a < 0.5) ? 0.5 : mL.x;
+    float hR = (mR.a < 0.5) ? 0.5 : mR.x;
+    float hD = (mD.a < 0.5) ? 0.5 : mD.x;
+    float hU = (mU.a < 0.5) ? 0.5 : mU.x;
+
+    vec2 grad = vec2(hR - hL, hU - hD) * 0.5;
+    vec2 pend = grad * vec2(aspecto, 1.0) * (30.0 + u_relieve * 170.0);
+    vec3 n    = normalize(vec3(-pend, 0.25 + u_profundidad * 1.75));
+
+    // ── 3. DESPLAZAMIENTO DE REFRACCIÓN DEL AGUA + OBJETOS/ONDAS ───────────
+    // Refracción principal del campo de agua (agua-nikos) + gradiente de lente
+    vec2 waterOff = (tc - vec2(0.5)) * (0.14 + u_refraccion * 0.85)
+                  + grad * (0.25 + u_refraccion * 1.35);
+
+    // Sumar atracción gravitacional suave de objetos buenos y ondas expansivas
+    vec2 extraDisp = vec2(0.0);
+    float chromatic = length(grad) * 2.2 + abs(h) * 0.35;
+
     for (int i = 0; i < 5; i++) {
         if (u_waveActive[i] > 0.5) {
-            // Posición de la onda (corregir aspect ratio)
-            vec2 wavePos = u_wavePositions[i];
-            wavePos.x *= u_resolution.x / u_resolution.y;
-            
-            // Distancia a la onda
-            float waveDist = distance(aspectUV, wavePos);
-            
-            // Tiempo desde que empezó la onda
-            float waveTime = u_time - u_waveTimes[i];
-            
-            // Radio de la onda (expande con el tiempo)
-            float waveRadius = waveTime * u_waveSpeed;
-            
-            // Intensidad de la onda (fade out con el tiempo)
-            float waveIntensity = smoothstep(u_waveDuration, 0.0, waveTime);
-            
-            // Distorsión radial desde el centro de la onda (área más amplia)
-            float distortionStrength = smoothstep(0.15, 0.0, abs(waveDist - waveRadius)) * waveIntensity;
-            
-            // Dirección de la distorsión (desde el centro de la onda)
-            vec2 direction = normalize(aspectUV - wavePos);
-            
-            // Aplicar distorsión (empuja hacia afuera) - MÁS FUERTE
-            displacement += direction * distortionStrength * WAVE_DISTORTION_STRENGTH * u_waveForce;
-            
-            // CHROMATIC ABERRATION: Acumular separación RGB
-            chromaticAberration += distortionStrength * waveIntensity * u_waveForce;
+            vec2 wPos = vec2(u_wavePositions[i].x * aspecto, u_wavePositions[i].y);
+            float wDist = distance(aspectScreenUV, wPos);
+            float wTime = u_time - u_waveTimes[i];
+            float wRad = wTime * u_waveSpeed;
+            float wInt = smoothstep(u_waveDuration, 0.0, wTime);
+            float dStr = smoothstep(0.14, 0.0, abs(wDist - wRad)) * wInt;
+            vec2 dir = normalize(aspectScreenUV - wPos + vec2(0.0001));
+            extraDisp += vec2(dir.x / aspecto, -dir.y) * dStr * 0.055 * u_waveForce;
+            chromatic += dStr * wInt * u_waveForce;
         }
     }
 
-    // Distorsión por ONDA DE EVENTO (anillo central fuerte)
-    if (u_eventActive > 0.5) {
-        vec2 eCenter = u_eventCenter;
-        eCenter.x *= u_resolution.x / u_resolution.y;
-        float eTime = u_time - u_eventStartTime;
-        float eRadius = eTime * 0.7;
-        float eDist = distance(aspectUV, eCenter);
-        float eIntensity = smoothstep(3.0, 0.0, eTime);
-        float eMask = smoothstep(0.08, 0.0, abs(eDist - eRadius));
-        vec2 dir = normalize(aspectUV - eCenter);
-        displacement += dir * eMask * eIntensity * (WAVE_DISTORTION_STRENGTH * 1.6 * u_eventStrength);
-        chromaticAberration += eMask * eIntensity * 1.2 * u_eventStrength;
-    }
-    
-    // Deshacer corrección de aspect ratio
-    displacement.x /= u_resolution.x / u_resolution.y;
-    
-    // 2. DISTORSIÓN GRAVITACIONAL POR UVAS
-    const float GRAVITY_STRENGTH = 0.008; // Fuerza de la distorsión gravitacional (más sutil)
-    
     for (int i = 0; i < 10; i++) {
         if (u_grapeActive[i] > 0.5) {
-            // Posición de la uva (corregir aspect ratio)
-            vec2 grapePos = u_grapePositions[i];
-            grapePos.x *= u_resolution.x / u_resolution.y;
-            
-            // Distancia a la uva
-            float grapeDist = distance(aspectUV, grapePos);
-            
-            // Radio de influencia (más grande si está siendo capturada)
-            float influenceRadius = 0.15 + u_grapeProgress[i] * 0.1;
-            
-            // Fuerza gravitacional (inversa al cuadrado de la distancia)
-            float gravityForce = 1.0 / (1.0 + grapeDist * grapeDist * 20.0);
-            gravityForce *= smoothstep(influenceRadius, 0.0, grapeDist);
-            
-            // Aumentar fuerza con el progreso de captura
-            gravityForce *= (1.0 + u_grapeProgress[i] * 2.0);
-            
-            // Dirección hacia la uva
-            vec2 direction = normalize(grapePos - aspectUV);
-            
-            // Aplicar distorsión gravitacional (atrae hacia la uva)
-            displacement += direction * gravityForce * GRAVITY_STRENGTH;
-            
-            // Chromatic aberration en la zona de influencia
-            chromaticAberration += gravityForce * u_grapeProgress[i];
+            vec2 gPos = vec2(u_grapePositions[i].x * aspecto, u_grapePositions[i].y);
+            float gDist = distance(aspectScreenUV, gPos);
+            float infRad = 0.14 + u_grapeProgress[i] * 0.10;
+            float gForce = (1.0 / (1.0 + gDist * gDist * 22.0)) * smoothstep(infRad, 0.0, gDist);
+            gForce *= (1.0 + u_grapeProgress[i] * 2.2);
+            vec2 dir = normalize(gPos - aspectScreenUV + vec2(0.0001));
+            extraDisp += vec2(dir.x / aspecto, -dir.y) * gForce * 0.010;
+            chromatic += gForce * u_grapeProgress[i] * 0.6;
         }
     }
-    
-    // Deshacer corrección de aspect ratio para distorsión de uvas
-    displacement.x /= u_resolution.x / u_resolution.y;
-    
-    // 3. DISTORSIÓN POR ONDAS SINUSOIDALES (muy sutil)
-    float sineWave1 = sin(uv.x * 25.0 + u_time * 0.2) * SINE_DISTORTION_STRENGTH;
-    float sineWave2 = sin(uv.y * 20.0 - u_time * 0.8) * SINE_DISTORTION_STRENGTH;
-    displacement += vec2(sineWave2, sineWave1); // Cruzadas para efecto más interesante
-    
-    // Aplicar distorsión a las UVs
-    vec2 distortedUV = uv + displacement;
-    
-    // ===== DIBUJAR TEXTURAS DE FONDO (SIN ROTACIÓN) =====
-    // Usar directamente las UVs distorsionadas sin rotación ni zoom
-    vec2 finalUV = distortedUV;
-    
-    // ===== CHROMATIC ABERRATION: Samplear RGB por separado =====
-    vec4 bgTexture1, bgTexture2;
-    
-    if (chromaticAberration > 0.01) {
-        // Separar canales RGB con chromatic aberration
-        float aberration = chromaticAberration * CHROMATIC_STRENGTH;
-        
-        // Textura 1
-        float r1 = texture2D(u_backgroundTexture1, finalUV + vec2(aberration, 0.0)).r;
-        float g1 = texture2D(u_backgroundTexture1, finalUV).g;
-        float b1 = texture2D(u_backgroundTexture1, finalUV - vec2(aberration, 0.0)).b;
-        bgTexture1 = vec4(r1, g1, b1, 1.0);
-        
-        // Textura 2
-        float r2 = texture2D(u_backgroundTexture2, finalUV + vec2(aberration, 0.0)).r;
-        float g2 = texture2D(u_backgroundTexture2, finalUV).g;
-        float b2 = texture2D(u_backgroundTexture2, finalUV - vec2(aberration, 0.0)).b;
-        bgTexture2 = vec4(r2, g2, b2, 1.0);
+
+    vec2 totalOff = waterOff + extraDisp;
+    vec2 quv = clamp(uv + totalOff, vec2(0.001), vec2(0.999));
+
+    // ── 4. MUESTREO DE IMÁGENES DE FONDO CON REFRACCIÓN Y ABERRACIÓN ───────
+    vec3 bg1, bg2;
+    float aberr = clamp(chromatic, 0.0, 1.5) * 0.0045;
+    if (aberr > 0.0004) {
+        vec2 abVec = normalize(totalOff + vec2(0.0001)) * aberr;
+        bg1.r = texture2D(u_backgroundTexture1, clamp(quv + abVec, 0.001, 0.999)).r;
+        bg1.g = texture2D(u_backgroundTexture1, quv).g;
+        bg1.b = texture2D(u_backgroundTexture1, clamp(quv - abVec, 0.001, 0.999)).b;
+
+        bg2.r = texture2D(u_backgroundTexture2, clamp(quv + abVec, 0.001, 0.999)).r;
+        bg2.g = texture2D(u_backgroundTexture2, quv).g;
+        bg2.b = texture2D(u_backgroundTexture2, clamp(quv - abVec, 0.001, 0.999)).b;
     } else {
-        // Sin chromatic aberration
-        bgTexture1 = texture2D(u_backgroundTexture1, finalUV);
-        bgTexture2 = texture2D(u_backgroundTexture2, finalUV);
+        bg1 = texture2D(u_backgroundTexture1, quv).rgb;
+        bg2 = texture2D(u_backgroundTexture2, quv).rgb;
     }
-    
-    // Mezclar texturas según blend
-    vec4 backgroundColor = mix(bgTexture1, bgTexture2, u_backgroundBlend);
-    
-    // ===== PATRÓN DE ONDAS SINUSOIDALES =====
-    // Normalizar TODAS las ondas de -1,1 a 0,1 inmediatamente
-    float wave1 = sin(uv.x * 25.0 + u_time * 0.2) * 0.5 + 0.5;
-    float wave2 = sin(uv.y * 20.0 - u_time * 0.8) * 0.5 + 0.5;
-    float wave3 = sin((uv.x + uv.y) * 5.0 + u_time * 0.5) * 0.5 + 0.5;
-    float wave4 = sin((uv.x - uv.y) * 10.0 - u_time * 0.7) * 0.5 + 0.5;
-    
-    // Combinar ondas (ahora todas están en rango 0 a 1)
-    float wavePattern = (wave1 + wave2 + wave3 + wave4) / 4.0;
-    
-    // Intensidad EXTREMADAMENTE SUTIL
-    float comboBoost = clamp(u_comboLevel, 0.0, 1.0) * 0.03; // Máximo 3% extra
-    float waveIntensity = 0.001 + comboBoost; // 1% base + hasta 3% con combo
-    
-    // Recentrar las ondas alrededor de 0 para que oscilen ±
-    float centeredWave = (wavePattern - 0.5) * 2.0; // De 0,1 a -1,1
-    
-    // SUMAR ondas a la imagen (APENAS PERCEPTIBLE)
-    vec3 finalColor = backgroundColor.rgb * 0.2 + backgroundColor.rgb * vec3(wavePattern) * 0.29;
 
-    // ===== HALOS EN SHADER =====
-    // Aspect ratio corregido para distancia radial
-    vec2 arUV = uv;
-    arUV.x *= u_resolution.x / u_resolution.y;
+    vec3 fondo = mix(bg1, bg2, clamp(u_backgroundBlend, 0.0, 1.0));
 
-    // Halos dorados para positivos (usando u_grapeActive/Positions)
+    // ── 5. ÓPTICA DE AGUA-NIKOS: TINTE + CÁUSTICAS + ESPUMA + ESPECULAR ────
+    // Nivel base balanceado para que luzca vibrante con el control de brillo del juego
+    vec3 col = fondo * u_agua * 0.58;
+
+    // Cáusticas solares/cristalinas que se concentran según la altura h de las ondas
+    float cau = causticas((uv + totalOff * 1.8) * vec2(aspecto, 1.0) * 2.4, u_time * 0.6);
+    float waveActivity = clamp(abs(h) * 8.0 + energia * 0.6, 0.0, 1.0);
+    col += cau * u_causticas * 1.65 * mix(u_agua, vec3(1.0, 0.92, 0.75), 0.5)
+         * (0.28 + 0.72 * waveActivity);
+
+    // Espuma donde hubo empuje de punteros o caída de objetos (energía del Buffer A)
+    float espN = ruido(vec2(uv.x * aspecto, uv.y) * 85.0 + vec2(u_time * 0.35, -u_time * 0.3) + vel * 28.0);
+    float esp  = smoothstep(0.26, 0.92, energia)
+               * smoothstep(0.42, 0.92, espN * 0.55 + energia * 0.72);
+    col += esp * u_espuma * vec3(1.0, 0.97, 0.92) * 0.55;
+
+    // Iluminación especular y Fresnel sobre la normal 3D del agua
+    vec3  L    = normalize(vec3((u_foco - uv) * vec2(aspecto, 1.0), 0.55));
+    vec3  Hv   = normalize(L + vec3(0.0, 0.0, 1.0));
+    float nh   = max(dot(n, Hv), 0.0);
+    float fres = pow(1.0 - clamp(n.z, 0.0, 1.0), 3.0);
+    col += (pow(nh, 12.0 + u_especular * 340.0) * u_brillo * 1.45
+          + pow(nh, 7.0) * u_brillo * 0.08) * vec3(1.0, 0.98, 0.92);
+    col += fres * u_brillo * 0.28 * mix(u_agua, vec3(0.95, 0.85, 1.0), 0.5);
+
+    // ── 6. HALOS DE OBJETOS CAYENDO (REFRACTADOS POR EL AGUA) ──────────────
+    // Usamos screenUV desplazada por el agua para que las auras doradas y rojas
+    // también se ondulen orgánicamente con el agua
+    vec2 refractedScreenUV = screenUV + vec2(totalOff.x, -totalOff.y) * 0.45;
+    vec2 arUV = vec2(refractedScreenUV.x * aspecto, refractedScreenUV.y);
+
+    // Halos dorados para objetos buenos (copas, botellas, uvas)
     for (int i = 0; i < 10; i++) {
         if (u_grapeActive[i] > 0.5) {
-            vec2 pos = u_grapePositions[i];
-            pos.x *= u_resolution.x / u_resolution.y;
+            vec2 pos = vec2(u_grapePositions[i].x * aspecto, u_grapePositions[i].y);
             float d = distance(arUV, pos);
-            float halo = smoothstep(u_goodHaloSize, 0.02, d);
-            finalColor += u_goodHaloColor * halo * u_goodHaloStrength;
+            float prog = clamp(u_grapeProgress[i], 0.0, 1.0);
+            float haloSize = u_goodHaloSize * (1.0 + prog * 0.35);
+            float halo = smoothstep(haloSize, 0.018, d);
+            float ring = smoothstep(0.012, 0.0, abs(d - haloSize * (0.55 + 0.15 * sin(u_time * 5.0 + float(i))))) * 0.35;
+            col += u_goodHaloColor * (halo + ring) * u_goodHaloStrength * (1.0 + prog * 0.5);
         }
     }
 
-    // Halos rojos para negativos
+    // Halos rojos para objetos malos (bichos)
     for (int i = 0; i < 10; i++) {
         if (u_badActive[i] > 0.5) {
-            vec2 posB = u_badPositions[i];
-            posB.x *= u_resolution.x / u_resolution.y;
+            vec2 posB = vec2(u_badPositions[i].x * aspecto, u_badPositions[i].y);
             float dB = distance(arUV, posB);
-            float haloB = smoothstep(u_badHaloSize, 0.03, dB);
-            finalColor += u_badHaloColor * haloB * u_badHaloStrength;
+            float haloB = smoothstep(u_badHaloSize, 0.025, dB);
+            float pulseB = 0.85 + 0.15 * sin(u_time * 8.0 + float(i) * 2.0);
+            col += u_badHaloColor * haloB * u_badHaloStrength * pulseB;
         }
     }
-    
-    // ===== COLOR GRADING DINÁMICO (basado en combo) =====
-    float safeComboLevel = clamp(u_comboLevel, 0.0, 1.0);
-    
-  
-    
-    // ===== LÍNEA DIVISORIA CON DISTORSIÓN =====
-    // Se calcula usando las UV ya distorsionadas para que se mueva con el shader
-    if (u_splitLineEnabled > 0.5) {
-        float dx = abs(finalUV.x - 0.5);
-        float mask = 1.0 - smoothstep(u_splitLineThickness, u_splitLineThickness + u_splitLineSoftness, dx);
-        finalColor = mix(finalColor, u_splitLineColor, clamp(mask, 0.0, 1.0));
-    }
-    
-    // ===== APLICAR FEEDBACK COMO EFECTO =====
-    vec4 feedbackColor = texture2D(u_feedbackTexture, uv);
-    finalColor += feedbackColor.rgb * feedbackColor.a * 0.25;
 
-    // Tint global suave según evento (veda dorado o rojo)
-    if (u_eventActive > 0.5) {
-        float t = clamp((u_time - u_eventStartTime) / 1.5, 0.0, 1.0);
-        float pulse = 0.5 + 0.5 * sin(u_time * 3.0);
-        // Reducir el tinte global del evento para evitar sobreexposición
-        finalColor = mix(finalColor, u_eventColor, 0.02 * u_eventStrength * (1.0 - t) * pulse);
+    // ── 7. MAPEO DE PUNTOS MASTER (núcleo + halo + estela sdSegment) ───────
+    vec3 puntosAcc = vec3(0.0);
+    float radioPunto = max(3.0, (0.008 + u_cursorHaloSize * 0.14) * min(res.x, res.y));
+    float activePtsCount = 0.0;
+
+    for (int i = 0; i < 16; i++) {
+        if (u_pointerActive[i] > 0.5) {
+            activePtsCount += 1.0;
+            vec2 act = vec2(u_pointerPositions[i].x * res.x, (1.0 - u_pointerPositions[i].y) * res.y);
+            vec2 ant = vec2(u_pointerPrevPositions[i].x * res.x, (1.0 - u_pointerPrevPositions[i].y) * res.y);
+            vec3 ptColor = vec3(
+                0.75 + 0.25 * sin(u_time * 1.5 + float(i) * 0.7),
+                0.65 + 0.25 * sin(u_time * 1.9 + float(i) * 0.7 + 1.5),
+                0.95
+            );
+            sumarPunto(puntosAcc, frag, act, ant, radioPunto, ptColor, clamp(u_cursorHaloStrength, 0.0, 2.0));
+        }
     }
-    
-    // Brillo adicional con combo
-    //finalColor += vec3(safeComboLevel * 0.03);
-    
-    // ===== BLOOM/GLOW EFFECT =====
-    // Detectar áreas brillantes
-    float brightness = dot(finalColor, vec3(0.299, 0.587, 0.114));
-    
-    /*if (brightness > 0.6) {
-        // Samplear píxeles vecinos para crear bloom
-        vec3 bloom = vec3(0.0);
-        float bloomRadius = 0.003 + safeComboLevel * 0.002; // Radio crece con combo
-        
-        // 8 direcciones
-        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, 0.0)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, 0.0)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(0.0, bloomRadius)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(0.0, -bloomRadius)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, bloomRadius)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, bloomRadius)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(bloomRadius, -bloomRadius)).rgb;
-        bloom += texture2D(u_feedbackTexture, uv + vec2(-bloomRadius, -bloomRadius)).rgb;
-        
-        bloom /= 8.0;
-        
-        // Aplicar bloom solo a áreas brillantes
-        float bloomStrength = (brightness - 0.6) * 2.5; // 0 a 1
-        bloomStrength *= (0.3 + safeComboLevel * 0.4); // Más fuerte con combo
-        
-        finalColor += bloom * bloomStrength;
-    }*/
-    
-    // Asegurar que el color final nunca sea negativo
-    finalColor = max(finalColor, vec3(0.0));
-    
-    // Aplicar brillo global del fondo desde interfaz
-    finalColor = clamp(finalColor * u_backgroundBrightness, 0.0, 1.0);
-    
-    gl_FragColor = vec4(finalColor, 1.0);
+
+    if (u_mouseActive > 0.5) {
+        activePtsCount += 1.0;
+        vec2 mAct = vec2(u_mouse.x, res.y - u_mouse.y);
+        vec2 mAnt = vec2(u_mousePrev.x, res.y - u_mousePrev.y);
+        sumarPunto(puntosAcc, frag, mAct, mAnt, radioPunto * 1.05, vec3(1.0, 0.88, 0.55), clamp(u_cursorHaloStrength, 0.0, 2.0));
+    }
+
+    // Normalización por raíz de cantidad (mapeopuntosmaster) para no saturar con muchos puntos
+    if (activePtsCount > 0.0) {
+        puntosAcc /= 1.0 + sqrt(activePtsCount) * 0.22;
+        col += (1.0 - exp(-puntosAcc * 1.35)) * (0.55 * u_cursorHaloStrength);
+    }
+
+    // ── 8. LÍNEA DIVISORIA CON DISTORSIÓN DE AGUA (Modo Competitivo) ───────
+    if (u_splitLineEnabled > 0.5) {
+        float dx = abs(quv.x - 0.5);
+        float core = 1.0 - smoothstep(u_splitLineThickness, u_splitLineThickness + u_splitLineSoftness, dx);
+        float glow = exp(-dx * 140.0) * 0.45;
+        vec3 lineCol = mix(u_splitLineColor, vec3(1.0, 0.85, 0.45), 0.4);
+        col = mix(col, lineCol, clamp(core + glow, 0.0, 1.0));
+    }
+
+    // ── 9. EVENTO DE CELEBRACIÓN / COMBO / VIÑETA DE VIDAS ─────────────────
+    if (u_eventActive > 0.5) {
+        vec2 eCenter = vec2(u_eventCenter.x * aspecto, u_eventCenter.y);
+        float eDist = distance(aspectScreenUV, eCenter);
+        float eTime = max(0.0, u_time - u_eventStartTime);
+        float eRad = eTime * 0.65;
+        float eRing = smoothstep(0.045, 0.0, abs(eDist - eRad)) * smoothstep(3.2, 0.0, eTime);
+        col += u_eventColor * eRing * 0.35 * u_eventStrength;
+    }
+
+    // Boost sutil por combo
+    float safeCombo = clamp(u_comboLevel, 0.0, 1.0);
+    if (safeCombo > 0.05) {
+        col += vec3(0.18, 0.12, 0.04) * safeCombo * (0.5 + 0.5 * sin(u_time * 3.0));
+    }
+
+    // Viñeta dinámica cuando quedan pocas vidas + viñeta óptica suave de agua-nikos
+    float distCenter = length(uv - 0.5);
+    col *= 1.0 - 0.38 * distCenter;
+    if (u_vignetteIntensity > 0.01) {
+        float vig = smoothstep(0.28, 1.15, distCenter);
+        col *= 1.0 - (vig * u_vignetteIntensity * 0.55);
+        col.r += vig * u_vignetteIntensity * 0.18;
+    }
+
+    // Tonemap suave y grano sutil anti-banding (agua-nikos)
+    col = max(col, vec3(0.0));
+    col = clamp(col * u_backgroundBrightness, 0.0, 1.0);
+    col += (hash12(frag + fract(u_time) * 137.0) - 0.5) * 0.008;
+
+    gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

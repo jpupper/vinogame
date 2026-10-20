@@ -1,20 +1,31 @@
+// ============================================================================
+//  VINOGAME · DYNAMIC BACKGROUND & MULTIBUFFER WATER SHADER PIPELINE
+//  ----------------------------------------------------------------------------
+//  Motor multibuffer WebGL con ping-pong en punto flotante (OES_texture_float)
+//  para simular el campo de agua de:
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=agua-nikos
+//   · https://fullscreencode.com/jpshadereditor/shader.html?shader=mapeopuntosmaster
+//  refractando la secuencia de imágenes de fondo y reaccionando en tiempo real
+//  a la caída de objetos (copas, botellas, uvas, bichos), punteros LIDAR/touch/mouse,
+//  ondas expansivas y celebraciones de fin de partida.
+// ============================================================================
+
 class DynamicBackground {
     constructor() {
         this.waves = [];
         this.numWaves = CONFIG.background.waves.count;
         this.ripples = [];
         this.maxRipples = CONFIG.background.ripples.max;
-        
-        // Sistema de texturas dinámicas
+
+        // Sistema de texturas dinámicas que entran al shader multibuffer
         this.currentTextureIndex = 0;
         this.nextTextureIndex = 1;
         this.transitionProgress = 0;
-        this.transitionSpeed = 0.003; // Velocidad de transición
+        this.transitionSpeed = 0.0028; // Transición fluida entre fondos
         this.textureScale = 1.0;
         this.textureRotation = 0;
         this.textureRotationSpeed = 0.0005;
-        
-        // Crear ondas base
+
         for (let i = 0; i < this.numWaves; i++) {
             this.waves.push({
                 amplitude: random(CONFIG.background.waves.amplitude.min, CONFIG.background.waves.amplitude.max),
@@ -24,9 +35,8 @@ class DynamicBackground {
             });
         }
     }
-    
+
     addRipple(x, y) {
-        // Añadir una nueva onda expansiva con parámetros de configuración
         this.ripples.push({
             pos: createVector(x, y),
             radius: 0,
@@ -37,468 +47,753 @@ class DynamicBackground {
             birthTime: millis(),
             lifespan: random(CONFIG.background.ripples.lifespan.min, CONFIG.background.ripples.lifespan.max)
         });
-        
-        // Limitar la cantidad de ondas
+
         if (this.ripples.length > this.maxRipples) {
             this.ripples.shift();
         }
     }
-    
+
+    getValidBackgrounds() {
+        if (typeof backgroundTextures === 'undefined' || !Array.isArray(backgroundTextures)) return [];
+        return backgroundTextures.filter(img => img && typeof img.width === 'number' && img.width > 0);
+    }
+
     update() {
-        // Actualizar ondas base
         for (let wave of this.waves) {
             wave.phase += wave.speed;
         }
-        
-        // Actualizar ondas expansivas con desvanecimiento más suave
+
         const currentTime = millis();
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             const ripple = this.ripples[i];
-            
-            // Calcular progreso de vida
             const lifeProgress = (currentTime - ripple.birthTime) / ripple.lifespan;
-            
-            // Actualizar radio con velocidad que disminuye con el tiempo
             const speedFactor = map(lifeProgress, 0, 1, 1, 0.5);
             ripple.radius += ripple.speed * speedFactor;
-            
-            // Calcular alpha basado en el tiempo de vida y no solo en el radio
             ripple.alpha = map(lifeProgress, 0, 1, 255, 0);
-            
-            // Eliminar ondas que han completado su ciclo de vida
             if (lifeProgress >= 1) {
                 this.ripples.splice(i, 1);
             }
         }
-        
-        // Actualizar transición de texturas con protección de arrays vacíos
-        if (backgroundTextures && backgroundTextures.length > 1) {
+
+        const validBgs = this.getValidBackgrounds();
+        if (validBgs.length > 1) {
             this.transitionProgress += this.transitionSpeed;
             if (this.transitionProgress >= 1) {
                 this.transitionProgress = 0;
-                this.currentTextureIndex = this.nextTextureIndex;
-                this.nextTextureIndex = (this.nextTextureIndex + 1) % backgroundTextures.length;
+                this.currentTextureIndex = this.nextTextureIndex % validBgs.length;
+                this.nextTextureIndex = (this.currentTextureIndex + 1) % validBgs.length;
             }
         } else {
-            // Sin texturas o con una sola, fijar índices y progreso
             this.transitionProgress = 0;
             this.currentTextureIndex = 0;
             this.nextTextureIndex = 0;
         }
-        
-        // Actualizar rotación de textura (solo si hay texturas)
-        if (backgroundTextures && backgroundTextures.length > 0) {
+
+        if (validBgs.length > 0) {
             this.textureRotation += this.textureRotationSpeed;
         } else {
             this.textureRotation = 0;
         }
     }
-    
-    
+
     display() {
-        // Dibujar fondo base con textura dinámica
         this.drawWineCellarBackground();
-        
-        // Dibujar ondas expansivas con efecto más suave
-        for (let ripple of this.ripples) {
-            // Dibujar múltiples anillos con diferentes opacidades para un efecto más suave
-            for (let i = 0; i < 3; i++) {
-                const ringAlpha = ripple.alpha * (0.5 - i * 0.15);
-                const ringOffset = i * 5;
-                
-                // Usar rellenos en lugar de strokes para evitar contornos
-                noStroke();
-                fill(CONFIG.background.ripples.color[0], 
-                     CONFIG.background.ripples.color[1], 
-                     CONFIG.background.ripples.color[2], 
-                     ringAlpha);
-                ellipse(ripple.pos.x, ripple.pos.y, (ripple.radius - ringOffset) * 2);
-            }
-            
-            // Añadir un brillo central que permanece más tiempo
-            const centerAlpha = map(ripple.radius, 0, ripple.maxRadius * 0.2, 100, 0);
-            if (centerAlpha > 0) {
-                noStroke();
-                fill(150, 200, 255, centerAlpha);
-                ellipse(ripple.pos.x, ripple.pos.y, 10, 10);
-            }
-        }
     }
-    
+
     drawWineCellarBackground() {
-        // Fondo negro si no hay texturas
-        if (!backgroundTexturesLoaded || backgroundTextures.length === 0) {
+        const validBgs = this.getValidBackgrounds();
+        if (!backgroundTexturesLoaded || validBgs.length === 0) {
             noStroke();
             fill(0);
             rect(0, 0, width, height);
             return;
         }
-        
-        // Fondo base oscuro
         background(5, 5, 10);
-        
-        // Dibujar textura dinámica con transición suave
-        if (backgroundTexturesLoaded && backgroundTextures.length > 0) {
-            push();
-            imageMode(CENTER);
-            translate(width / 2, height / 2);
-            rotate(this.textureRotation);
-            
-            // Textura actual
-            tint(255, 255, 255, 70 * (1 - this.transitionProgress));
-            const currentScaled = window.getScaledBackgroundImage && window.getScaledBackgroundImage(this.currentTextureIndex);
-            if (currentScaled) {
-                image(currentScaled, 0, 0);
-            } else {
-                const img = backgroundTextures[this.currentTextureIndex];
-                if (img && img.width && img.height) {
-                    push();
-                    const sx = (width * 1.2) / img.width;
-                    const sy = (height * 1.2) / img.height;
-                    scale(sx, sy);
-                    image(img, 0, 0);
-                    pop();
-                }
-            }
-            
-            // Textura siguiente (fade in)
-            tint(255, 255, 255, 70 * this.transitionProgress);
-            const nextScaled = window.getScaledBackgroundImage && window.getScaledBackgroundImage(this.nextTextureIndex);
-            if (nextScaled) {
-                image(nextScaled, 0, 0);
-            } else {
-                const img2 = backgroundTextures[this.nextTextureIndex];
-                if (img2 && img2.width && img2.height) {
-                    push();
-                    const sx2 = (width * 1.2) / img2.width;
-                    const sy2 = (height * 1.2) / img2.height;
-                    scale(sx2, sy2);
-                    image(img2, 0, 0);
-                    pop();
-                }
-            }
-            
-            pop();
-        }
     }
-    
-    resize() {
-        // Ya no necesitamos actualizar la grilla
-    }
+
+    resize() {}
 }
 
-// ====== Pipeline de shaders centralizado ======
-// Mueve el procesamiento de feedback y la composición a funciones reutilizables
-// para ser llamadas desde sketch.js
+// ============================================================================
+//  MOTOR WEBGL MULTIBUFFER PING-PONG (FLOAT FBO) PARA AGUA-NIKOS + MAPEOPUNTOS
+// ============================================================================
+const WaterMultiBuffer = {
+    gl: null,
+    initialized: false,
+    failed: false,
+    width: 0,
+    height: 0,
+    frame: 0,
+    quadBuffer: null,
+    progBufferA: null,
+    progMain: null,
+    fboA: null,
+    fboB: null,
+    fallbackTex: null,
+    // Seguimiento de posiciones previas para estelas continuas (sdSegment)
+    prevPointers: {},
+    prevGrapes: new WeakMap(),
+    prevBads: new WeakMap(),
+    prevMouse: { x: 0, y: 0, initialized: false },
+
+    vertSource: `
+        attribute vec2 aPosition;
+        varying vec2 vTexCoord;
+        void main() {
+            vTexCoord = aPosition * 0.5 + 0.5;
+            gl_Position = vec4(aPosition, 0.0, 1.0);
+        }
+    `,
+
+    init(gl, w, h, fragBufferASrc, fragMainSrc) {
+        try {
+            this.gl = gl;
+            this.width = w;
+            this.height = h;
+            this.frame = 0;
+
+            // Quad pantalla completa (-1..1)
+            this.quadBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1,  1, -1, -1,  1,
+                -1,  1,  1, -1,  1,  1
+            ]), gl.STATIC_DRAW);
+
+            this.progBufferA = this.createProgram(gl, this.vertSource, fragBufferASrc, 'BufferA(feedback.frag)');
+            this.progMain    = this.createProgram(gl, this.vertSource, fragMainSrc, 'Main(composite.frag)');
+
+            if (!this.progBufferA || !this.progMain) {
+                this.failed = true;
+                return false;
+            }
+
+            this.createPingPongFBOs(gl, w, h);
+            this.createFallbackTexture(gl);
+            this.initialized = true;
+            console.log('✅ WaterMultiBuffer inicializado (' + w + 'x' + h + ', FBO type: ' + this.fboTypeLabel + ')');
+            return true;
+        } catch (err) {
+            console.error('Error inicializando WaterMultiBuffer:', err);
+            this.failed = true;
+            return false;
+        }
+    },
+
+    compileShader(gl, type, src, label) {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+            console.error('❌ Error compilando ' + label + ':', gl.getShaderInfoLog(sh));
+            gl.deleteShader(sh);
+            return null;
+        }
+        return sh;
+    },
+
+    createProgram(gl, vsSrc, fsSrc, label) {
+        const vs = this.compileShader(gl, gl.VERTEX_SHADER, vsSrc, label + ' VS');
+        const fs = this.compileShader(gl, gl.FRAGMENT_SHADER, fsSrc, label + ' FS');
+        if (!vs || !fs) return null;
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.error('❌ Error linkeando ' + label + ':', gl.getProgramInfoLog(prog));
+            return null;
+        }
+        prog.aPosition = gl.getAttribLocation(prog, 'aPosition');
+        prog.uniforms = {};
+        const numUniforms = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+        for (let i = 0; i < numUniforms; i++) {
+            const info = gl.getActiveUniform(prog, i);
+            if (!info) continue;
+            const baseName = info.name.replace(/\[0\]$/, '');
+            prog.uniforms[baseName] = gl.getUniformLocation(prog, baseName);
+            prog.uniforms[info.name] = gl.getUniformLocation(prog, info.name);
+        }
+        return prog;
+    },
+
+    createSingleFBO(gl, w, h, texType, filter) {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, texType, null);
+
+        const fb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+            gl.deleteFramebuffer(fb);
+            gl.deleteTexture(tex);
+            return null;
+        }
+        return { framebuffer: fb, texture: tex, width: w, height: h };
+    },
+
+    createPingPongFBOs(gl, w, h) {
+        if (this.fboA) {
+            gl.deleteFramebuffer(this.fboA.framebuffer);
+            gl.deleteTexture(this.fboA.texture);
+        }
+        if (this.fboB) {
+            gl.deleteFramebuffer(this.fboB.framebuffer);
+            gl.deleteTexture(this.fboB.texture);
+        }
+
+        // Intentar primero FLOAT (igual que jpshadereditor WebGLRenderer), luego HALF_FLOAT, luego UNSIGNED_BYTE
+        const extFloat = gl.getExtension('OES_texture_float');
+        const extFloatLinear = gl.getExtension('OES_texture_float_linear');
+        const extHalf = gl.getExtension('OES_texture_half_float');
+        const extHalfLinear = gl.getExtension('OES_texture_half_float_linear');
+
+        let fboA = null, fboB = null;
+        if (extFloat) {
+            const filter = extFloatLinear ? gl.LINEAR : gl.NEAREST;
+            fboA = this.createSingleFBO(gl, w, h, gl.FLOAT, filter);
+            fboB = this.createSingleFBO(gl, w, h, gl.FLOAT, filter);
+            if (fboA && fboB) this.fboTypeLabel = 'FLOAT';
+        }
+        if ((!fboA || !fboB) && extHalf) {
+            const filter = extHalfLinear ? gl.LINEAR : gl.NEAREST;
+            fboA = this.createSingleFBO(gl, w, h, extHalf.HALF_FLOAT_OES, filter);
+            fboB = this.createSingleFBO(gl, w, h, extHalf.HALF_FLOAT_OES, filter);
+            if (fboA && fboB) this.fboTypeLabel = 'HALF_FLOAT';
+        }
+        if (!fboA || !fboB) {
+            fboA = this.createSingleFBO(gl, w, h, gl.UNSIGNED_BYTE, gl.LINEAR);
+            fboB = this.createSingleFBO(gl, w, h, gl.UNSIGNED_BYTE, gl.LINEAR);
+            this.fboTypeLabel = 'UNSIGNED_BYTE';
+        }
+
+        this.fboA = fboA;
+        this.fboB = fboB;
+        this.frame = 0;
+    },
+
+    createFallbackTexture(gl) {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        // Piso cálido de viñedo por defecto (1x1)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([90, 35, 55, 255]));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        this.fallbackTex = tex;
+    },
+
+    getOrUploadImageTexture(gl, p5Img) {
+        if (!p5Img || !p5Img.width || !p5Img.height) return this.fallbackTex;
+        const srcCanvas = p5Img.canvas || p5Img.elt;
+        if (!srcCanvas) return this.fallbackTex;
+
+        if (!p5Img._waterGLTex || p5Img._waterGLCtx !== gl || p5Img._waterGLW !== p5Img.width || p5Img._waterGLH !== p5Img.height) {
+            if (p5Img._waterGLTex && p5Img._waterGLCtx === gl) {
+                try { gl.deleteTexture(p5Img._waterGLTex); } catch (e) {}
+            }
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            p5Img._waterGLTex = tex;
+            p5Img._waterGLCtx = gl;
+            p5Img._waterGLW = p5Img.width;
+            p5Img._waterGLH = p5Img.height;
+        }
+        return p5Img._waterGLTex;
+    },
+
+    set1f(gl, prog, name, val) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform1f(loc, val);
+    },
+    set1i(gl, prog, name, val) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform1i(loc, val);
+    },
+    set2f(gl, prog, name, x, y) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform2f(loc, x, y);
+    },
+    set3f(gl, prog, name, x, y, z) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform3f(loc, x, y, z);
+    },
+    set1fv(gl, prog, name, arr) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform1fv(loc, new Float32Array(arr));
+    },
+    set2fv(gl, prog, name, arr) {
+        const loc = prog.uniforms[name];
+        if (loc !== undefined && loc !== null) gl.uniform2fv(loc, new Float32Array(arr));
+    },
+
+    ensureSize(gl, w, h) {
+        if (this.width !== w || this.height !== h) {
+            this.width = w;
+            this.height = h;
+            this.createPingPongFBOs(gl, w, h);
+        }
+    }
+};
+
+// Recolecta datos en vivo de punteros, objetos cayendo (o del tutorial) y ondas
+function collectSceneDataForWater() {
+    const W = Math.max(1, width);
+    const H = Math.max(1, height);
+    const nowSec = (typeof millis === 'function' ? millis() : Date.now()) / 1000.0;
+
+    // 1. Punteros (LIDAR / Touch / Mouse desde PointServer)
+    const MAX_POINTERS = 16;
+    const pointerPositions = [];
+    const pointerPrevPositions = [];
+    const pointerActive = [];
+    const nextPrevPointers = {};
+
+    const pts = (typeof Pserver !== 'undefined' && Pserver && typeof Pserver.getAllPoints === 'function')
+        ? Pserver.getAllPoints()
+        : [];
+
+    for (let i = 0; i < MAX_POINTERS; i++) {
+        if (i < pts.length && pts[i]) {
+            const p = pts[i];
+            const id = (p.id !== undefined && p.id !== null) ? ('id_' + p.id) : ('idx_' + i);
+            const nx = p.x / W;
+            const ny = p.y / H;
+            const prev = WaterMultiBuffer.prevPointers[id] || { x: nx, y: ny };
+            nextPrevPointers[id] = { x: nx, y: ny };
+
+            pointerPositions.push(nx, ny);
+            pointerPrevPositions.push(prev.x, prev.y);
+            pointerActive.push(1.0);
+        } else {
+            pointerPositions.push(0, 0);
+            pointerPrevPositions.push(0, 0);
+            pointerActive.push(0.0);
+        }
+    }
+    WaterMultiBuffer.prevPointers = nextPrevPointers;
+
+    // Mouse local
+    const mx = (typeof mouseX === 'number') ? mouseX : W * 0.5;
+    const my = (typeof mouseY === 'number') ? mouseY : H * 0.5;
+    if (!WaterMultiBuffer.prevMouse.initialized) {
+        WaterMultiBuffer.prevMouse = { x: mx, y: my, initialized: true };
+    }
+    const prevMx = WaterMultiBuffer.prevMouse.x;
+    const prevMy = WaterMultiBuffer.prevMouse.y;
+    const mouseMoved = Math.hypot(mx - prevMx, my - prevMy) > 0.5;
+    const mouseActive = ((typeof mouseIsPressed !== 'undefined' && mouseIsPressed) || mouseMoved) ? 1.0 : 0.0;
+    WaterMultiBuffer.prevMouse.x = mx;
+    WaterMultiBuffer.prevMouse.y = my;
+
+    // 2. Objetos buenos y malos cayendo (o pasando en el tutorial)
+    const MAX_GRAPES = 10;
+    const grapePositions = [];
+    const grapePrevPositions = [];
+    const grapeProgress = [];
+    const grapeActive = [];
+
+    const MAX_BAD = 10;
+    const badPositions = [];
+    const badPrevPositions = [];
+    const badActive = [];
+
+    let grapesSource = (typeof wineGlassSystem !== 'undefined' && wineGlassSystem && Array.isArray(wineGlassSystem.glasses))
+        ? wineGlassSystem.glasses
+        : [];
+    let badsSource = (typeof wineGlassSystem !== 'undefined' && wineGlassSystem && Array.isArray(wineGlassSystem.badItems))
+        ? wineGlassSystem.badItems
+        : [];
+
+    // Si estamos en la pantalla de tutorial, los objetos pasando también modifican el agua y proyectan su aura
+    if (typeof gameState !== 'undefined' && gameState === 'tutorial' &&
+        typeof tutorialScreen !== 'undefined' && tutorialScreen && typeof tutorialScreen.getActiveShowcaseItems === 'function') {
+        const tutItems = tutorialScreen.getActiveShowcaseItems();
+        if (tutItems.good && tutItems.good.length) grapesSource = tutItems.good;
+        if (tutItems.bad && tutItems.bad.length) badsSource = tutItems.bad;
+    }
+
+    for (let i = 0; i < MAX_GRAPES; i++) {
+        if (i < grapesSource.length && grapesSource[i]) {
+            const g = grapesSource[i];
+            const gx = g.x / W;
+            const gy = g.y / H;
+            const prev = WaterMultiBuffer.prevGrapes.get(g) || { x: gx, y: gy };
+            WaterMultiBuffer.prevGrapes.set(g, { x: gx, y: gy });
+            const prog = (g.requiredHoverTime > 0) ? Math.min(1.0, (g.hoverTime || 0) / g.requiredHoverTime) : (g.captureProgress || 0.0);
+
+            grapePositions.push(gx, gy);
+            grapePrevPositions.push(prev.x, prev.y);
+            grapeProgress.push(prog);
+            grapeActive.push(1.0);
+        } else {
+            grapePositions.push(0, 0);
+            grapePrevPositions.push(0, 0);
+            grapeProgress.push(0);
+            grapeActive.push(0.0);
+        }
+    }
+
+    for (let i = 0; i < MAX_BAD; i++) {
+        if (i < badsSource.length && badsSource[i]) {
+            const b = badsSource[i];
+            const bx = b.x / W;
+            const by = b.y / H;
+            const prev = WaterMultiBuffer.prevBads.get(b) || { x: bx, y: by };
+            WaterMultiBuffer.prevBads.set(b, { x: bx, y: by });
+
+            badPositions.push(bx, by);
+            badPrevPositions.push(prev.x, prev.y);
+            badActive.push(1.0);
+        } else {
+            badPositions.push(0, 0);
+            badPrevPositions.push(0, 0);
+            badActive.push(0.0);
+        }
+    }
+
+    // 3. Ondas expansivas
+    const MAX_WAVES_LOCAL = (typeof MAX_WAVES !== 'undefined') ? MAX_WAVES : 5;
+    const wavePositions = [];
+    const waveTimes = [];
+    const waveActive = [];
+    if (Array.isArray(window.waves)) {
+        for (let i = 0; i < MAX_WAVES_LOCAL; i++) {
+            if (i < window.waves.length && window.waves[i] && window.waves[i].active) {
+                wavePositions.push(window.waves[i].x, window.waves[i].y);
+                waveTimes.push(window.waves[i].startTime);
+                waveActive.push(1.0);
+            } else {
+                wavePositions.push(0, 0);
+                waveTimes.push(0);
+                waveActive.push(0.0);
+            }
+        }
+    } else {
+        for (let i = 0; i < MAX_WAVES_LOCAL; i++) {
+            wavePositions.push(0, 0);
+            waveTimes.push(0);
+            waveActive.push(0.0);
+        }
+    }
+
+    // 4. Combo y viñeta
+    let comboLevel = 0.0;
+    if (typeof gameState !== 'undefined' && gameState === 'standby') {
+        comboLevel = 0.12 + 0.08 * Math.sin(nowSec * 1.6);
+    } else {
+        const sc = (typeof scoreSystem !== 'undefined' && scoreSystem) ? scoreSystem : null;
+        const winThresh = (typeof CONFIG !== 'undefined' && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
+        const cc = sc && sc.comboCount ? sc.comboCount : 0;
+        comboLevel = Math.min(1.0, cc / winThresh);
+    }
+
+    if (typeof scoreSystem !== 'undefined' && scoreSystem) {
+        const lives = scoreSystem.lives !== undefined ? scoreSystem.lives : 3;
+        window.vignetteIntensity = Math.max(0, Math.min(1, (3 - lives) / 3));
+    }
+
+    return {
+        W, H, nowSec,
+        pointerPositions, pointerPrevPositions, pointerActive,
+        mx, my, prevMx, prevMy, mouseActive,
+        grapePositions, grapePrevPositions, grapeProgress, grapeActive,
+        badPositions, badPrevPositions, badActive,
+        wavePositions, waveTimes, waveActive,
+        comboLevel
+    };
+}
 
 function processShaders() {
-  // Protección: requerimos buffers y shaders
-  if (typeof fondoBuffer === 'undefined' || fondoBuffer === null || 
-      typeof feedbackShader === 'undefined' || feedbackShader === null ||
-      typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
+    if (typeof feedbackBuffer === 'undefined' || !feedbackBuffer) return;
 
-  // Si el usuario eligió ocultar el fondo, limpiar el buffer y salir
-  if (typeof window !== 'undefined' && window.hideBackground) {
-    try {
-      fondoBuffer.clear();
-      fondoBuffer.push();
-      fondoBuffer.noStroke();
-      fondoBuffer.fill(0);
-      fondoBuffer.rect(0, 0, width, height); // plano negro
-      fondoBuffer.pop();
-    } catch (e) {}
-    return;
-  }
-
-  // Actualizar animación de fondo
-  if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
-    dynamicBackground.update();
-  }
-
-  // Calcular comboLevel (standby usa pulso suave)
-  let comboLevel;
-  if (typeof gameState !== 'undefined' && gameState === 'standby') {
-    comboLevel = 0.12 + 0.08 * Math.sin((typeof millis === 'function' ? millis() : Date.now()) / 1000.0 * 1.6);
-  } else {
-    const sc = (typeof scoreSystem !== 'undefined' && scoreSystem) ? scoreSystem : null;
-    const winThresh = (typeof CONFIG !== 'undefined' && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
-    const cc = sc && sc.comboCount ? sc.comboCount : 0;
-    comboLevel = Math.min(1.0, cc / winThresh);
-  }
-
-  // Vignette por vidas
-  if (typeof scoreSystem !== 'undefined' && scoreSystem) {
-    const lives = scoreSystem.lives || 3;
-    if (typeof map === 'function') {
-      window.vignetteIntensity = map(lives, 3, 0, 0, 1, true);
-    } else {
-      window.vignetteIntensity = Math.max(0, Math.min(1, (3 - lives) / 3));
+    // Actualizar animación de fondo y partículas
+    if (typeof dynamicBackground !== 'undefined' && dynamicBackground) {
+        dynamicBackground.update();
     }
-  }
-
-  // ===== PASO 1: SHADER DE FEEDBACK =====
-  fondoBuffer.push();
-  fondoBuffer.shader(feedbackShader);
-
-  // Pasar las texturas de fondo al feedback shader
-  if (typeof backgroundTexturesLoaded !== 'undefined' && backgroundTexturesLoaded && Array.isArray(backgroundTextures) && backgroundTextures.length > 0) {
-    const safeIndex = (dynamicBackground && dynamicBackground.currentTextureIndex < backgroundTextures.length) ? dynamicBackground.currentTextureIndex : 0;
-    feedbackShader.setUniform('u_texture', backgroundTextures[safeIndex]);
-  }
-
-  feedbackShader.setUniform('u_feedbackTexture', fondoBuffer);
-  if (typeof particulasBuffer !== 'undefined') feedbackShader.setUniform('u_particlesTexture', particulasBuffer);
-  if (typeof juegoBuffer !== 'undefined') feedbackShader.setUniform('u_gameTexture', juegoBuffer);
-  feedbackShader.setUniform('u_resolution', [width, height]);
-  feedbackShader.setUniform('u_mouse', [mouseX, mouseY]);
-  feedbackShader.setUniform('u_time', (typeof millis === 'function' ? millis() : Date.now()) / 1000.0);
-  feedbackShader.setUniform('u_effectIntensity', (typeof effectIntensity !== 'undefined' ? effectIntensity : 0));
-  feedbackShader.setUniform('u_comboLevel', comboLevel);
-  feedbackShader.setUniform('u_vignetteIntensity', (typeof vignetteIntensity !== 'undefined' ? vignetteIntensity : 0));
-
-  // Punteros (mouse/touch/LIDAR)
-  const MAX_POINTERS = 16;
-  let pointerPositions = [];
-  let pointerActive = [];
-  if (typeof Pserver !== 'undefined' && Pserver && typeof Pserver.getAllPoints === 'function') {
-    const pts = Pserver.getAllPoints();
-    for (let i = 0; i < MAX_POINTERS; i++) {
-      if (i < pts.length) {
-        pointerPositions.push(pts[i].x / width, pts[i].y / height);
-        pointerActive.push(1.0);
-      } else {
-        pointerPositions.push(0, 0);
-        pointerActive.push(0.0);
-      }
+    if (typeof particulasBuffer !== 'undefined' && typeof particleSystem !== 'undefined' && particleSystem) {
+        particulasBuffer.clear();
+        particleSystem.update();
+        particleSystem.display(particulasBuffer);
     }
-  } else {
-    for (let i = 0; i < MAX_POINTERS; i++) { pointerPositions.push(0, 0); pointerActive.push(0.0); }
-  }
-  feedbackShader.setUniform('u_pointerPositions', pointerPositions);
-  feedbackShader.setUniform('u_pointerActive', pointerActive);
 
-  // Ondas expansivas
-  const MAX_WAVES_LOCAL = (typeof MAX_WAVES !== 'undefined') ? MAX_WAVES : 5;
-  let wavePositions = [];
-  let waveTimes = [];
-  let waveActive = [];
-  if (Array.isArray(window.waves)) {
-    for (let i = 0; i < MAX_WAVES_LOCAL; i++) {
-      if (i < window.waves.length && window.waves[i].active) {
-        wavePositions.push(window.waves[i].x, window.waves[i].y);
-        waveTimes.push(window.waves[i].startTime);
-        waveActive.push(1.0);
-      } else {
-        wavePositions.push(0, 0);
-        waveTimes.push(0);
-        waveActive.push(0.0);
-      }
+    if (typeof window !== 'undefined' && window.hideBackground) {
+        return;
     }
-  }
-  window._wavePositions = wavePositions;
-  window._waveTimes = waveTimes;
-  window._waveActive = waveActive;
-  feedbackShader.setUniform('u_wavePositions', wavePositions);
-  feedbackShader.setUniform('u_waveTimes', waveTimes);
-  feedbackShader.setUniform('u_waveActive', waveActive);
-  
-  // Parámetros de ondas expansivas desde el panel de control
-  feedbackShader.setUniform('u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 1.0);
-  feedbackShader.setUniform('u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 1.0);
-  feedbackShader.setUniform('u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
 
-  // Controles de halo del cursor
-  feedbackShader.setUniform('u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
-  feedbackShader.setUniform('u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
+    const gl = feedbackBuffer.drawingContext || (feedbackBuffer._renderer && feedbackBuffer._renderer.GL);
+    if (!gl) return;
 
-  // Onda de evento (GANASTE/PERDISTE)
-  if (typeof window !== 'undefined') {
-    const er = window.eventRipple || null;
+    // Inicializar WaterMultiBuffer con el código de feedback.frag y composite.frag cargados por p5
+    if (!WaterMultiBuffer.initialized && !WaterMultiBuffer.failed) {
+        const fragA = (typeof feedbackShader !== 'undefined' && feedbackShader && feedbackShader._fragSrc) ? feedbackShader._fragSrc : null;
+        const fragMain = (typeof compositeShader !== 'undefined' && compositeShader && compositeShader._fragSrc) ? compositeShader._fragSrc : null;
+        if (!fragA || !fragMain) return;
+        WaterMultiBuffer.init(gl, feedbackBuffer.width, feedbackBuffer.height, fragA, fragMain);
+    }
+    if (!WaterMultiBuffer.initialized || WaterMultiBuffer.failed) return;
+
+    WaterMultiBuffer.ensureSize(gl, feedbackBuffer.width, feedbackBuffer.height);
+
+    const scene = collectSceneDataForWater();
+    window._waterSceneCache = scene;
+
+    // ===== PASE 1 (BUFFER A): SIMULACIÓN DEL CAMPO DE AGUA =====
+    const prog = WaterMultiBuffer.progBufferA;
+    const readFBO = WaterMultiBuffer.fboA;
+    const writeFBO = WaterMultiBuffer.fboB;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, writeFBO.framebuffer);
+    gl.viewport(0, 0, writeFBO.width, writeFBO.height);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+
+    gl.useProgram(prog);
+
+    // Textura del estado anterior del campo (Buffer A -> self)
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, readFBO.texture);
+    WaterMultiBuffer.set1i(gl, prog, 'u_feedbackTexture', 0);
+
+    WaterMultiBuffer.set2f(gl, prog, 'u_resolution', writeFBO.width, writeFBO.height);
+    WaterMultiBuffer.set2f(gl, prog, 'u_mouse', scene.mx, scene.my);
+    WaterMultiBuffer.set2f(gl, prog, 'u_mousePrev', scene.prevMx, scene.prevMy);
+    WaterMultiBuffer.set1f(gl, prog, 'u_mouseActive', scene.mouseActive);
+    WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
+    WaterMultiBuffer.set1i(gl, prog, 'u_frame', WaterMultiBuffer.frame);
+
+    // Parámetros físicos de agua-nikos
+    WaterMultiBuffer.set1f(gl, prog, 'u_paso', 0.35);
+    WaterMultiBuffer.set1f(gl, prog, 'u_oleaje', 0.38);
+    WaterMultiBuffer.set1f(gl, prog, 'u_amortiguar', 0.84);
+    WaterMultiBuffer.set1f(gl, prog, 'u_fuerza', 0.78);
+    WaterMultiBuffer.set1f(gl, prog, 'u_empuje', 0.88);
+    WaterMultiBuffer.set1f(gl, prog, 'u_radio', 0.42);
+
+    WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
+    WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
+
+    // Punteros mapeopuntosmaster
+    WaterMultiBuffer.set2fv(gl, prog, 'u_pointerPositions', scene.pointerPositions);
+    WaterMultiBuffer.set2fv(gl, prog, 'u_pointerPrevPositions', scene.pointerPrevPositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_pointerActive', scene.pointerActive);
+
+    // Objetos cayendo (copas/uvas y bichos)
+    WaterMultiBuffer.set2fv(gl, prog, 'u_grapePositions', scene.grapePositions);
+    WaterMultiBuffer.set2fv(gl, prog, 'u_grapePrevPositions', scene.grapePrevPositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_grapeProgress', scene.grapeProgress);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_grapeActive', scene.grapeActive);
+
+    WaterMultiBuffer.set2fv(gl, prog, 'u_badPositions', scene.badPositions);
+    WaterMultiBuffer.set2fv(gl, prog, 'u_badPrevPositions', scene.badPrevPositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_badActive', scene.badActive);
+
+    // Ondas expansivas
+    WaterMultiBuffer.set2fv(gl, prog, 'u_wavePositions', scene.wavePositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_waveTimes', scene.waveTimes);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_waveActive', scene.waveActive);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 0.5);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 0.09);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
+
+    // Onda de evento
+    const er = (typeof window !== 'undefined' && window.eventRipple) ? window.eventRipple : null;
     if (er && er.active) {
-      feedbackShader.setUniform('u_eventActive', 1.0);
-      feedbackShader.setUniform('u_eventCenter', [er.x, er.y]);
-      feedbackShader.setUniform('u_eventStartTime', er.startTime);
-      feedbackShader.setUniform('u_eventColor', er.color || [1.0, 0.85, 0.2]);
-      feedbackShader.setUniform('u_eventStrength', er.strength || 1.0);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventActive', 1.0);
+        WaterMultiBuffer.set2f(gl, prog, 'u_eventCenter', er.x, er.y);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStartTime', er.startTime);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStrength', er.strength || 1.0);
     } else {
-      feedbackShader.setUniform('u_eventActive', 0.0);
-      feedbackShader.setUniform('u_eventCenter', [0.5, 0.5]);
-      feedbackShader.setUniform('u_eventStartTime', 0.0);
-      feedbackShader.setUniform('u_eventColor', [1.0, 0.85, 0.2]);
-      feedbackShader.setUniform('u_eventStrength', 0.0);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventActive', 0.0);
+        WaterMultiBuffer.set2f(gl, prog, 'u_eventCenter', 0.5, 0.5);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStartTime', 0.0);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStrength', 0.0);
     }
-  }
 
-  fondoBuffer.rect(0, 0, width, height);
-  fondoBuffer.pop();
+    gl.bindBuffer(gl.ARRAY_BUFFER, WaterMultiBuffer.quadBuffer);
+    gl.enableVertexAttribArray(prog.aPosition);
+    gl.vertexAttribPointer(prog.aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-  // ===== BUFFER DE PARTÍCULAS =====
-  if (typeof particulasBuffer !== 'undefined' && typeof particleSystem !== 'undefined' && particleSystem) {
-    particulasBuffer.clear();
-    particleSystem.update();
-    particleSystem.display(particulasBuffer);
-  }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // Swap ping-pong: ahora fboA contiene el nuevo estado del campo de agua
+    WaterMultiBuffer.fboA = writeFBO;
+    WaterMultiBuffer.fboB = readFBO;
+    WaterMultiBuffer.frame++;
 }
 
 function renderShaders() {
-  if (typeof feedbackBuffer === 'undefined' || feedbackBuffer === null ||
-      typeof compositeShader === 'undefined' || compositeShader === null ||
-      typeof shadersLoaded === 'undefined' || !shadersLoaded) return;
-  if (!backgroundTexturesLoaded) return;
+    if (typeof feedbackBuffer === 'undefined' || !feedbackBuffer) return;
 
-  // Si el usuario eligió ocultar el fondo, limpiar y no componer
-  if (typeof window !== 'undefined' && window.hideBackground) {
-    try {
-      feedbackBuffer.clear();
-      feedbackBuffer.push();
-      feedbackBuffer.noStroke();
-      feedbackBuffer.fill(0);
-      feedbackBuffer.rect(0, 0, width, height); // plano negro
-      feedbackBuffer.pop();
-    } catch (e) {}
-    return;
-  }
+    const gl = feedbackBuffer.drawingContext || (feedbackBuffer._renderer && feedbackBuffer._renderer.GL);
+    if (!gl) return;
 
-  const len = Array.isArray(backgroundTextures) ? backgroundTextures.length : 0;
-  const isImgReady = (img) => !!(img && typeof img.width === 'number' && img.width > 0);
-  if (len > 0 && (typeof assetsReady === 'undefined' || assetsReady)) {
-    feedbackBuffer.shader(compositeShader);
-    const idx1 = (dynamicBackground && dynamicBackground.currentTextureIndex < len) ? dynamicBackground.currentTextureIndex : 0;
-    const idx2 = (dynamicBackground && dynamicBackground.nextTextureIndex < len) ? dynamicBackground.nextTextureIndex : idx1;
-    const tex1 = backgroundTextures[idx1] || null;
-    const tex2 = backgroundTextures[idx2] || tex1;
+    if (typeof window !== 'undefined' && window.hideBackground) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, feedbackBuffer.width, feedbackBuffer.height);
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        return;
+    }
 
-    // Fallbacks: nunca detener el shader por texturas no listas
-    const last1 = (typeof window !== 'undefined') ? window._lastBgTex1 : null;
-    const last2 = (typeof window !== 'undefined') ? window._lastBgTex2 : null;
-    let safeTex1 = isImgReady(tex1) ? tex1 : (isImgReady(last1) ? last1 : (isImgReady(tex2) ? tex2 : (isImgReady(last2) ? last2 : null)));
-    let safeTex2 = isImgReady(tex2) ? tex2 : safeTex1;
-    // Si seguimos sin textura válida, usar el feedback/fondo previo como respaldo
-    if (!isImgReady(safeTex1) && typeof fondoBuffer !== 'undefined') safeTex1 = fondoBuffer;
-    if (!isImgReady(safeTex2)) safeTex2 = safeTex1;
+    if (!WaterMultiBuffer.initialized || WaterMultiBuffer.failed) return;
 
+    const scene = window._waterSceneCache || collectSceneDataForWater();
+    const prog = WaterMultiBuffer.progMain;
+
+    // Seleccionar las dos imágenes de fondo actuales (filtrando nulos si hubiera)
+    const validBgs = (typeof dynamicBackground !== 'undefined' && dynamicBackground)
+        ? dynamicBackground.getValidBackgrounds()
+        : [];
+    const len = validBgs.length;
+    const idx1 = (len > 0 && dynamicBackground) ? (dynamicBackground.currentTextureIndex % len) : 0;
+    const idx2 = (len > 1 && dynamicBackground) ? (dynamicBackground.nextTextureIndex % len) : idx1;
+    const tex1Obj = len > 0 ? validBgs[idx1] : null;
+    const tex2Obj = len > 0 ? validBgs[idx2] : null;
     const blend = (len > 1 && dynamicBackground) ? (dynamicBackground.transitionProgress || 0.0) : 0.0;
-    compositeShader.setUniform('u_backgroundTexture1', safeTex1);
-    compositeShader.setUniform('u_backgroundTexture2', safeTex2);
-    compositeShader.setUniform('u_backgroundBlend', blend);
-    compositeShader.setUniform('u_backgroundRotation', dynamicBackground ? dynamicBackground.textureRotation : 0);
-    compositeShader.setUniform('u_feedbackTexture', fondoBuffer);
-    compositeShader.setUniform('u_resolution', [width, height]);
-    compositeShader.setUniform('u_time', (typeof millis === 'function' ? millis() : Date.now()) / 1000.0);
-    const sc = (typeof scoreSystem !== 'undefined' && scoreSystem) ? scoreSystem : null;
-    const winThresh = (typeof CONFIG !== 'undefined' && CONFIG.score && CONFIG.score.winComboThreshold) ? CONFIG.score.winComboThreshold : 20;
-    const cc = sc && sc.comboCount ? sc.comboCount : 0;
-    compositeShader.setUniform('u_comboLevel', Math.min(1.0, cc / winThresh));
 
-    // Cachear últimas texturas válidas para próximos frames
-    if (typeof window !== 'undefined') {
-      if (isImgReady(safeTex1)) window._lastBgTex1 = safeTex1;
-      if (isImgReady(safeTex2)) window._lastBgTex2 = safeTex2;
+    const glTex1 = WaterMultiBuffer.getOrUploadImageTexture(gl, tex1Obj);
+    const glTex2 = WaterMultiBuffer.getOrUploadImageTexture(gl, tex2Obj);
+
+    // ===== PASE 2 (OUTPUT): REFRACCIÓN DE AGUA + FONDOS + HALOS + PUNTOS =====
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, feedbackBuffer.width, feedbackBuffer.height);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+
+    gl.useProgram(prog);
+
+    // Unidad 0: Buffer A (Campo de agua en float)
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, WaterMultiBuffer.fboA.texture);
+    WaterMultiBuffer.set1i(gl, prog, 'u_feedbackTexture', 0);
+
+    // Unidad 1: Imagen de fondo 1
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, glTex1);
+    WaterMultiBuffer.set1i(gl, prog, 'u_backgroundTexture1', 1);
+
+    // Unidad 2: Imagen de fondo 2
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glTex2);
+    WaterMultiBuffer.set1i(gl, prog, 'u_backgroundTexture2', 2);
+
+    WaterMultiBuffer.set1f(gl, prog, 'u_backgroundBlend', blend);
+    WaterMultiBuffer.set1f(gl, prog, 'u_backgroundRotation', dynamicBackground ? dynamicBackground.textureRotation : 0.0);
+    WaterMultiBuffer.set2f(gl, prog, 'u_resolution', feedbackBuffer.width, feedbackBuffer.height);
+    WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
+    WaterMultiBuffer.set1f(gl, prog, 'u_comboLevel', scene.comboLevel);
+
+    // Parámetros ópticos de agua-nikos
+    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', 0.38);
+    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', 0.52);
+    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', 0.50);
+    WaterMultiBuffer.set1f(gl, prog, 'u_especular', 0.62);
+    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', 0.68);
+    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', 0.42);
+    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', 0.55);
+    WaterMultiBuffer.set2f(gl, prog, 'u_foco', 0.52, 0.74);
+    WaterMultiBuffer.set3f(gl, prog, 'u_agua', 0.96, 0.95, 1.0);
+
+    // Ondas expansivas
+    WaterMultiBuffer.set2fv(gl, prog, 'u_wavePositions', scene.wavePositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_waveTimes', scene.waveTimes);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_waveActive', scene.waveActive);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 0.5);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 0.09);
+    WaterMultiBuffer.set1f(gl, prog, 'u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
+
+    // Objetos cayendo
+    WaterMultiBuffer.set2fv(gl, prog, 'u_grapePositions', scene.grapePositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_grapeProgress', scene.grapeProgress);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_grapeActive', scene.grapeActive);
+
+    WaterMultiBuffer.set2fv(gl, prog, 'u_badPositions', scene.badPositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_badActive', scene.badActive);
+
+    // Punteros mapeopuntosmaster
+    WaterMultiBuffer.set2fv(gl, prog, 'u_pointerPositions', scene.pointerPositions);
+    WaterMultiBuffer.set2fv(gl, prog, 'u_pointerPrevPositions', scene.pointerPrevPositions);
+    WaterMultiBuffer.set1fv(gl, prog, 'u_pointerActive', scene.pointerActive);
+    WaterMultiBuffer.set2f(gl, prog, 'u_mouse', scene.mx, scene.my);
+    WaterMultiBuffer.set2f(gl, prog, 'u_mousePrev', scene.prevMx, scene.prevMy);
+    WaterMultiBuffer.set1f(gl, prog, 'u_mouseActive', scene.mouseActive);
+    WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
+    WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
+
+    // Halos configurables desde el panel
+    const goodHalo = (typeof window !== 'undefined' && window.getGoodHaloSettings)
+        ? window.getGoodHaloSettings()
+        : { size: 0.12, strength: 0.35, color: [1.0, 0.85, 0.2] };
+    const badHalo = (typeof window !== 'undefined' && window.getBadHaloSettings)
+        ? window.getBadHaloSettings()
+        : { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
+
+    WaterMultiBuffer.set1f(gl, prog, 'u_goodHaloSize', goodHalo.size);
+    WaterMultiBuffer.set1f(gl, prog, 'u_goodHaloStrength', goodHalo.strength);
+    WaterMultiBuffer.set3f(gl, prog, 'u_goodHaloColor', goodHalo.color[0], goodHalo.color[1], goodHalo.color[2]);
+    WaterMultiBuffer.set1f(gl, prog, 'u_badHaloSize', badHalo.size);
+    WaterMultiBuffer.set1f(gl, prog, 'u_badHaloStrength', badHalo.strength);
+    WaterMultiBuffer.set3f(gl, prog, 'u_badHaloColor', badHalo.color[0], badHalo.color[1], badHalo.color[2]);
+
+    // Brillo del fondo y viñeta
+    WaterMultiBuffer.set1f(gl, prog, 'u_backgroundBrightness', (typeof window !== 'undefined' && window.backgroundBrightness !== undefined) ? window.backgroundBrightness : 1.0);
+    WaterMultiBuffer.set1f(gl, prog, 'u_vignetteIntensity', (typeof window !== 'undefined' && window.vignetteIntensity !== undefined) ? window.vignetteIntensity : 0.0);
+
+    // Línea divisoria en modo competitivo
+    const splitEnabled = (typeof gameMode !== 'undefined' && gameMode === 'competitive' && typeof gameState !== 'undefined' && gameState === 'playing') ? 1.0 : 0.0;
+    WaterMultiBuffer.set1f(gl, prog, 'u_splitLineEnabled', splitEnabled);
+    WaterMultiBuffer.set3f(gl, prog, 'u_splitLineColor', 1.0, 0.92, 0.68);
+    WaterMultiBuffer.set1f(gl, prog, 'u_splitLineThickness', 0.0015);
+    WaterMultiBuffer.set1f(gl, prog, 'u_splitLineSoftness', 0.002);
+
+    // Onda de evento
+    const er = (typeof window !== 'undefined' && window.eventRipple) ? window.eventRipple : null;
+    if (er && er.active) {
+        const ec = er.color || [1.0, 0.85, 0.2];
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventActive', 1.0);
+        WaterMultiBuffer.set2f(gl, prog, 'u_eventCenter', er.x, er.y);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStartTime', er.startTime);
+        WaterMultiBuffer.set3f(gl, prog, 'u_eventColor', ec[0], ec[1], ec[2]);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStrength', er.strength || 1.0);
+    } else {
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventActive', 0.0);
+        WaterMultiBuffer.set2f(gl, prog, 'u_eventCenter', 0.5, 0.5);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStartTime', 0.0);
+        WaterMultiBuffer.set3f(gl, prog, 'u_eventColor', 1.0, 0.85, 0.2);
+        WaterMultiBuffer.set1f(gl, prog, 'u_eventStrength', 0.0);
     }
 
-      // Ondas expansivas
-      if (window._wavePositions && window._waveTimes && window._waveActive) {
-        compositeShader.setUniform('u_wavePositions', window._wavePositions);
-        compositeShader.setUniform('u_waveTimes', window._waveTimes);
-        compositeShader.setUniform('u_waveActive', window._waveActive);
-      }
-      // Parámetros de ondas expansivas (distorsión en composite)
-      compositeShader.setUniform('u_waveSpeed', (typeof window !== 'undefined' && window.waveSpeed !== undefined) ? window.waveSpeed : 0.5);
-      compositeShader.setUniform('u_waveForce', (typeof window !== 'undefined' && window.waveForce !== undefined) ? window.waveForce : 0.09);
-      compositeShader.setUniform('u_waveDuration', (typeof window !== 'undefined' && window.waveDuration !== undefined) ? window.waveDuration : 2.0);
-
-      // Posiciones de uvas/copas
-      let grapePositions = [];
-      let grapeProgress = [];
-      let grapeActive = [];
-      const MAX_GRAPES = 10;
-      const grapes = (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) ? wineGlassSystem.glasses : [];
-      for (let i = 0; i < MAX_GRAPES; i++) {
-        if (i < grapes.length) {
-          grapePositions.push(grapes[i].x / width, grapes[i].y / height);
-          grapeProgress.push(grapes[i].hoverTime / grapes[i].requiredHoverTime);
-          grapeActive.push(1.0);
-        } else {
-          grapePositions.push(0, 0);
-          grapeProgress.push(0);
-          grapeActive.push(0.0);
-        }
-      }
-      compositeShader.setUniform('u_grapePositions', grapePositions);
-      compositeShader.setUniform('u_grapeProgress', grapeProgress);
-      compositeShader.setUniform('u_grapeActive', grapeActive);
-
-      // Items malos
-      let badPositions = [];
-      let badActive = [];
-      const MAX_BAD = 10;
-      const bads = (typeof wineGlassSystem !== 'undefined' && wineGlassSystem) ? wineGlassSystem.badItems : [];
-      for (let i = 0; i < MAX_BAD; i++) {
-        if (i < bads.length) {
-          badPositions.push(bads[i].x / width, bads[i].y / height);
-          badActive.push(1.0);
-        } else {
-          badPositions.push(0, 0);
-          badActive.push(0.0);
-        }
-      }
-      compositeShader.setUniform('u_badPositions', badPositions);
-      compositeShader.setUniform('u_badActive', badActive);
-
-      // Halos desde panel
-      const goodHalo = (typeof window !== 'undefined' && window.getGoodHaloSettings) ? window.getGoodHaloSettings() : { size: 0.12, strength: 0.35, color: [1.0, 0.85, 0.2] };
-      const badHalo = (typeof window !== 'undefined' && window.getBadHaloSettings) ? window.getBadHaloSettings() : { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
-      compositeShader.setUniform('u_goodHaloSize', goodHalo.size);
-      compositeShader.setUniform('u_goodHaloStrength', goodHalo.strength);
-      compositeShader.setUniform('u_goodHaloColor', goodHalo.color);
-      compositeShader.setUniform('u_badHaloSize', badHalo.size);
-      compositeShader.setUniform('u_badHaloStrength', badHalo.strength);
-      compositeShader.setUniform('u_badHaloColor', badHalo.color);
-      
-      // Brillo del fondo desde el panel de control
-      compositeShader.setUniform('u_backgroundBrightness', (typeof window !== 'undefined' && window.backgroundBrightness !== undefined) ? window.backgroundBrightness : 1.0);
-
-      const splitEnabled = (typeof gameMode !== 'undefined' && gameMode === 'competitive') ? 1.0 : 0.0;
-      compositeShader.setUniform('u_splitLineEnabled', splitEnabled);
-      compositeShader.setUniform('u_splitLineColor', [1.0, 1.0, 1.0]);
-      compositeShader.setUniform('u_splitLineThickness', 0.001);
-      compositeShader.setUniform('u_splitLineSoftness', 0.001);
-
-      // Onda de evento (GANASTE/PERDISTE)
-      if (typeof window !== 'undefined') {
-        const er = window.eventRipple || null;
-        if (er && er.active) {
-          compositeShader.setUniform('u_eventActive', 1.0);
-          compositeShader.setUniform('u_eventCenter', [er.x, er.y]);
-          compositeShader.setUniform('u_eventStartTime', er.startTime);
-          compositeShader.setUniform('u_eventColor', er.color || [1.0, 0.85, 0.2]);
-          compositeShader.setUniform('u_eventStrength', er.strength || 1.0);
-        } else {
-          compositeShader.setUniform('u_eventActive', 0.0);
-          compositeShader.setUniform('u_eventCenter', [0.5, 0.5]);
-          compositeShader.setUniform('u_eventStartTime', 0.0);
-          compositeShader.setUniform('u_eventColor', [1.0, 0.85, 0.2]);
-          compositeShader.setUniform('u_eventStrength', 0.0);
-        }
-      }
-
-      feedbackBuffer.rect(0, 0, width, height);
-    }
-  else {
-    // Sin texturas: fondo negro
-    feedbackBuffer.clear();
-    feedbackBuffer.push();
-    feedbackBuffer.noStroke();
-    feedbackBuffer.fill(0);
-    feedbackBuffer.rect(0, 0, width, height);
-    feedbackBuffer.pop();
-  }
+    gl.bindBuffer(gl.ARRAY_BUFFER, WaterMultiBuffer.quadBuffer);
+    gl.enableVertexAttribArray(prog.aPosition);
+    gl.vertexAttribPointer(prog.aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
-// Exponer globales
 if (typeof window !== 'undefined') {
-  window.processShaders = processShaders;
-  window.renderShaders = renderShaders;
-  // Exponer la clase para que sketch.js pueda instanciarla aunque el archivo se cargue en distinto orden
-  window.DynamicBackground = DynamicBackground;
+    window.processShaders = processShaders;
+    window.renderShaders = renderShaders;
+    window.DynamicBackground = DynamicBackground;
+    window.WaterMultiBuffer = WaterMultiBuffer;
 }

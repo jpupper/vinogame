@@ -48,7 +48,7 @@
       }
     }
 
-    // Carga inicial centralizada de imágenes (incluye medidor y trofeo)
+    // Carga inicial centralizada de imágenes (incluye medidor, trofeo y shader de celebración)
     // Se puede invocar desde preload() para mantener la semántica de p5.
     initialLoad() {
       // Buenas
@@ -91,10 +91,11 @@
       this.backgroundImagePaths = bgPaths.slice();
       this.backgroundTextures = bgPaths.map(p => loadImage(p));
 
-      // Medidor (copa y máscara) y su shader
+      // Medidor (copa y máscara) y shaders
       this.images.medidorGlass = loadImage('img/medidor/copa-vacia.png');
       this.images.medidorMask = loadImage('img/medidor/copa-vacia-mask.png');
       this.shaders.medidor = loadShader('sh/medidor.vert', 'sh/medidor.frag');
+      this.shaders.celebration = loadShader('sh/celebration.vert', 'sh/celebration.frag');
 
       // Trofeo
       this.images.trophy = loadImage('img/copa/copa.png');
@@ -112,6 +113,7 @@
         window.backgroundImagePaths = this.backgroundImagePaths;
         window.trophyImage = this.images.trophy;
         window.logoImage = this.images.logo;
+        window.celebrationShader = this.shaders.celebration;
       }
     }
 
@@ -210,7 +212,7 @@
           for (const arr of arrays) {
             for (let i = 0; i < arr.length; i++) {
               const img = arr[i];
-              if (!img) return false;
+              if (!img) continue;
               const ready = (img.__loaded === true) || (typeof img.width === 'number' && img.width > 0);
               if (!ready) return false;
             }
