@@ -56,6 +56,7 @@
         <!-- Navegación por Pestañas -->
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
+            <button class="tab-button" data-tab="watershader">💧 Agua / Shader</button>
             <button class="tab-button" data-tab="particles">✨ Partículas</button>
             <button class="tab-button" data-tab="winlose">🏆 Win/Lose</button>
             <button class="tab-button" data-tab="assets">🎨 Assets</button>
@@ -209,6 +210,154 @@
                     💾 Guardar Cambios
                 </button>
                 <div class="save-status" id="saveStatus"></div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Agua / Shader (JPShaderEditor + Fluido Multibuffer) -->
+        <div class="tab-content" id="watershader-tab">
+            <!-- Sincronización con JPShaderEditor -->
+            <div class="control-group">
+                <label>🔗 JPShaderEditor Include / Plan</label>
+                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+                    <input type="text" id="jpshaderNameInput" value="solo-agua" placeholder="solo-agua o vinogame-agua" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,215,106,0.4);background:rgba(15,6,18,0.85);color:#fff;">
+                    <button type="button" id="syncJPShaderBtn" style="padding:6px 12px;border-radius:6px;border:1px solid #ffd76a;background:rgba(255,215,106,0.18);color:#ffd76a;cursor:pointer;font-weight:700;">🔄 Sincronizar</button>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:8px;font-size:12px;">
+                    <a href="https://fullscreencode.com/jpshadereditor/shader.html?shader=solo-agua" target="_blank" style="color:#ffd76a;text-decoration:underline;">Abrir solo-agua</a>
+                    <a href="https://fullscreencode.com/jpshadereditor/shader.html?shader=vinogame-agua" target="_blank" style="color:#ffd76a;text-decoration:underline;">Abrir vinogame-agua</a>
+                </div>
+                <div class="help-text" id="jpshaderSyncStatus">Podés ajustar todos los parámetros acá abajo o traer los defaults desde JPShaderEditor (Atajo: tecla P o S).</div>
+            </div>
+
+            <!-- 1. Fluido del Puntero (Mouse / Touch / LIDAR) -->
+            <div class="control-group">
+                <label>🌊 Fluido del Puntero (Cursor / LIDAR)</label>
+                <div style="margin-top:8px">
+                    <label for="waterPointerForceSlider">
+                        Fuerza Fluido Puntero (u_fuerza / u_empuje)
+                        <span class="value-display" id="waterPointerForceValue">0.95</span>
+                    </label>
+                    <input type="range" id="waterPointerForceSlider" min="0.0" max="2.5" step="0.05" value="0.95">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterPointerRadiusSlider">
+                        Radio Fluido Puntero (u_radio)
+                        <span class="value-display" id="waterPointerRadiusValue">0.52</span>
+                    </label>
+                    <input type="range" id="waterPointerRadiusSlider" min="0.05" max="1.5" step="0.02" value="0.52">
+                </div>
+                <div class="help-text">Controla cuánto fluido y de qué tamaño sale desde el puntero al moverse.</div>
+            </div>
+
+            <!-- 2. Fluido de los Objetos que Caen -->
+            <div class="control-group">
+                <label>🍷 Fluido de Objetos que Caen (Copas / Uvas / Bichos)</label>
+                <div style="margin-top:8px">
+                    <label for="waterObjStrengthSlider">
+                        Fuerza Fluido Objetos (u_objWakeStrength)
+                        <span class="value-display" id="waterObjStrengthValue">0.90</span>
+                    </label>
+                    <input type="range" id="waterObjStrengthSlider" min="0.0" max="2.5" step="0.05" value="0.90">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterObjSizeSlider">
+                        Radio Estela Objetos (u_objWakeSize)
+                        <span class="value-display" id="waterObjSizeValue">0.52</span>
+                    </label>
+                    <input type="range" id="waterObjSizeSlider" min="0.05" max="1.5" step="0.02" value="0.52">
+                </div>
+                <div class="help-text">Controla la estela de agua que dejan los objetos mientras caen.</div>
+            </div>
+
+            <!-- 3. Física de Propagación del Agua -->
+            <div class="control-group">
+                <label>💧 Física de Propagación (Ecuación de Onda)</label>
+                <div style="margin-top:8px">
+                    <label for="waterAmortiguarSlider">
+                        Propagación / Persistencia (u_amortiguar)
+                        <span class="value-display" id="waterAmortiguarValue">0.64</span>
+                    </label>
+                    <input type="range" id="waterAmortiguarSlider" min="0.0" max="1.0" step="0.02" value="0.64">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterOleajeSlider">
+                        Velocidad de Oleaje (u_oleaje)
+                        <span class="value-display" id="waterOleajeValue">0.42</span>
+                    </label>
+                    <input type="range" id="waterOleajeSlider" min="0.05" max="1.0" step="0.02" value="0.42">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterPasoSlider">
+                        Paso Espacial (u_paso)
+                        <span class="value-display" id="waterPasoValue">0.38</span>
+                    </label>
+                    <input type="range" id="waterPasoSlider" min="0.05" max="1.0" step="0.02" value="0.38">
+                </div>
+            </div>
+
+            <!-- 4. Óptica y Refracción sobre la Imagen de Fondo -->
+            <div class="control-group">
+                <label>✨ Óptica del Agua (Refracción, Relieve, Espuma)</label>
+                <div style="margin-top:8px">
+                    <label for="waterRefraccionSlider">
+                        Refracción del Fondo (u_refraccion)
+                        <span class="value-display" id="waterRefraccionValue">0.48</span>
+                    </label>
+                    <input type="range" id="waterRefraccionSlider" min="0.0" max="1.5" step="0.02" value="0.48">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterRelieveSlider">
+                        Relieve Normal 3D (u_relieve)
+                        <span class="value-display" id="waterRelieveValue">0.58</span>
+                    </label>
+                    <input type="range" id="waterRelieveSlider" min="0.0" max="1.5" step="0.02" value="0.58">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterProfundidadSlider">
+                        Profundidad (u_profundidad)
+                        <span class="value-display" id="waterProfundidadValue">0.48</span>
+                    </label>
+                    <input type="range" id="waterProfundidadSlider" min="0.0" max="1.0" step="0.02" value="0.48">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterCausticasSlider">
+                        Cáusticas (u_causticas)
+                        <span class="value-display" id="waterCausticasValue">0.38</span>
+                    </label>
+                    <input type="range" id="waterCausticasSlider" min="0.0" max="1.5" step="0.02" value="0.38">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterEspumaSlider">
+                        Espuma en Estelas (u_espuma)
+                        <span class="value-display" id="waterEspumaValue">0.45</span>
+                    </label>
+                    <input type="range" id="waterEspumaSlider" min="0.0" max="1.5" step="0.02" value="0.45">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterBrilloSlider">
+                        Brillo Especular (u_brillo)
+                        <span class="value-display" id="waterBrilloValue">0.62</span>
+                    </label>
+                    <input type="range" id="waterBrilloSlider" min="0.0" max="1.5" step="0.02" value="0.62">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterEspecularSlider">
+                        Dureza Especular (u_especular)
+                        <span class="value-display" id="waterEspecularValue">0.58</span>
+                    </label>
+                    <input type="range" id="waterEspecularSlider" min="0.0" max="1.0" step="0.02" value="0.58">
+                </div>
+                <div style="margin-top:8px">
+                    <label for="waterColorInput">Tinte del Agua (u_agua)</label>
+                    <input type="color" id="waterColorInput" value="#f5f2ff">
+                </div>
+            </div>
+
+            <!-- Botón de Guardar Cambios desde la pestaña de Agua -->
+            <div class="save-section">
+                <button class="save-changes-btn" id="saveWaterChangesBtn">
+                    💾 Guardar Parámetros de Agua
+                </button>
             </div>
         </div>
 

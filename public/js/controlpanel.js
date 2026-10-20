@@ -1969,3 +1969,153 @@ window.getGoodHaloSettings = function() {
 window.getBadHaloSettings = function() {
     return window.badHaloSettings || { size: 0.14, strength: 0.27, color: [1.0, 0.2, 0.2] };
 };
+
+
+// ============================================================================
+//  EXTENSIÓN DE CONTROLES DE AGUA / JPSHADEREDITOR (localhost:4353)
+// ============================================================================
+(function () {
+    const origLoadShader = ControlPanel.prototype.loadShaderSettingsFromConfig;
+    ControlPanel.prototype.loadShaderSettingsFromConfig = function () {
+        if (origLoadShader) origLoadShader.call(this);
+        if (this.configData && this.configData.shaderSettings && this.configData.shaderSettings.waterParams) {
+            const wp = this.configData.shaderSettings.waterParams;
+            if (typeof window !== 'undefined' && typeof window.setWaterParam === 'function') {
+                Object.keys(wp).forEach((k) => {
+                    window.setWaterParam(k, wp[k]);
+                });
+            }
+        }
+        this.syncWaterSlidersFromParams();
+    };
+
+    const origSaveConfig = ControlPanel.prototype.saveConfiguration;
+    ControlPanel.prototype.saveConfiguration = async function () {
+        if (!this.configData) this.configData = {};
+        if (!this.configData.shaderSettings) this.configData.shaderSettings = {};
+        if (typeof window !== 'undefined' && window.waterShaderParams) {
+            this.configData.shaderSettings.waterParams = Object.assign({}, window.waterShaderParams);
+        }
+        return origSaveConfig ? await origSaveConfig.call(this) : false;
+    };
+
+    ControlPanel.prototype.syncWaterSlidersFromParams = function () {
+        if (typeof window === 'undefined' || !window.waterShaderParams) return;
+        const wp = window.waterShaderParams;
+        const setSlider = (sliderId, valId, val, decimals = 2) => {
+            const sl = document.getElementById(sliderId);
+            const vl = document.getElementById(valId);
+            if (sl && val !== undefined) sl.value = val;
+            if (vl && val !== undefined && typeof val === 'number') vl.textContent = val.toFixed(decimals);
+        };
+        setSlider('waterPointerForceSlider', 'waterPointerForceValue', wp.empuje);
+        setSlider('waterPointerRadiusSlider', 'waterPointerRadiusValue', wp.radio);
+        setSlider('waterObjStrengthSlider', 'waterObjStrengthValue', wp.objWakeStrength);
+        setSlider('waterObjSizeSlider', 'waterObjSizeValue', wp.objWakeSize);
+        setSlider('waterAmortiguarSlider', 'waterAmortiguarValue', wp.amortiguar);
+        setSlider('waterOleajeSlider', 'waterOleajeValue', wp.oleaje);
+        setSlider('waterPasoSlider', 'waterPasoValue', wp.paso);
+        setSlider('waterRefraccionSlider', 'waterRefraccionValue', wp.refraccion);
+        setSlider('waterRelieveSlider', 'waterRelieveValue', wp.relieve);
+        setSlider('waterProfundidadSlider', 'waterProfundidadValue', wp.profundidad);
+        setSlider('waterCausticasSlider', 'waterCausticasValue', wp.causticas);
+        setSlider('waterEspumaSlider', 'waterEspumaValue', wp.espuma);
+        setSlider('waterBrilloSlider', 'waterBrilloValue', wp.brillo);
+        setSlider('waterEspecularSlider', 'waterEspecularValue', wp.especular);
+        const colInput = document.getElementById('waterColorInput');
+        if (colInput && wp.aguaColorHex) colInput.value = wp.aguaColorHex;
+    };
+
+    ControlPanel.prototype.initWaterShaderControls = function () {
+        if (this._waterControlsInitialized) return;
+        this._waterControlsInitialized = true;
+
+        const bindSlider = (sliderId, valId, paramKeys) => {
+            const sl = document.getElementById(sliderId);
+            const vl = document.getElementById(valId);
+            if (!sl) return;
+            sl.addEventListener('input', (e) => {
+                const v = parseFloat(e.target.value);
+                if (vl && !isNaN(v)) vl.textContent = v.toFixed(2);
+                const keys = Array.isArray(paramKeys) ? paramKeys : [paramKeys];
+                keys.forEach((k) => {
+                    if (typeof window.setWaterParam === 'function') window.setWaterParam(k, v);
+                });
+            });
+        };
+
+        bindSlider('waterPointerForceSlider', 'waterPointerForceValue', ['fuerza', 'empuje']);
+        bindSlider('waterPointerRadiusSlider', 'waterPointerRadiusValue', 'radio');
+        bindSlider('waterObjStrengthSlider', 'waterObjStrengthValue', 'objWakeStrength');
+        bindSlider('waterObjSizeSlider', 'waterObjSizeValue', 'objWakeSize');
+        bindSlider('waterAmortiguarSlider', 'waterAmortiguarValue', 'amortiguar');
+        bindSlider('waterOleajeSlider', 'waterOleajeValue', 'oleaje');
+        bindSlider('waterPasoSlider', 'waterPasoValue', 'paso');
+        bindSlider('waterRefraccionSlider', 'waterRefraccionValue', 'refraccion');
+        bindSlider('waterRelieveSlider', 'waterRelieveValue', 'relieve');
+        bindSlider('waterProfundidadSlider', 'waterProfundidadValue', 'profundidad');
+        bindSlider('waterCausticasSlider', 'waterCausticasValue', 'causticas');
+        bindSlider('waterEspumaSlider', 'waterEspumaValue', 'espuma');
+        bindSlider('waterBrilloSlider', 'waterBrilloValue', 'brillo');
+        bindSlider('waterEspecularSlider', 'waterEspecularValue', 'especular');
+
+        const colInput = document.getElementById('waterColorInput');
+        if (colInput) {
+            colInput.addEventListener('input', (e) => {
+                if (typeof window.setWaterParam === 'function') {
+                    window.setWaterParam('aguaColorHex', e.target.value);
+                }
+            });
+        }
+
+        const syncBtn = document.getElementById('syncJPShaderBtn');
+        const nameInput = document.getElementById('jpshaderNameInput');
+        const statusEl = document.getElementById('jpshaderSyncStatus');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', async () => {
+                const shName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'solo-agua';
+                if (statusEl) statusEl.textContent = `Sincronizando desde JPShaderEditor (${shName})...`;
+                try {
+                    if (typeof window.syncWaterFromJPShaderEditor === 'function') {
+                        await window.syncWaterFromJPShaderEditor(shName);
+                        if (statusEl) statusEl.textContent = `✅ Parámetros sincronizados desde JPShaderEditor (${shName})`;
+                    }
+                } catch (err) {
+                    if (statusEl) statusEl.textContent = `❌ No se pudo sincronizar (${err.message})`;
+                }
+            });
+        }
+
+        const saveWaterBtn = document.getElementById('saveWaterChangesBtn');
+        if (saveWaterBtn) {
+            saveWaterBtn.addEventListener('click', async (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                await this.saveConfiguration();
+            });
+        }
+
+        // Atajo tecla S para abrir directamente la pestaña Agua / Shader
+        document.addEventListener('keydown', (event) => {
+            const tag = (event.target && event.target.tagName) ? event.target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+            if (event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                this.show();
+                this.switchTab('watershader');
+            }
+        });
+
+        this.syncWaterSlidersFromParams();
+    };
+
+    const bootWaterControls = () => {
+        if (window.controlPanel && typeof window.controlPanel.initWaterShaderControls === 'function') {
+            window.controlPanel.initWaterShaderControls();
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(bootWaterControls, 50));
+    } else {
+        setTimeout(bootWaterControls, 50);
+    }
+})();

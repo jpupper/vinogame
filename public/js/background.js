@@ -582,13 +582,28 @@ function processShaders() {
     WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
     WaterMultiBuffer.set1i(gl, prog, 'u_frame', WaterMultiBuffer.frame);
 
-    // Parámetros físicos de agua-nikos (calibrados para propagación sutil y controlada)
-    WaterMultiBuffer.set1f(gl, prog, 'u_paso', 0.28);
-    WaterMultiBuffer.set1f(gl, prog, 'u_oleaje', 0.24);
-    WaterMultiBuffer.set1f(gl, prog, 'u_amortiguar', 0.48);
-    WaterMultiBuffer.set1f(gl, prog, 'u_fuerza', 0.45);
-    WaterMultiBuffer.set1f(gl, prog, 'u_empuje', 0.48);
-    WaterMultiBuffer.set1f(gl, prog, 'u_radio', 0.24);
+    // Parámetros físicos del agua (expuestos globalmente para control desde localhost:4353 / panel)
+    const wp = (typeof window !== 'undefined' && window.getWaterParams)
+        ? window.getWaterParams()
+        : {
+            paso: 0.38,
+            oleaje: 0.42,
+            amortiguar: 0.64,
+            fuerza: 0.95,
+            empuje: 0.95,
+            radio: 0.52,
+            objWakeSize: 0.52,
+            objWakeStrength: 0.90
+        };
+
+    WaterMultiBuffer.set1f(gl, prog, 'u_paso', wp.paso);
+    WaterMultiBuffer.set1f(gl, prog, 'u_oleaje', wp.oleaje);
+    WaterMultiBuffer.set1f(gl, prog, 'u_amortiguar', wp.amortiguar);
+    WaterMultiBuffer.set1f(gl, prog, 'u_fuerza', wp.fuerza);
+    WaterMultiBuffer.set1f(gl, prog, 'u_empuje', wp.empuje);
+    WaterMultiBuffer.set1f(gl, prog, 'u_radio', wp.radio);
+    WaterMultiBuffer.set1f(gl, prog, 'u_objWakeSize', wp.objWakeSize);
+    WaterMultiBuffer.set1f(gl, prog, 'u_objWakeStrength', wp.objWakeStrength);
 
     WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloSize', (typeof window !== 'undefined' && window.cursorHaloSize !== undefined) ? window.cursorHaloSize : 0.08);
     WaterMultiBuffer.set1f(gl, prog, 'u_cursorHaloStrength', (typeof window !== 'undefined' && window.cursorHaloStrength !== undefined) ? window.cursorHaloStrength : 1.0);
@@ -705,16 +720,31 @@ function renderShaders() {
     WaterMultiBuffer.set1f(gl, prog, 'u_time', scene.nowSec);
     WaterMultiBuffer.set1f(gl, prog, 'u_comboLevel', scene.comboLevel);
 
-    // Parámetros ópticos de agua-nikos (sutiles para no sobrecargar la escena)
-    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', 0.22);
-    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', 0.32);
-    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', 0.38);
-    WaterMultiBuffer.set1f(gl, prog, 'u_especular', 0.45);
-    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', 0.40);
-    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', 0.20);
-    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', 0.22);
-    WaterMultiBuffer.set2f(gl, prog, 'u_foco', 0.52, 0.74);
-    WaterMultiBuffer.set3f(gl, prog, 'u_agua', 0.96, 0.95, 1.0);
+    // Parámetros ópticos del agua (expuestos globalmente para control desde localhost:4353 / panel)
+    const wp = (typeof window !== 'undefined' && window.getWaterParams)
+        ? window.getWaterParams()
+        : {
+            refraccion: 0.48,
+            relieve: 0.58,
+            profundidad: 0.48,
+            especular: 0.58,
+            brillo: 0.62,
+            causticas: 0.38,
+            espuma: 0.45,
+            focoX: 0.52,
+            focoY: 0.74,
+            aguaColor: [0.96, 0.95, 1.0]
+        };
+
+    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', wp.refraccion);
+    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', wp.relieve);
+    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', wp.profundidad);
+    WaterMultiBuffer.set1f(gl, prog, 'u_especular', wp.especular);
+    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', wp.brillo);
+    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', wp.causticas);
+    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', wp.espuma);
+    WaterMultiBuffer.set2f(gl, prog, 'u_foco', wp.focoX, wp.focoY);
+    WaterMultiBuffer.set3f(gl, prog, 'u_agua', wp.aguaColor[0], wp.aguaColor[1], wp.aguaColor[2]);
 
     // Ondas expansivas
     WaterMultiBuffer.set2fv(gl, prog, 'u_wavePositions', scene.wavePositions);
@@ -792,6 +822,91 @@ function renderShaders() {
 }
 
 if (typeof window !== 'undefined') {
+    window.waterShaderParams = window.waterShaderParams || {
+        // Física de propagación e inyección (Buffer A)
+        paso: 0.38,
+        oleaje: 0.42,
+        amortiguar: 0.64,
+        fuerza: 0.95,
+        empuje: 0.95,
+        radio: 0.52,
+        objWakeSize: 0.52,
+        objWakeStrength: 0.90,
+        // Óptica y refracción (Output)
+        refraccion: 0.48,
+        relieve: 0.58,
+        profundidad: 0.48,
+        especular: 0.58,
+        brillo: 0.62,
+        causticas: 0.38,
+        espuma: 0.45,
+        focoX: 0.52,
+        focoY: 0.74,
+        aguaColorHex: '#f5f2ff',
+        aguaColor: [0.96, 0.95, 1.0]
+    };
+
+    window.getWaterParams = function () {
+        return window.waterShaderParams;
+    };
+
+    window.setWaterParam = function (key, value) {
+        if (!window.waterShaderParams) return;
+        const cleanKey = String(key).replace(/^u_/, '');
+        if (cleanKey === 'aguaColorHex' && typeof value === 'string') {
+            window.waterShaderParams.aguaColorHex = value;
+            const h = value.replace('#', '');
+            if (h.length === 6) {
+                window.waterShaderParams.aguaColor = [
+                    parseInt(h.substring(0, 2), 16) / 255.0,
+                    parseInt(h.substring(2, 4), 16) / 255.0,
+                    parseInt(h.substring(4, 6), 16) / 255.0
+                ];
+            }
+            return;
+        }
+        const num = parseFloat(value);
+        if (!isNaN(num) && cleanKey in window.waterShaderParams) {
+            window.waterShaderParams[cleanKey] = num;
+        }
+    };
+
+    // Sincronizar uniforms en vivo desde un shader publicado en JPShaderEditor (ej: solo-agua o vinogame-agua)
+    window.syncWaterFromJPShaderEditor = async function (shaderName = 'solo-agua') {
+        const url = `https://vps-4455523-x.dattaweb.com/jpshadereditor/api/include/plan?shader=${encodeURIComponent(shaderName)}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || !data.ok || !Array.isArray(data.passes)) {
+            throw new Error('Plan inválido recibido desde JPShaderEditor');
+        }
+        data.passes.forEach(pass => {
+            if (!Array.isArray(pass.uniforms)) return;
+            pass.uniforms.forEach(u => {
+                if (!u || !u.name) return;
+                const clean = u.name.replace(/^u_/, '');
+                if (typeof u.default === 'number' && clean in window.waterShaderParams) {
+                    window.waterShaderParams[clean] = u.default;
+                }
+            });
+        });
+        if (window.controlPanel && typeof window.controlPanel.syncWaterSlidersFromParams === 'function') {
+            window.controlPanel.syncWaterSlidersFromParams();
+        }
+        return window.waterShaderParams;
+    };
+
+    // Escuchar mensajes postMessage (para integración externa o JPShaderEditor)
+    window.addEventListener('message', (ev) => {
+        if (!ev || !ev.data || typeof ev.data !== 'object') return;
+        if (ev.data.type === 'jpshader:uniform' || ev.data.type === 'vinogame:waterParam') {
+            window.setWaterParam(ev.data.name || ev.data.key, ev.data.value);
+            if (window.controlPanel && typeof window.controlPanel.syncWaterSlidersFromParams === 'function') {
+                window.controlPanel.syncWaterSlidersFromParams();
+            }
+        }
+    });
+
     window.processShaders = processShaders;
     window.renderShaders = renderShaders;
     window.DynamicBackground = DynamicBackground;

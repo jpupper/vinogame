@@ -185,7 +185,32 @@
     "waveForce": 0.09,
     "waveDuration": 2,
     "cursorHaloSize": 0.08,
-    "cursorHaloStrength": 1
+    "cursorHaloStrength": 1,
+    "waterParams": {
+      "paso": 0.38,
+      "oleaje": 0.42,
+      "amortiguar": 0.64,
+      "fuerza": 0.95,
+      "empuje": 0.95,
+      "radio": 0.52,
+      "objWakeSize": 0.52,
+      "objWakeStrength": 0.9,
+      "refraccion": 0.48,
+      "relieve": 0.58,
+      "profundidad": 0.48,
+      "especular": 0.58,
+      "brillo": 0.62,
+      "causticas": 0.38,
+      "espuma": 0.45,
+      "focoX": 0.52,
+      "focoY": 0.74,
+      "aguaColorHex": "#f5f2ff",
+      "aguaColor": [
+        0.96,
+        0.95,
+        1
+      ]
+    }
   },
   "winLoseSettings": {
     "textSize": {
