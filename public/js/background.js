@@ -54,8 +54,10 @@ class DynamicBackground {
     }
 
     getValidBackgrounds() {
-        if (typeof backgroundTextures === 'undefined' || !Array.isArray(backgroundTextures)) return [];
-        return backgroundTextures.filter(img => img && typeof img.width === 'number' && img.width > 0);
+        const list = (typeof window !== 'undefined' && Array.isArray(window.backgroundTextures) && window.backgroundTextures.length > 0)
+            ? window.backgroundTextures
+            : ((typeof backgroundTextures !== 'undefined' && Array.isArray(backgroundTextures)) ? backgroundTextures : []);
+        return list.filter(img => img && typeof img.width === 'number' && img.width > 0);
     }
 
     update() {
@@ -118,6 +120,7 @@ class DynamicBackground {
 //  MOTOR WEBGL MULTIBUFFER PING-PONG (FLOAT FBO) PARA AGUA-NIKOS + MAPEOPUNTOS
 // ============================================================================
 const WaterMultiBuffer = {
+    canvas: null,
     gl: null,
     initialized: false,
     failed: false,
@@ -130,6 +133,7 @@ const WaterMultiBuffer = {
     fboA: null,
     fboB: null,
     fallbackTex: null,
+    directBgTextures: [],
     // Seguimiento de posiciones previas para estelas continuas (sdSegment)
     prevPointers: {},
     prevGrapes: new WeakMap(),
@@ -145,11 +149,31 @@ const WaterMultiBuffer = {
         }
     `,
 
-    init(gl, w, h, fragBufferASrc, fragMainSrc) {
+    init(w, h, fragBufferASrc, fragMainSrc) {
         try {
+            const safeW = Math.max(1, Math.floor(w));
+            const safeH = Math.max(1, Math.floor(h));
+            this.canvas = document.createElement('canvas');
+            this.canvas.width = safeW;
+            this.canvas.height = safeH;
+
+            const glOpts = {
+                alpha: false,
+                depth: false,
+                stencil: false,
+                antialias: false,
+                preserveDrawingBuffer: true
+            };
+            const gl = this.canvas.getContext('webgl', glOpts) || this.canvas.getContext('experimental-webgl', glOpts);
+            if (!gl) {
+                console.error('❌ No se pudo crear contexto WebGL dedicado para WaterMultiBuffer');
+                this.failed = true;
+                return false;
+            }
+
             this.gl = gl;
-            this.width = w;
-            this.height = h;
+            this.width = safeW;
+            this.height = safeH;
             this.frame = 0;
 
             // Quad pantalla completa (-1..1)
@@ -168,16 +192,47 @@ const WaterMultiBuffer = {
                 return false;
             }
 
-            this.createPingPongFBOs(gl, w, h);
+            this.createPingPongFBOs(gl, safeW, safeH);
             this.createFallbackTexture(gl);
+            this.preloadDirectBackgrounds(gl);
             this.initialized = true;
-            console.log('✅ WaterMultiBuffer inicializado (' + w + 'x' + h + ', FBO type: ' + this.fboTypeLabel + ')');
+            console.log('✅ WaterMultiBuffer inicializado (' + safeW + 'x' + safeH + ', FBO type: ' + this.fboTypeLabel + ')');
             return true;
         } catch (err) {
             console.error('Error inicializando WaterMultiBuffer:', err);
             this.failed = true;
             return false;
         }
+    },
+
+    preloadDirectBackgrounds(gl) {
+        const defaultPaths = [
+            'img/background/fondo1.jpg',
+            'img/background/fondo2.jpg',
+            'img/background/fondo3.jpg',
+            'img/background/fondo4.jpg',
+            'img/background/fondo5.jpg'
+        ];
+        this.directBgTextures = [];
+        defaultPaths.forEach((src, idx) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                if (!this.gl) return;
+                const tex = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+                this.directBgTextures[idx] = tex;
+            };
+            img.src = src;
+        });
     },
 
     compileShader(gl, type, src, label) {
@@ -218,6 +273,7 @@ const WaterMultiBuffer = {
     },
 
     createSingleFBO(gl, w, h, texType, filter) {
+        while (gl.getError() !== gl.NO_ERROR) {} // Limpiar errores previos
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -231,10 +287,22 @@ const WaterMultiBuffer = {
         gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+        // Verificar que realmente se pueda limpiar/renderizar sin GL error (en reposo: 0.5, 0.5, 0.0, 1.0)
+        let renderOk = (status === gl.FRAMEBUFFER_COMPLETE);
+        if (renderOk) {
+            gl.viewport(0, 0, w, h);
+            gl.clearColor(0.5, 0.5, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            if (gl.getError() !== gl.NO_ERROR) {
+                renderOk = false;
+            }
+        }
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
-        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        if (!renderOk) {
             gl.deleteFramebuffer(fb);
             gl.deleteTexture(tex);
             return null;
@@ -252,11 +320,14 @@ const WaterMultiBuffer = {
             gl.deleteTexture(this.fboB.texture);
         }
 
-        // Intentar primero FLOAT (igual que jpshadereditor WebGLRenderer), luego HALF_FLOAT, luego UNSIGNED_BYTE
+        // Habilitar extensiones de renderizado a punto flotante en WebGL 1
         const extFloat = gl.getExtension('OES_texture_float');
         const extFloatLinear = gl.getExtension('OES_texture_float_linear');
+        gl.getExtension('WEBGL_color_buffer_float');
+        gl.getExtension('EXT_color_buffer_float');
         const extHalf = gl.getExtension('OES_texture_half_float');
         const extHalfLinear = gl.getExtension('OES_texture_half_float_linear');
+        gl.getExtension('EXT_color_buffer_half_float');
 
         let fboA = null, fboB = null;
         if (extFloat) {
@@ -348,10 +419,16 @@ const WaterMultiBuffer = {
     },
 
     ensureSize(gl, w, h) {
-        if (this.width !== w || this.height !== h) {
-            this.width = w;
-            this.height = h;
-            this.createPingPongFBOs(gl, w, h);
+        const safeW = Math.max(1, Math.floor(w));
+        const safeH = Math.max(1, Math.floor(h));
+        if (this.width !== safeW || this.height !== safeH) {
+            this.width = safeW;
+            this.height = safeH;
+            if (this.canvas) {
+                this.canvas.width = safeW;
+                this.canvas.height = safeH;
+            }
+            this.createPingPongFBOs(gl, safeW, safeH);
         }
     }
 };
@@ -541,17 +618,17 @@ function processShaders() {
         return;
     }
 
-    const gl = feedbackBuffer.drawingContext || (feedbackBuffer._renderer && feedbackBuffer._renderer.GL);
-    if (!gl) return;
-
-    // Inicializar WaterMultiBuffer con el código de feedback.frag y composite.frag cargados por p5
+    // Inicializar WaterMultiBuffer en su propio canvas WebGL aislado con el código de feedback.frag y composite.frag
     if (!WaterMultiBuffer.initialized && !WaterMultiBuffer.failed) {
         const fragA = (typeof feedbackShader !== 'undefined' && feedbackShader && feedbackShader._fragSrc) ? feedbackShader._fragSrc : null;
         const fragMain = (typeof compositeShader !== 'undefined' && compositeShader && compositeShader._fragSrc) ? compositeShader._fragSrc : null;
         if (!fragA || !fragMain) return;
-        WaterMultiBuffer.init(gl, feedbackBuffer.width, feedbackBuffer.height, fragA, fragMain);
+        WaterMultiBuffer.init(feedbackBuffer.width, feedbackBuffer.height, fragA, fragMain);
     }
     if (!WaterMultiBuffer.initialized || WaterMultiBuffer.failed) return;
+
+    const gl = WaterMultiBuffer.gl;
+    if (!gl) return;
 
     WaterMultiBuffer.ensureSize(gl, feedbackBuffer.width, feedbackBuffer.height);
 
@@ -661,39 +738,41 @@ function processShaders() {
 function renderShaders() {
     if (typeof feedbackBuffer === 'undefined' || !feedbackBuffer) return;
 
-    const gl = feedbackBuffer.drawingContext || (feedbackBuffer._renderer && feedbackBuffer._renderer.GL);
-    if (!gl) return;
-
     if (typeof window !== 'undefined' && window.hideBackground) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, feedbackBuffer.width, feedbackBuffer.height);
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        feedbackBuffer.clear();
+        feedbackBuffer.background(0);
         return;
     }
 
-    if (!WaterMultiBuffer.initialized || WaterMultiBuffer.failed) return;
+    if (!WaterMultiBuffer.initialized || WaterMultiBuffer.failed || !WaterMultiBuffer.gl) return;
 
+    const gl = WaterMultiBuffer.gl;
     const scene = window._waterSceneCache || collectSceneDataForWater();
     const prog = WaterMultiBuffer.progMain;
 
-    // Seleccionar las dos imágenes de fondo actuales (filtrando nulos si hubiera)
+    // Seleccionar las dos imágenes de fondo actuales (con respaldo directo si p5 aún está cargando)
     const validBgs = (typeof dynamicBackground !== 'undefined' && dynamicBackground)
         ? dynamicBackground.getValidBackgrounds()
         : [];
-    const len = validBgs.length;
+    const directBgs = (WaterMultiBuffer.directBgTextures || []).filter(Boolean);
+    const len = validBgs.length > 0 ? validBgs.length : directBgs.length;
     const idx1 = (len > 0 && dynamicBackground) ? (dynamicBackground.currentTextureIndex % len) : 0;
     const idx2 = (len > 1 && dynamicBackground) ? (dynamicBackground.nextTextureIndex % len) : idx1;
-    const tex1Obj = len > 0 ? validBgs[idx1] : null;
-    const tex2Obj = len > 0 ? validBgs[idx2] : null;
     const blend = (len > 1 && dynamicBackground) ? (dynamicBackground.transitionProgress || 0.0) : 0.0;
 
-    const glTex1 = WaterMultiBuffer.getOrUploadImageTexture(gl, tex1Obj);
-    const glTex2 = WaterMultiBuffer.getOrUploadImageTexture(gl, tex2Obj);
+    let glTex1 = WaterMultiBuffer.fallbackTex;
+    let glTex2 = WaterMultiBuffer.fallbackTex;
+    if (validBgs.length > 0) {
+        glTex1 = WaterMultiBuffer.getOrUploadImageTexture(gl, validBgs[idx1]);
+        glTex2 = WaterMultiBuffer.getOrUploadImageTexture(gl, validBgs[idx2]);
+    } else if (directBgs.length > 0) {
+        glTex1 = directBgs[idx1] || WaterMultiBuffer.fallbackTex;
+        glTex2 = directBgs[idx2] || glTex1;
+    }
 
     // ===== PASE 2 (OUTPUT): REFRACCIÓN DE AGUA + FONDOS + HALOS + PUNTOS =====
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, feedbackBuffer.width, feedbackBuffer.height);
+    gl.viewport(0, 0, WaterMultiBuffer.width, WaterMultiBuffer.height);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
@@ -819,6 +898,12 @@ function renderShaders() {
     gl.enableVertexAttribArray(prog.aPosition);
     gl.vertexAttribPointer(prog.aPosition, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Copiar el canvas WebGL aislado al feedbackBuffer 2D de p5 para que image(feedbackBuffer, 0, 0) lo dibuje siempre
+    const ctx2d = feedbackBuffer.drawingContext;
+    if (ctx2d && typeof ctx2d.drawImage === 'function' && WaterMultiBuffer.canvas) {
+        ctx2d.drawImage(WaterMultiBuffer.canvas, 0, 0, feedbackBuffer.width, feedbackBuffer.height);
+    }
 }
 
 if (typeof window !== 'undefined') {

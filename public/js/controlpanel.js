@@ -1975,6 +1975,90 @@ window.getBadHaloSettings = function() {
 //  EXTENSIÓN DE CONTROLES DE AGUA / JPSHADEREDITOR (localhost:4353)
 // ============================================================================
 (function () {
+    // Evitar que loadAssetsFromConfig borre las texturas precargadas antes o después de preload()
+    ControlPanel.prototype.loadAssetsFromConfig = async function () {
+        if (!this.configData || !this.configData.assets) return;
+
+        let waitTries = 0;
+        while ((typeof loadImage !== 'function' || !window.assetsReady) && waitTries < 60) {
+            await new Promise((r) => setTimeout(r, 100));
+            waitTries++;
+        }
+
+        window.goodItemImagePaths = window.goodItemImagePaths || [];
+        window.badItemImagePaths = window.badItemImagePaths || [];
+        window.backgroundImagePaths = window.backgroundImagePaths || [];
+        window.goodItemImages = window.goodItemImages || [];
+        window.badItemImages = window.badItemImages || [];
+        window.backgroundTextures = window.backgroundTextures || [];
+
+        const samePaths = (a, b) => {
+            if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        };
+
+        const hasValidImages = (arr, expectedLen) => {
+            return Array.isArray(arr) && arr.length === expectedLen && arr.every((img) => img && img.width > 0);
+        };
+
+        const loadCategorySafe = async (paths, targetArray) => {
+            if (typeof loadImage !== 'function' || !Array.isArray(paths) || paths.length === 0) return;
+            const tempArray = new Array(paths.length).fill(null);
+            const promises = paths.map((path, idx) => new Promise((resolve) => {
+                loadImage(
+                    path,
+                    (img) => { img.__loaded = true; tempArray[idx] = img; resolve(true); },
+                    () => { tempArray[idx] = null; resolve(false); }
+                );
+            }));
+            await Promise.all(promises);
+            const valid = tempArray.filter(Boolean);
+            if (valid.length > 0) {
+                targetArray.length = 0;
+                valid.forEach((img) => targetArray.push(img));
+            }
+        };
+
+        const assets = this.configData.assets;
+
+        if (assets.objects && assets.objects.length > 0) {
+            if (!samePaths(window.goodItemImagePaths, assets.objects) || !hasValidImages(window.goodItemImages, assets.objects.length)) {
+                window.goodItemImagePaths = assets.objects.slice();
+                await loadCategorySafe(window.goodItemImagePaths, window.goodItemImages);
+            }
+        }
+
+        if (assets.badItems && assets.badItems.length > 0) {
+            if (!samePaths(window.badItemImagePaths, assets.badItems) || !hasValidImages(window.badItemImages, assets.badItems.length)) {
+                window.badItemImagePaths = assets.badItems.slice();
+                await loadCategorySafe(window.badItemImagePaths, window.badItemImages);
+            }
+        }
+
+        if (assets.backgrounds && assets.backgrounds.length > 0) {
+            if (!samePaths(window.backgroundImagePaths, assets.backgrounds) || !hasValidImages(window.backgroundTextures, assets.backgrounds.length)) {
+                window.backgroundImagePaths = assets.backgrounds.slice();
+                await loadCategorySafe(window.backgroundImagePaths, window.backgroundTextures);
+            }
+            window.backgroundTexturesLoaded = window.backgroundTextures.length > 0;
+        }
+
+        this.currentAssets = {
+            objects: window.goodItemImagePaths.slice(),
+            badItems: window.badItemImagePaths.slice(),
+            backgrounds: window.backgroundImagePaths.slice()
+        };
+
+        if (typeof window.preScaleImages === 'function') {
+            window.preScaleImages();
+        }
+        window.assetsReady = true;
+        window.backgroundTexturesLoaded = window.backgroundTextures && window.backgroundTextures.length > 0;
+    };
+
     const origLoadShader = ControlPanel.prototype.loadShaderSettingsFromConfig;
     ControlPanel.prototype.loadShaderSettingsFromConfig = function () {
         if (origLoadShader) origLoadShader.call(this);

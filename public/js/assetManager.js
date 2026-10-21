@@ -1,6 +1,20 @@
 // AssetManager: centraliza carga, preescalado y acceso a imágenes/shaders
 // Mantiene compatibilidad exponiendo funciones en window cuando existen.
 
+// Parche global para evitar el warning de Chrome:
+// "Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true"
+(function() {
+  if (typeof HTMLCanvasElement !== 'undefined' && HTMLCanvasElement.prototype && HTMLCanvasElement.prototype.getContext) {
+    const _origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(type, attrs) {
+      if (type === '2d') {
+        attrs = Object.assign({ willReadFrequently: true }, attrs || {});
+      }
+      return _origGetContext.call(this, type, attrs);
+    };
+  }
+})();
+
 (function() {
   class AssetManager {
     constructor() {

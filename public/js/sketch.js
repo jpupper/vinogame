@@ -167,18 +167,11 @@ function setup() {
   backgroundTexturesLoaded = true;
   shadersLoaded = true;
   
-  // Crear buffers
-  fondoBuffer = createGraphics(width, height, WEBGL);  // Para feedback
-  fondoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
-  
+  // Crear buffers (2D con willReadFrequently automático vía shim en assetManager.js)
+  fondoBuffer = createGraphics(width, height);
   juegoBuffer = createGraphics(width, height);
-  juegoBuffer.canvas.getContext('webgl', { willReadFrequently: true });
-  
   particulasBuffer = createGraphics(width, height);
-  particulasBuffer.canvas.getContext('webgl', { willReadFrequently: true });
-  
-  feedbackBuffer = createGraphics(width, height, WEBGL); // Composición final
-  feedbackBuffer.canvas.getContext('webgl', { willReadFrequently: true });
+  feedbackBuffer = createGraphics(width, height); // Composición final desde WaterMultiBuffer.canvas
   
   // Inicializar sistemas
   Pserver = new PointServer();
