@@ -815,15 +815,18 @@ function renderShaders() {
             aguaColor: [0.96, 0.95, 1.0]
         };
 
-    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', wp.refraccion);
-    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', wp.relieve);
-    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', wp.profundidad);
-    WaterMultiBuffer.set1f(gl, prog, 'u_especular', wp.especular);
-    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', wp.brillo);
-    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', wp.causticas);
-    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', wp.espuma);
-    WaterMultiBuffer.set2f(gl, prog, 'u_foco', wp.focoX, wp.focoY);
-    WaterMultiBuffer.set3f(gl, prog, 'u_agua', wp.aguaColor[0], wp.aguaColor[1], wp.aguaColor[2]);
+    WaterMultiBuffer.set1f(gl, prog, 'u_refraccion', Number.isFinite(wp.refraccion) ? wp.refraccion : 0.48);
+    WaterMultiBuffer.set1f(gl, prog, 'u_relieve', Number.isFinite(wp.relieve) ? wp.relieve : 0.58);
+    WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', Number.isFinite(wp.profundidad) ? wp.profundidad : 0.48);
+    WaterMultiBuffer.set1f(gl, prog, 'u_especular', Number.isFinite(wp.especular) ? wp.especular : 0.58);
+    WaterMultiBuffer.set1f(gl, prog, 'u_brillo', Number.isFinite(wp.brillo) ? wp.brillo : 0.62);
+    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', Number.isFinite(wp.causticas) ? wp.causticas : 0.38);
+    WaterMultiBuffer.set1f(gl, prog, 'u_espuma', Number.isFinite(wp.espuma) ? wp.espuma : 0.45);
+    WaterMultiBuffer.set2f(gl, prog, 'u_foco', Number.isFinite(wp.focoX) ? wp.focoX : 0.52, Number.isFinite(wp.focoY) ? wp.focoY : 0.74);
+    const ac = (Array.isArray(wp.aguaColor) && wp.aguaColor.length >= 3 && Number.isFinite(wp.aguaColor[0]))
+        ? wp.aguaColor
+        : [0.96, 0.95, 1.0];
+    WaterMultiBuffer.set3f(gl, prog, 'u_agua', ac[0], ac[1], ac[2]);
 
     // Ondas expansivas
     WaterMultiBuffer.set2fv(gl, prog, 'u_wavePositions', scene.wavePositions);
@@ -867,7 +870,11 @@ function renderShaders() {
     WaterMultiBuffer.set3f(gl, prog, 'u_badHaloColor', badHalo.color[0], badHalo.color[1], badHalo.color[2]);
 
     // Brillo del fondo y viñeta
-    WaterMultiBuffer.set1f(gl, prog, 'u_backgroundBrightness', (typeof window !== 'undefined' && window.backgroundBrightness !== undefined) ? window.backgroundBrightness : 1.0);
+    const rawBright = (typeof window !== 'undefined' && window.backgroundBrightness !== undefined)
+        ? (typeof window.backgroundBrightness === 'object' ? Number(window.backgroundBrightness.current) : Number(window.backgroundBrightness))
+        : 1.35;
+    const safeBright = (Number.isFinite(rawBright) && rawBright > 0.05) ? rawBright : 1.35;
+    WaterMultiBuffer.set1f(gl, prog, 'u_backgroundBrightness', safeBright);
     WaterMultiBuffer.set1f(gl, prog, 'u_vignetteIntensity', (typeof window !== 'undefined' && window.vignetteIntensity !== undefined) ? window.vignetteIntensity : 0.0);
 
     // Línea divisoria en modo competitivo
@@ -950,6 +957,22 @@ if (typeof window !== 'undefined') {
             }
             return;
         }
+        if (cleanKey === 'aguaColor' || cleanKey === 'agua') {
+            if (Array.isArray(value) && value.length >= 3) {
+                window.waterShaderParams.aguaColor = [
+                    Number(value[0]) || 0.96,
+                    Number(value[1]) || 0.95,
+                    Number(value[2]) || 1.0
+                ];
+            }
+            return;
+        }
+        if (cleanKey === 'foco' && Array.isArray(value) && value.length >= 2) {
+            window.waterShaderParams.focoX = Number(value[0]) || 0.52;
+            window.waterShaderParams.focoY = Number(value[1]) || 0.74;
+            return;
+        }
+        if (Array.isArray(value)) return;
         const num = parseFloat(value);
         if (!isNaN(num) && cleanKey in window.waterShaderParams) {
             window.waterShaderParams[cleanKey] = num;

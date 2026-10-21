@@ -169,7 +169,14 @@ void main() {
     vec3 n    = normalize(vec3(-pend, 0.35 + u_profundidad * 1.55));
 
     // ── 3. DESPLAZAMIENTO DE REFRACCIÓN DEL AGUA ───────────────────────────
-    vec2 totalOff = (tc - vec2(0.5)) * (0.065 + u_refraccion * 0.32)
+    // Ondulación base muy suave del agua + refracción física de ondas en Buffer A
+    vec2 ambientWave = vec2(
+        sin(uv.y * 9.0 + u_time * 1.1) * cos(uv.x * 7.0 - u_time * 0.8),
+        cos(uv.x * 8.5 + u_time * 0.95) * sin(uv.y * 6.5 + u_time * 1.05)
+    ) * (0.0022 * clamp(u_refraccion, 0.0, 1.5));
+
+    vec2 totalOff = ambientWave
+                  + (tc - vec2(0.5)) * (0.065 + u_refraccion * 0.32)
                   + grad * (0.12 + u_refraccion * 0.48);
 
     vec2 quv = clamp(uv + totalOff, vec2(0.001), vec2(0.999));
@@ -179,15 +186,15 @@ void main() {
     vec3 bg2 = texture2D(u_backgroundTexture2, quv).rgb;
     vec3 fondo = mix(bg1, bg2, clamp(u_backgroundBlend, 0.0, 1.0));
 
-    // ── 5. ÓPTICA DEL AGUA (MODULADA POR LA ACTIVIDAD DE LA ONDA) ──────────
-    vec3 col = fondo * u_agua * 0.56;
+    // ── 5. ÓPTICA DEL AGUA (CÁUSTICAS + REFRACCIÓN + ESPUMA + ESPECULAR) ───
+    vec3 col = fondo * u_agua * 0.58;
 
-    // Máscara de actividad local del agua: en reposo es 0 (el fondo queda limpio)
+    // Actividad local de las ondas en Buffer A + presencia sutil de agua en reposo
     float waveActivity = clamp(abs(h) * 14.0 + length(grad) * 26.0 + energia * 0.75, 0.0, 1.0);
 
-    // Cáusticas moduladas por la actividad de la onda
-    float cau = causticas((uv + totalOff * 1.5) * vec2(aspecto, 1.0) * 2.2, u_time * 0.45);
-    col += cau * u_causticas * 0.85 * mix(u_agua, vec3(1.0, 0.94, 0.80), 0.5) * waveActivity;
+    // Cáusticas cristalinas sobre el fondo (presentes sutilmente en reposo e intensas con ondas)
+    float cau = causticas((uv + totalOff * 1.5) * vec2(aspecto, 1.0) * 2.2, u_time * 0.48);
+    col += cau * u_causticas * 0.95 * mix(u_agua, vec3(1.0, 0.94, 0.80), 0.5) * (0.24 + 0.76 * waveActivity);
 
     // Espuma en las estelas del puntero y de los objetos cayendo
     float espN = ruido(vec2(uv.x * aspecto, uv.y) * 80.0 + vec2(u_time * 0.3, -u_time * 0.25) + vel * 20.0);
@@ -200,8 +207,8 @@ void main() {
     vec3  Hv   = normalize(L + vec3(0.0, 0.0, 1.0));
     float nh   = max(dot(n, Hv), 0.0);
     float fres = pow(1.0 - clamp(n.z, 0.0, 1.0), 3.0);
-    col += (pow(nh, 18.0 + u_especular * 320.0) * u_brillo * 1.05) * vec3(1.0, 0.98, 0.94) * waveActivity;
-    col += fres * u_brillo * 0.24 * mix(u_agua, vec3(0.95, 0.88, 1.0), 0.5) * waveActivity;
+    col += (pow(nh, 18.0 + u_especular * 320.0) * u_brillo * 1.05) * vec3(1.0, 0.98, 0.94) * (0.15 + 0.85 * waveActivity);
+    col += fres * u_brillo * 0.24 * mix(u_agua, vec3(0.95, 0.88, 1.0), 0.5) * (0.15 + 0.85 * waveActivity);
 
     // ── 6. HALOS DE OBJETOS CAYENDO (REFRACTADOS SUTILMENTE POR EL AGUA) ───
     vec2 refractedScreenUV = screenUV + vec2(totalOff.x, -totalOff.y) * 0.35;

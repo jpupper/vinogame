@@ -138,11 +138,11 @@ function preload() {
   }
   
   // Cargar shaders
-  feedbackShader = loadShader('sh/feedback.vert', 'sh/feedback.frag');
-  compositeShader = loadShader('sh/composite.vert', 'sh/composite.frag');
+  feedbackShader = loadShader('sh/feedback.vert?v=22', 'sh/feedback.frag?v=22');
+  compositeShader = loadShader('sh/composite.vert?v=22', 'sh/composite.frag?v=22');
   celebrationShader = (typeof window !== 'undefined' && window.celebrationShader)
     ? window.celebrationShader
-    : loadShader('sh/celebration.vert', 'sh/celebration.frag');
+    : loadShader('sh/celebration.vert?v=22', 'sh/celebration.frag?v=22');
   if (typeof window !== 'undefined') {
     window.celebrationShader = celebrationShader;
   }
