@@ -2,12 +2,12 @@
   "metadata": {
     "version": "2.0.0",
     "created": "2024-01-01",
-    "lastModified": "2026-10-20",
+    "lastModified": "2026-11-02",
     "description": "Configuraciones del panel de control para Deli & Wine Water Shader Edition"
   },
   "gameSettings": {
     "fallSpeed": {
-      "current": 9.2,
+      "current": 3.9,
       "min": 0.5,
       "max": 5,
       "step": 0.25,
@@ -15,7 +15,7 @@
       "description": "Multiplicador de velocidad de caída de objetos"
     },
     "lives": {
-      "current": 2,
+      "current": 3,
       "min": 1,
       "max": 10,
       "step": 1,
@@ -180,34 +180,34 @@
     "spawnMode": "top"
   },
   "shaderSettings": {
-    "backgroundBrightness": 1.7,
+    "backgroundBrightness": 1,
     "waveSpeed": 0.5,
     "waveForce": 0.09,
     "waveDuration": 2,
     "cursorHaloSize": 0.08,
     "cursorHaloStrength": 1,
     "waterParams": {
-      "paso": 0.38,
-      "oleaje": 0.42,
-      "amortiguar": 0.64,
-      "fuerza": 0.95,
-      "empuje": 0.95,
-      "radio": 0.52,
+      "paso": 0.53,
+      "oleaje": 0.65,
+      "amortiguar": 0.98,
+      "fuerza": 0.2,
+      "empuje": 0.2,
+      "radio": 1.47,
       "objWakeSize": 0.52,
-      "objWakeStrength": 0.9,
+      "objWakeStrength": 0.1,
       "refraccion": 0.48,
       "relieve": 0.58,
       "profundidad": 0.48,
-      "especular": 0.58,
-      "brillo": 0.62,
+      "especular": 0.5,
+      "brillo": 1.44,
       "causticas": 0.38,
       "espuma": 0.45,
       "focoX": 0.52,
       "focoY": 0.74,
-      "aguaColorHex": "#f5f2ff",
+      "aguaColorHex": "#ffffff",
       "aguaColor": [
-        0.96,
-        0.95,
+        1,
+        1,
         1
       ]
     }

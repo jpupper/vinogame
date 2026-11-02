@@ -87,6 +87,70 @@ class EndAnimation {
     return [str];
   }
 
+  // Mide un texto concreto y devuelve la tipografía final + el cartel que necesita
+  measureTextLayout(ctx, rawText, ratio) {
+    const text = String(rawText || '').trim().toUpperCase();
+    const lines = this.computeLines(text);
+    const maxLineWidth = this.areaWidth * (this.isCompetitive ? 0.84 : 0.80);
+    const baseSize = (this.isCompetitive ? this.areaHeight : height) * ratio;
+    let fontSize = baseSize;
+
+    ctx.push();
+    ctx.textFont('Cinzel, Georgia, serif');
+    ctx.textStyle(BOLD);
+    ctx.textSize(fontSize);
+
+    let longestWidth = 1;
+    for (const lineStr of lines) {
+      const w = ctx.textWidth(lineStr) * 1.06; // margen por tracking
+      if (w > longestWidth) longestWidth = w;
+    }
+    if (longestWidth > maxLineWidth) {
+      const fit = maxLineWidth / longestWidth;
+      fontSize *= fit;
+      longestWidth *= fit;
+    }
+    ctx.pop();
+
+    const lineHeight = fontSize * 1.22;
+    const totalTextH = lines.length * lineHeight;
+    const badgeW = Math.min(this.areaWidth * 0.92, Math.max(longestWidth + fontSize * 1.6, this.areaWidth * 0.58));
+    const badgeH = totalTextH + fontSize * 1.55;
+
+    return { lines, fontSize, lineHeight, totalTextH, longestWidth, badgeW, badgeH };
+  }
+
+  // Un único tamaño de cartel para victoria y derrota: se toma el mayor de los dos textos
+  getSharedBadge(ctx, ratio) {
+    const winTxt = (typeof window !== 'undefined' && window.winText) ? window.winText : '¡FELICITACIONES!';
+    const loseTxt = (typeof window !== 'undefined' && window.loseText) ? window.loseText : '¡SEGUÍ PARTICIPANDO!';
+    const ownTxt = this.isWin ? winTxt : loseTxt;
+    const otherTxt = this.isWin ? loseTxt : winTxt;
+
+    const key = [
+      this.isCompetitive ? 'c' : 's',
+      Math.round(this.areaWidth),
+      Math.round(this.areaHeight),
+      ratio,
+      ownTxt,
+      otherTxt
+    ].join('|');
+
+    const cache = EndAnimation._badgeCache || (EndAnimation._badgeCache = {});
+    if (cache.key === key && cache.value) return cache.value;
+
+    const a = this.measureTextLayout(ctx, ownTxt, ratio);
+    const b = this.measureTextLayout(ctx, otherTxt, ratio);
+    const value = {
+      badgeW: Math.max(a.badgeW, b.badgeW),
+      badgeH: Math.max(a.badgeH, b.badgeH)
+    };
+
+    cache.key = key;
+    cache.value = value;
+    return value;
+  }
+
   initLetters() {
     this.lineLetters = [];
     let globalIdx = 0;
@@ -326,23 +390,14 @@ class EndAnimation {
     ctx.textSize(fontSize);
 
     // Ajustar automáticamente el tamaño para que nunca se salga del área disponible
-    const maxLineWidth = this.areaWidth * (this.isCompetitive ? 0.84 : 0.80);
-    let longestMeasured = 1;
-    for (let lineStr of this.lines) {
-      const w = ctx.textWidth(lineStr) * 1.06; // margen por tracking
-      if (w > longestMeasured) longestMeasured = w;
-    }
-    if (longestMeasured > maxLineWidth) {
-      fontSize *= (maxLineWidth / longestMeasured);
-      ctx.textSize(fontSize);
-    }
+    const { fontSize: fittedSize, lineHeight } = this.measureTextLayout(ctx, this.rawText, effectiveRatio);
+    fontSize = fittedSize;
+    ctx.textSize(fontSize);
 
-    const lineHeight = fontSize * 1.22;
-    const totalTextH = this.lines.length * lineHeight;
-
-    // Dimensiones del cartel de lujo detrás del texto
-    const badgeW = Math.min(this.areaWidth * 0.90, Math.max(longestMeasured * (fontSize / ((this.isCompetitive ? this.areaHeight : height) * effectiveRatio)) + fontSize * 1.6, this.areaWidth * 0.58));
-    const badgeH = totalTextH + fontSize * 1.55;
+    // Cartel compartido: FELICITACIONES y SEGUÍ PARTICIPANDO usan SIEMPRE el mismo contenedor
+    const sharedBadge = this.getSharedBadge(ctx, effectiveRatio);
+    const badgeW = sharedBadge.badgeW;
+    const badgeH = sharedBadge.badgeH;
 
     // Dibujar placa vítrea de fondo con marco dorado o rubí
     ctx.push();
