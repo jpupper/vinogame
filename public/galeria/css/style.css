@@ -83,7 +83,7 @@ body{
 /* ---------- galería ---------- */
 .galeria{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:clamp(14px,2.2vw,26px);
   flex:1 0 auto;
   align-content:start;
@@ -169,7 +169,6 @@ body{
 /* ---------- responsive ---------- */
 @media (max-width:900px){
   .galeria{grid-template-columns:repeat(2,1fr)}
-  .destacada{grid-column:1 / -1;order:-1}
   .destacada .miniatura{aspect-ratio:16/8}
 }
 @media (max-width:620px){

@@ -1,0 +1,441 @@
+/* ============================================================
+   DELI & WINE · MEMOTEST
+   Misma estética que Serve Wine / Remastered: borgoña, dorado,
+   Cinzel + Bebas Neue. Cartas con flip 3D y botellas etiquetadas.
+   ============================================================ */
+:root{
+  --vino:#6d0b1e;
+  --vino-claro:#a4132f;
+  --dorado:#e8c477;
+  --crema:#f3e6d0;
+  --negro:#0a0607;
+  --panel:rgba(12,7,9,.84);
+  --borde:rgba(232,196,119,.28);
+  --carta-w:90px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--negro);overflow:hidden}
+body{
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--crema);
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  overscroll-behavior:none;
+  user-select:none;
+}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* ---------------- FONDO ---------------- */
+#fondo{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:url(../img/fondo1.jpg) center 38%/cover no-repeat;
+  filter:saturate(.85) brightness(.62);
+  transform:scale(1.05);
+}
+#fondo::after{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 50% 38%,rgba(70,10,24,.30),rgba(5,2,4,.80) 72%),
+    linear-gradient(180deg,rgba(5,2,4,.86) 0%,rgba(5,2,4,.42) 34%,rgba(5,2,4,.86) 100%);
+}
+
+/* ---------------- HUD ---------------- */
+#hud{
+  position:relative;z-index:5;flex:0 0 auto;
+  display:flex;align-items:center;gap:clamp(10px,2vw,26px);
+  min-height:clamp(68px,10vh,92px);
+  padding:12px 18px 10px;
+  background:linear-gradient(180deg,rgba(0,0,0,.85) 40%,rgba(0,0,0,0));
+  text-shadow:0 2px 8px rgba(0,0,0,.9);
+  transition:opacity .25s ease;
+}
+#hud.hud-off{opacity:0;pointer-events:none}
+.hud-logo{width:clamp(88px,11vw,132px);height:auto;opacity:.95;filter:drop-shadow(0 4px 14px rgba(0,0,0,.6))}
+.hud-bloque{display:flex;flex-direction:column;line-height:1}
+.hud-etq{font-size:9.5px;letter-spacing:.18em;color:rgba(243,230,208,.58);font-weight:600}
+.hud-val{font-family:"Bebas Neue",Impact,sans-serif;font-size:clamp(24px,3.4vw,34px);letter-spacing:.02em;color:var(--dorado)}
+
+/* Contador de tiempo grande y centrado */
+.hud-tiempo{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-48%);
+  align-items:center;
+  text-align:center;
+  padding:4px 18px 6px;
+  border-radius:14px;
+  background:rgba(12,4,7,.52);
+  border:1px solid rgba(232,196,119,.24);
+  box-shadow:0 6px 20px rgba(0,0,0,.45);
+}
+.hud-tiempo .hud-etq{
+  font-size:clamp(10px,1.4vw,12px);
+  letter-spacing:.26em;
+  color:rgba(243,230,208,.75);
+  margin-bottom:2px;
+}
+.hud-tiempo .hud-val{
+  font-size:clamp(42px,6.2vw,64px);
+  line-height:.92;
+  letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 3px 14px rgba(0,0,0,.9),0 0 24px rgba(232,196,119,.28);
+}
+.hud-tiempo .hud-val.poco{color:#ff5d6c;animation:pulsoTiempo 1s ease-in-out infinite}
+@keyframes pulsoTiempo{0%,100%{opacity:1}50%{opacity:.45}}
+
+.hud-botones{margin-left:auto;display:flex;gap:8px}
+.hud-botones button{
+  width:40px;height:40px;border-radius:12px;cursor:pointer;
+  border:2px solid #ffd25f;
+  background:linear-gradient(180deg,#5a1329,#440a1c);
+  color:#fff2c3;font-size:15px;line-height:1;
+  box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,245,220,.25);
+  transition:filter .16s,box-shadow .16s,transform .16s;
+}
+.hud-botones button:hover{filter:brightness(1.14);box-shadow:0 4px 18px rgba(255,210,95,.3),inset 0 1px 0 rgba(255,245,220,.3)}
+.hud-botones button:active{transform:translateY(1px)}
+
+/* ---------------- ZONA DE JUEGO ---------------- */
+#zona{
+  position:relative;z-index:2;flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;align-items:center;
+  padding:6px clamp(8px,2vw,26px) clamp(10px,2vh,22px);
+}
+
+#tableroWrap{position:relative;flex:1 1 auto;min-height:0;width:100%;display:grid;place-items:center}
+
+#tablero{
+  display:grid;
+  grid-template-columns:repeat(var(--cols,4),1fr);
+  grid-template-rows:repeat(var(--filas,3),1fr);
+  gap:10px;
+  transform:translate(var(--offset-x,0px),var(--offset-y,0px));
+}
+
+/* ---------------- CARTAS ---------------- */
+.carta{
+  position:relative;
+  width:100%;height:100%;min-width:0;min-height:0;
+  padding:0;border:0;background:none;cursor:pointer;
+  perspective:1000px;
+  opacity:1;
+  -webkit-tap-highlight-color:transparent;
+}
+.carta.repartiendo{
+  animation:repartir .46s cubic-bezier(.2,.85,.3,1.05) backwards;
+  animation-delay:calc(var(--i,0) * 28ms);
+}
+@keyframes repartir{
+  from{opacity:0;transform:translateY(16px) scale(.92)}
+  to{opacity:1;transform:none}
+}
+.carta-int{
+  position:relative;display:block;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform .52s cubic-bezier(.25,.8,.3,1);
+  will-change:transform;
+}
+.carta.volteada .carta-int{transform:rotateY(180deg)}
+.carta:not(.volteada):not(.acierto):hover .carta-int{transform:translateY(-4px) scale(1.014)}
+.carta:focus-visible{outline:none}
+.carta:focus-visible .carta-int{outline:2px solid #ffd25f;outline-offset:3px;border-radius:14px}
+
+.cara{
+  position:absolute;inset:0;display:block;
+  border-radius:clamp(8px,calc(var(--carta-w) * 0.12),16px);
+  overflow:hidden;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+}
+
+/* dorso: borgoña con doble marco dorado y el logo */
+.dorso{
+  background:
+    repeating-linear-gradient(45deg,rgba(255,210,95,.045) 0 2px,transparent 2px 10px),
+    radial-gradient(circle at 50% 26%,#70162f 0%,#3e0918 58%,#24040d 100%);
+  border:2px solid rgba(255,210,95,.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,242,195,.16),
+    inset 0 12px 34px rgba(0,0,0,.55),
+    0 8px 22px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--carta-w) * 0.05);
+}
+.dorso::before{
+  content:"";position:absolute;inset:calc(var(--carta-w) * 0.055);
+  border-radius:calc(var(--carta-w) * 0.085);
+  border:1px solid rgba(255,242,195,.22);
+  pointer-events:none;
+}
+.dorso-logo{width:64%;height:auto;opacity:.94;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
+.dorso-txt{
+  font-family:"Cinzel",Georgia,serif;font-weight:600;
+  font-size:calc(var(--carta-w) * 0.082);letter-spacing:.24em;
+  color:rgba(232,196,119,.62);text-indent:.24em;
+}
+
+/* frente: la botella etiquetada */
+.frente{
+  transform:rotateY(180deg);
+  background:#f6efdf;
+  box-shadow:inset 0 0 0 1px rgba(74,6,17,.18),0 10px 26px rgba(0,0,0,.45);
+}
+.frente canvas{display:block;width:100%;height:100%}
+
+.sello{
+  position:absolute;top:5%;right:5%;
+  width:calc(var(--carta-w) * 0.24);height:calc(var(--carta-w) * 0.24);
+  border-radius:50%;display:grid;place-items:center;
+  font-size:calc(var(--carta-w) * 0.135);font-weight:800;color:#3d0713;
+  background:radial-gradient(circle at 34% 28%,#fff0bb,#e6b34a 55%,#8d5b13);
+  border:1px solid rgba(255,240,190,.85);
+  box-shadow:0 2px 8px rgba(0,0,0,.45),0 0 14px rgba(255,210,95,.45);
+  opacity:0;transform:scale(.4) rotate(-16deg);
+  transition:opacity .22s ease,transform .32s cubic-bezier(.2,1.5,.4,1);
+}
+.carta.acierto .sello{opacity:1;transform:scale(1) rotate(-8deg)}
+.carta.acierto{cursor:default}
+.carta.acierto .frente{box-shadow:inset 0 0 0 2px rgba(255,210,95,.95),0 0 26px rgba(255,210,95,.4),0 10px 26px rgba(0,0,0,.4)}
+.carta.acierto .cara{border-radius:clamp(8px,calc(var(--carta-w) * 0.12),16px)}
+
+.carta.falla{
+  animation:sacudir .48s cubic-bezier(.36,.07,.19,.97) both;
+}
+.carta.falla .frente{
+  box-shadow:inset 0 0 0 3px #ff4f5f, 0 0 24px rgba(255,79,95,.55), 0 10px 26px rgba(0,0,0,.45);
+}
+@keyframes sacudir{
+  0%,100%{transform:translate3d(0,0,0) rotate(0deg)}
+  15%{transform:translate3d(-8px,0,0) rotate(-2.5deg)}
+  30%{transform:translate3d(8px,0,0) rotate(2.5deg)}
+  45%{transform:translate3d(-7px,0,0) rotate(-1.8deg)}
+  60%{transform:translate3d(7px,0,0) rotate(1.8deg)}
+  75%{transform:translate3d(-4px,0,0) rotate(-0.8deg)}
+  90%{transform:translate3d(4px,0,0) rotate(0.8deg)}
+}
+
+#capaFlotantes{position:absolute;inset:0;pointer-events:none;z-index:5}
+.flotante{
+  position:absolute;transform:translate(-50%,-50%);
+  font-family:"Bebas Neue",Impact,sans-serif;font-size:clamp(20px,3.6vw,30px);
+  color:#ffe3a4;letter-spacing:.04em;
+  text-shadow:0 2px 10px rgba(0,0,0,.85),0 0 20px rgba(255,210,95,.55);
+  animation:subir .9s ease-out forwards;
+}
+@keyframes subir{
+  0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}
+  18%{opacity:1;transform:translate(-50%,-62%) scale(1.06)}
+  100%{opacity:0;transform:translate(-50%,-190%) scale(.96)}
+}
+
+/* ---------------- PANTALLAS ---------------- */
+.pantalla{
+  position:absolute;inset:0;z-index:10;
+  display:none;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,rgba(60,8,20,.42),rgba(5,3,4,.76));
+  padding:18px;
+}
+.pantalla.visible{display:flex}
+.panel{
+  width:min(520px,94vw);
+  max-height:94vh;overflow:auto;
+  background:var(--panel);
+  border:1px solid var(--borde);
+  border-radius:20px;
+  padding:clamp(22px,4vw,36px);
+  text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(10px);
+}
+.panel::-webkit-scrollbar{width:8px}
+.panel::-webkit-scrollbar-thumb{background:rgba(232,196,119,.3);border-radius:4px}
+.panel h1{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(34px,6.8vw,54px);line-height:1.02;letter-spacing:.04em;
+  color:var(--dorado);margin:8px 0 22px;
+}
+
+/* marca */
+.marca{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:10px}
+.logo{width:min(240px,60vw);height:auto;filter:drop-shadow(0 8px 22px rgba(0,0,0,.6))}
+.marca-evento{
+  font-family:"Cinzel",Georgia,serif;font-weight:700;
+  font-size:clamp(11px,2.2vw,14px);letter-spacing:.26em;color:var(--dorado);
+  padding:4px 16px;border-top:1px solid rgba(232,196,119,.35);border-bottom:1px solid rgba(232,196,119,.35);
+}
+.marca-chica{margin-bottom:8px}
+.marca-chica .logo{width:min(148px,40vw)}
+.marca-chica .marca-evento{font-size:9.5px}
+
+/* ---------------- BOTONES (estética Remastered) ---------------- */
+.boton-grande{
+  position:relative;display:block;width:100%;cursor:pointer;
+  font-family:"Cinzel",Georgia,serif;font-weight:700;
+  font-size:clamp(18px,3.2vw,24px);letter-spacing:.14em;text-transform:uppercase;
+  padding:17px 22px;border-radius:22px;color:#fffaf0;
+  background:
+    linear-gradient(180deg,rgba(255,245,220,.16) 0%,rgba(255,245,220,0) 44%),
+    linear-gradient(180deg,#5a1329 0%,#440a1c 55%,#300713 100%);
+  border:3px solid #ffd25f;
+  box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 26px rgba(255,210,95,.2),inset 0 1px 0 rgba(255,245,220,.3);
+  text-shadow:0 2px 8px rgba(0,0,0,.75),0 0 18px rgba(255,210,95,.3);
+  transition:transform .16s,box-shadow .16s,filter .16s;
+}
+.boton-grande::before{
+  content:"";position:absolute;inset:5px;border-radius:16px;
+  border:1px solid rgba(255,242,195,.45);pointer-events:none;
+}
+.boton-grande:hover:not(:disabled){filter:brightness(1.08);box-shadow:0 12px 32px rgba(0,0,0,.6),0 0 40px rgba(255,210,95,.34),inset 0 1px 0 rgba(255,250,235,.4)}
+.boton-grande:active:not(:disabled){transform:translateY(2px) scale(.995);filter:brightness(.96)}
+.boton-grande:disabled{opacity:.55;cursor:progress;filter:saturate(.6)}
+
+/* ---------------- PANTALLA FINAL ---------------- */
+.panel-fin{width:min(600px,94vw);background:linear-gradient(180deg,rgba(24,9,13,.95),rgba(8,3,5,.97));border-color:rgba(232,196,119,.42)}
+.fin-kicker{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(11px,2.4vw,14px);letter-spacing:.34em;
+  color:rgba(232,196,119,.8);margin-bottom:14px;
+}
+.fin-medalla{position:relative;width:clamp(150px,36vw,196px);height:clamp(150px,36vw,196px);margin:0 auto 12px;display:grid;place-items:center}
+.fin-anillo{
+  position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from -90deg,#6d0b1e,#f0d397,#a4132f,#f0d397,#6d0b1e);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));
+  filter:drop-shadow(0 0 16px rgba(232,196,119,.35));
+  animation:girarAro 16s linear infinite;
+}
+@keyframes girarAro{to{transform:rotate(1turn)}}
+.fin-centro{
+  position:relative;width:calc(100% - 26px);height:calc(100% - 26px);border-radius:50%;
+  background:radial-gradient(circle at 50% 30%,rgba(74,10,24,.96),rgba(8,3,5,.99));
+  border:1px solid rgba(232,196,119,.2);
+  box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 40px rgba(120,10,30,.35);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.fin-etq{font-size:9.5px;letter-spacing:.28em;color:rgba(243,230,208,.55);font-weight:600}
+.fin-numero{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(54px,13vw,80px);line-height:.9;color:#f4d79b;
+  text-shadow:0 0 30px rgba(240,211,151,.4);font-variant-numeric:tabular-nums;
+}
+.fin-medalla.nuevo-record .fin-centro{animation:latidoRecord 1.6s ease-in-out infinite}
+@keyframes latidoRecord{
+  0%,100%{box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 40px rgba(232,196,119,.35)}
+  50%{box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 74px rgba(232,196,119,.6)}
+}
+.fin-cartel{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(14px,3vw,18px);letter-spacing:.16em;
+  color:rgba(243,230,208,.82);margin-bottom:4px;
+}
+.fin-bonus{
+  font-size:10.5px;letter-spacing:.16em;color:rgba(232,196,119,.75);
+  min-height:14px;margin-bottom:12px;text-transform:uppercase;
+}
+.fin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 auto 18px;max-width:470px}
+.fin-stat{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:9px 4px;border-radius:12px;
+  background:rgba(232,196,119,.07);border:1px solid rgba(232,196,119,.14);
+}
+.fin-stat-etq{font-size:8px;letter-spacing:.13em;color:rgba(243,230,208,.55);font-weight:600;text-align:center}
+.fin-stat-val{font-family:"Bebas Neue",Impact,sans-serif;font-size:23px;color:var(--dorado);line-height:1}
+.boton-jugar{font-size:clamp(22px,4vw,30px);padding:20px 22px;letter-spacing:.16em;border-radius:24px;overflow:hidden}
+.boton-jugar::after{
+  content:"";position:absolute;inset:-40% -60%;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,245,220,.3) 50%,transparent 58%);
+  transform:translateX(-80%);animation:brilloBoton 3.6s ease-in-out infinite;pointer-events:none;
+}
+@keyframes brilloBoton{0%,58%{transform:translateX(-80%)}88%,100%{transform:translateX(80%)}}
+
+/* ---------------- PANEL DE PARÁMETROS DE CARTAS (TECLA P) ---------------- */
+.cfg-cartas{
+  position:fixed;right:18px;bottom:18px;z-index:50;
+  width:min(330px,92vw);
+  background:linear-gradient(180deg,rgba(22,8,12,.97),rgba(9,3,5,.98));
+  border:1.5px solid rgba(255,210,95,.55);
+  border-radius:16px;
+  box-shadow:0 18px 46px rgba(0,0,0,.78);
+  backdrop-filter:blur(10px);
+  display:none;flex-direction:column;
+  color:var(--crema);
+}
+.cfg-cartas.ver{display:flex}
+.cfg-cartas-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;border-bottom:1px solid rgba(232,196,119,.22);
+  font-family:"Cinzel",Georgia,serif;font-size:11.5px;letter-spacing:.12em;color:var(--dorado);font-weight:700;
+}
+.cfg-cartas-x{
+  width:26px;height:26px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(255,210,95,.45);background:transparent;color:var(--dorado);font-size:13px;
+}
+.cfg-cartas-x:hover{background:rgba(255,210,95,.14)}
+.cfg-cartas-body{padding:12px 14px 6px}
+.cfg-fila{display:block;margin-bottom:11px}
+.cfg-cab{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:11.5px;color:rgba(243,230,208,.82);margin-bottom:4px;
+}
+.cfg-cab b{font-family:"Bebas Neue",Impact,sans-serif;font-size:16px;color:var(--dorado);font-weight:400}
+.cfg-fila input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;
+  background:rgba(232,196,119,.24);outline:none;cursor:pointer;
+}
+.cfg-fila input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:linear-gradient(180deg,#f7e2b4,#d9ad5f);border:1px solid #8a6a2e;
+  box-shadow:0 1px 4px rgba(0,0,0,.6);
+}
+.cfg-cartas-pie{
+  padding:8px 14px 12px;border-top:1px solid rgba(232,196,119,.18);
+  display:flex;justify-content:flex-end;
+}
+.cfg-btn-reset{
+  width:100%;padding:8px 12px;border-radius:10px;cursor:pointer;
+  font-family:"Cinzel",Georgia,serif;font-size:11px;letter-spacing:.14em;
+  color:rgba(255,242,195,.92);background:rgba(90,19,41,.55);
+  border:1px solid rgba(255,210,95,.5);
+}
+.cfg-btn-reset:hover{background:rgba(110,24,50,.75)}
+
+/* ---------------- CARGANDO ---------------- */
+.cargando{
+  position:absolute;inset:0;z-index:30;display:none;
+  align-items:center;justify-content:center;text-align:center;
+  background:var(--negro);color:var(--dorado);
+  font-family:"Bebas Neue",Impact,sans-serif;font-size:22px;letter-spacing:.2em;
+  line-height:1.6;
+}
+.cargando small{font-family:Inter,sans-serif;font-size:11px;letter-spacing:.06em;color:rgba(243,230,208,.6)}
+.cargando.visible{display:flex}
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width:600px){
+  .hud-mov{display:none}
+  #hud{gap:10px;padding:9px 12px 8px;min-height:64px}
+  .hud-logo{width:76px}
+  .hud-val{font-size:21px}
+  .hud-etq{font-size:8.5px}
+  .hud-tiempo{padding:3px 12px 4px}
+  .hud-tiempo .hud-val{font-size:clamp(34px,9vw,46px)}
+  .hud-botones button{width:34px;height:34px;border-radius:10px;font-size:13px}
+  .panel{border-radius:16px}
+  .fin-stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-height:760px){
+  .panel{padding:18px 22px;border-radius:16px}
+  .panel h1{font-size:clamp(28px,5.8vw,42px);margin:6px 0 16px}
+  .logo{width:min(185px,46vw)}
+  .fin-kicker{margin-bottom:8px;font-size:10px}
+  .fin-medalla{width:clamp(112px,26vw,150px);height:clamp(112px,26vw,150px);margin-bottom:8px}
+  .fin-numero{font-size:clamp(38px,9.5vw,56px)}
+  .fin-cartel{margin-bottom:2px;font-size:13px}
+  .fin-bonus{margin-bottom:8px;font-size:9.5px}
+  .fin-stats{margin-bottom:12px}
+  .fin-stat{padding:6px 3px}
+  .fin-stat-val{font-size:19px}
+  .boton-jugar{font-size:clamp(21px,4vw,27px);padding:14px 18px}
+}

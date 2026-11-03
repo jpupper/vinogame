@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deli &amp; Wine · Memotest</title>
+<meta name="description" content="Memotest Deli &amp; Wine: encontrá los pares.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/memotest.css">
+</head>
+<body>
+<div id="app">
+  <div id="fondo" aria-hidden="true"></div>
+
+  <!-- HUD -->
+  <header id="hud" class="hud-off">
+    <img class="hud-logo" src="img/logo.png" alt="Deli &amp; Wine">
+    <div class="hud-bloque">
+      <span class="hud-etq">PUNTOS</span>
+      <span id="hudPuntos" class="hud-val">0</span>
+    </div>
+    <div class="hud-bloque">
+      <span class="hud-etq">PARES</span>
+      <span id="hudPares" class="hud-val">0/6</span>
+    </div>
+    <div class="hud-bloque hud-mov">
+      <span class="hud-etq">MOV</span>
+      <span id="hudMov" class="hud-val">0</span>
+    </div>
+    <div class="hud-bloque hud-tiempo">
+      <span class="hud-etq">TIEMPO</span>
+      <span id="hudTiempo" class="hud-val">1:00</span>
+    </div>
+    <div class="hud-botones">
+      <button id="btnReiniciar" type="button" title="Reiniciar la partida" aria-label="Reiniciar la partida">↺</button>
+      <button id="btnSalir" type="button" title="Volver al inicio" aria-label="Volver al inicio">⌂</button>
+    </div>
+  </header>
+
+  <!-- TABLERO -->
+  <main id="zona">
+    <div id="tableroWrap">
+      <div id="tablero"></div>
+      <div id="capaFlotantes" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <!-- PANTALLA INICIO -->
+  <section id="pantallaInicio" class="pantalla visible">
+    <div class="panel">
+      <div class="marca">
+        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-evento">MEMOTEST</p>
+      </div>
+      <h1>ENCONTRÁ LOS PARES</h1>
+      <button id="btnJugar" class="boton-grande" type="button" disabled>CARGANDO…</button>
+    </div>
+  </section>
+
+  <!-- PANTALLA FIN -->
+  <section id="pantallaFin" class="pantalla">
+    <div class="panel panel-fin">
+      <div class="marca marca-chica">
+        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-evento">MEMOTEST</p>
+      </div>
+      <p id="finKicker" class="fin-kicker">✦ BODEGA COMPLETA ✦</p>
+      <div id="finMedalla" class="fin-medalla">
+        <div class="fin-anillo" aria-hidden="true"></div>
+        <div class="fin-centro">
+          <span class="fin-etq">PUNTOS</span>
+          <span id="finPuntos" class="fin-numero">0</span>
+        </div>
+      </div>
+      <p id="finCartel" class="fin-cartel">TU MEJOR MARCA: 0</p>
+      <p id="finBonus" class="fin-bonus"></p>
+      <div class="fin-stats">
+        <div class="fin-stat">
+          <span class="fin-stat-etq">PARES</span>
+          <span id="finPares" class="fin-stat-val">0/6</span>
+        </div>
+        <div class="fin-stat">
+          <span class="fin-stat-etq">MOVIMIENTOS</span>
+          <span id="finMov" class="fin-stat-val">0</span>
+        </div>
+        <div class="fin-stat">
+          <span class="fin-stat-etq">TIEMPO</span>
+          <span id="finTiempo" class="fin-stat-val">0:00</span>
+        </div>
+        <div class="fin-stat">
+          <span class="fin-stat-etq">RÉCORD</span>
+          <span id="finRecord" class="fin-stat-val">0</span>
+        </div>
+      </div>
+      <button id="btnOtra" class="boton-grande boton-jugar" type="button">JUGAR OTRA VEZ</button>
+    </div>
+  </section>
+
+  <!-- PANEL DE PARÁMETROS DE CARTAS (TECLA P) -->
+  <aside id="panelCfgCartas" class="cfg-cartas" aria-hidden="true">
+    <div class="cfg-cartas-head">
+      <span>PARÁMETROS DE CARTAS (P)</span>
+      <button id="btnCerrarCfgCartas" type="button" class="cfg-cartas-x" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="cfg-cartas-body">
+      <label class="cfg-fila">
+        <span class="cfg-cab"><span>Tamaño (escala)</span><b id="valCfgTam">1.00×</b></span>
+        <input id="inpCfgTam" type="range" min="0.50" max="1.60" step="0.01" value="1">
+      </label>
+      <label class="cfg-fila">
+        <span class="cfg-cab"><span>Offset X</span><b id="valCfgOffX">0 px</b></span>
+        <input id="inpCfgOffX" type="range" min="-300" max="300" step="1" value="0">
+      </label>
+      <label class="cfg-fila">
+        <span class="cfg-cab"><span>Offset Y</span><b id="valCfgOffY">0 px</b></span>
+        <input id="inpCfgOffY" type="range" min="-300" max="300" step="1" value="0">
+      </label>
+    </div>
+    <div class="cfg-cartas-pie">
+      <button id="btnResetCfgCartas" type="button" class="cfg-btn-reset">RESTABLECER</button>
+    </div>
+  </aside>
+
+  <div id="cargando" class="cargando visible">CARGANDO…</div>
+</div>
+
+<script src="js/botellas.js"></script>
+<script src="js/juego.js"></script>
+</body>
+</html>

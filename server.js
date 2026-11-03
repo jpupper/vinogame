@@ -167,6 +167,7 @@ const server = app.listen(PORT, () => {
   console.log(`   http://localhost:${PORT}/juegovino.html           Deli & Wine 1 (original)`);
   console.log(`   http://localhost:${PORT}/juegovinoremastered.html Deli & Wine Remastered`);
   console.log(`   http://localhost:${PORT}/servirvino.html          Serve Wine`);
+  console.log(`   http://localhost:${PORT}/memotest/                Memotest de bodega`);
   console.log(`   Estáticos desde /public`);
   console.log(`==================================================`);
 });

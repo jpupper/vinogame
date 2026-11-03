@@ -30,24 +30,23 @@
         <span class="hud-etq">TIEMPO</span>
         <span id="hudTiempo" class="hud-val">1:00</span>
       </div>
-      <button id="btnPausa" type="button" title="Pausa (P)">❚❚</button>
+      <label class="switch-inclinar" for="chkInclinarBotella" title="Inclinar botella a 45° según mitad de pantalla">
+        <input id="chkInclinarBotella" type="checkbox" checked>
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+        <span class="switch-txt">inclinarbotella</span>
+      </label>
+      <button id="btnPausa" type="button" title="Pausa (espacio)">❚❚</button>
     </div>
 
     <!-- PANTALLA INICIO -->
     <section id="pantallaInicio" class="pantalla visible">
       <div class="panel">
-        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
-        <h1>LLENÁ LAS COPAS</h1>
-        <p class="bajada">Tenés <b>60 segundos</b>. Cada punto que toca la pantalla es una botella que vierte vino: llená las copas antes de que se venza su reloj.</p>
-        <ul class="reglas">
-          <li><b>Una botella por cada dedo</b> — con el mouse, mové y ya estás sirviendo</li>
-          <li><b>Copa llena a tiempo</b> → +100 puntos + bonus por el reloj que sobró</li>
-          <li><b>Reloj en cero</b> → −50 puntos (la partida sigue)</li>
-          <li>Desbordar una copa ya llena → −30 puntos</li>
-          <li>Cuando se termina el <b>minuto</b>, te dice cuántos puntos hiciste</li>
-        </ul>
+        <div class="marca">
+          <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+          <p class="marca-evento" data-evento-nombre>DELI &amp; WINE</p>
+        </div>
+        <h1>MOVÉ LA BOTELLA PARA LLENAR LAS COPAS</h1>
         <button id="btnJugar" class="boton-grande" type="button">JUGAR</button>
-        <p class="chico">Mové la botella con el mouse o el dedo · <b>P</b> pausa</p>
       </div>
     </section>
 
@@ -63,9 +62,13 @@
     <!-- PANTALLA FIN -->
     <section id="pantallaFin" class="pantalla">
       <div class="panel panel-fin">
+        <div class="marca marca-fin">
+          <img src="img/logo.png" alt="Deli &amp; Wine" class="logo logo-fin">
+          <p class="marca-evento" data-evento-nombre>DELI &amp; WINE</p>
+        </div>
         <p class="fin-kicker">✦ SE TERMINÓ EL TIEMPO ✦</p>
-        <div id="finMedalla" class="fin-medalla">
-          <div class="fin-anillo" aria-hidden="true"></div>
+        <div id="finMedalla" class="fin-medalla fin-botella">
+          <img class="botella-fin-img" src="img/botella.png" alt="" aria-hidden="true">
           <div class="fin-centro">
             <span class="fin-etq">PUNTOS</span>
             <span id="finPuntos" class="fin-numero">0</span>
@@ -99,5 +102,6 @@
 <script src="js/fluido.js"></script>
 <script src="js/fondo.js"></script>
 <script src="js/juego.js"></script>
+<script src="js/panel.js"></script>
 </body>
 </html>
