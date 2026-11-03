@@ -3,7 +3,12 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ==============================================
-echo  VinoGame - Deli ^& Wine 2 (Puerto 4353)
+echo  Deli ^& Wine - galeria + 3 juegos (Puerto 4353)
+echo ==============================================
+echo  http://localhost:4353/                        (galeria)
+echo  http://localhost:4353/juegovino.html           (Deli ^& Wine 1)
+echo  http://localhost:4353/juegovinoremastered.html (Remastered)
+echo  http://localhost:4353/servirvino.html          (Serve Wine)
 echo ==============================================
 
 echo [run] Verificando si el puerto 4353 esta ocupado...

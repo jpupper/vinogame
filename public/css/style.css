@@ -152,19 +152,22 @@ body {
         top: 20px;
         right: 20px; /* Punto de anclaje constante */
         width: 520px; /* Ancho aumentado para evitar cortes */
-        max-width: 90vw; /* Responsive para pantallas pequeñas */
+        max-width: calc(100vw - 40px); /* Responsive para pantallas pequeñas */
         background: rgba(0, 0, 0, 0.9);
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 10px;
-        padding: 20px;
+        padding: 16px 18px;
         z-index: 1000;
         transition: transform 0.3s ease-in-out;
         transform: translateX(calc(100% + 40px)); /* Oculto completamente */
         backdrop-filter: blur(10px);
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        max-height: 90vh; /* Limitar altura máxima */
-        overflow-y: auto; /* Scroll vertical si es necesario */
-        overflow-x: hidden; /* Evitar barra de desplazamiento horizontal */
+        /* El alto se limita al viewport y el scroll vive en la pestaña activa */
+        box-sizing: border-box;
+        max-height: calc(100vh - 40px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
     
     #controlPanel.visible {
@@ -173,10 +176,25 @@ body {
     
     #controlPanel h3 {
         color: #fff;
-        margin: 0 0 20px 0;
+        margin: 0 0 12px 0;
         text-align: center;
         font-size: 18px;
         text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        flex: 0 0 auto;
+    }
+
+    /* Scroll propio y visible dentro del panel */
+    #controlPanel .tab-content::-webkit-scrollbar { width: 10px; }
+    #controlPanel .tab-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+    }
+    #controlPanel .tab-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 215, 106, 0.55);
+        border-radius: 6px;
+    }
+    #controlPanel .tab-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 215, 106, 0.8);
     }
     
     .control-group {
@@ -328,23 +346,29 @@ body {
     
     /* Estilos para sistema de pestañas */
     .tab-navigation {
-        display: flex;
-        margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 14px;
+        padding-bottom: 6px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        flex: 0 0 auto;
     }
     
     .tab-button {
-        flex: 1;
-        padding: 12px 16px;
+        min-width: 0;
+        padding: 9px 6px;
         background: rgba(255, 255, 255, 0.05);
         border: none;
         color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
         transition: all 0.3s ease;
-        font-size: 14px;
-        font-weight: 500;
-        border-radius: 8px 8px 0 0;
-        margin-right: 2px;
+        font-size: 11.5px;
+        font-weight: 600;
+        border-radius: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .tab-button:last-child {
@@ -369,6 +393,13 @@ body {
     
     .tab-content.active {
         display: block;
+        /* Ocupa el alto libre del panel y scrollea por dentro: nunca se corta */
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        padding-right: 4px;
     }
     
     @keyframes fadeIn {

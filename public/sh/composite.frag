@@ -29,7 +29,6 @@ uniform float u_relieve;               // 0..1 pendiente de la normal
 uniform float u_profundidad;           // 0..1 componente z de la normal
 uniform float u_especular;             // 0..1 dureza del brillo especular
 uniform float u_brillo;                // 0..1 intensidad especular/Fresnel
-uniform float u_causticas;             // 0..1 intensidad de cáusticas
 uniform float u_espuma;                // 0..1 espuma donde hubo empuje
 uniform vec2  u_foco;                  // posición de la luz
 uniform vec3  u_agua;                  // tinte del agua
@@ -109,18 +108,6 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
-float causticas(vec2 q, float t) {
-    float v = 0.0;
-    float a = 1.0;
-    vec2  w = q;
-    for (int i = 0; i < 3; i++) {
-        v += a * (1.0 - abs(ruido(w * (1.7 + float(i))) * 2.0 - 1.0));
-        a *= 0.55;
-        w = w * 2.03 + vec2(t * 0.04, -t * 0.03);
-    }
-    return pow(clamp(v, 0.0, 1.0), 5.0);
-}
-
 // Acumulador de punto estilo mapeopuntosmaster (núcleo + halo + estela sdSegment)
 void sumarPunto(inout vec3 acc, vec2 frag, vec2 act, vec2 ant, float radio, vec3 colPunto, float glowAmt) {
     float dAct   = length(frag - act);
@@ -186,15 +173,11 @@ void main() {
     vec3 bg2 = texture2D(u_backgroundTexture2, quv).rgb;
     vec3 fondo = mix(bg1, bg2, clamp(u_backgroundBlend, 0.0, 1.0));
 
-    // ── 5. ÓPTICA DEL AGUA (CÁUSTICAS + REFRACCIÓN + ESPUMA + ESPECULAR) ───
+    // ── 5. ÓPTICA DEL AGUA (REFRACCIÓN + ESPUMA + ESPECULAR) ─────────────────
     vec3 col = fondo * u_agua * 0.58;
 
     // Actividad local de las ondas en Buffer A + presencia sutil de agua en reposo
     float waveActivity = clamp(abs(h) * 14.0 + length(grad) * 26.0 + energia * 0.75, 0.0, 1.0);
-
-    // Cáusticas cristalinas sobre el fondo (presentes sutilmente en reposo e intensas con ondas)
-    float cau = causticas((uv + totalOff * 1.5) * vec2(aspecto, 1.0) * 2.2, u_time * 0.48);
-    col += cau * u_causticas * 0.95 * mix(u_agua, vec3(1.0, 0.94, 0.80), 0.5) * (0.24 + 0.76 * waveActivity);
 
     // Espuma en las estelas del puntero y de los objetos cayendo
     float espN = ruido(vec2(uv.x * aspecto, uv.y) * 80.0 + vec2(u_time * 0.3, -u_time * 0.25) + vel * 20.0);

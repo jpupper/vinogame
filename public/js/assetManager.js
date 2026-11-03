@@ -76,7 +76,14 @@
         'img/objetos/copa2.png',
         'img/objetos/botella.png',
         'img/objetos/destapador.png',
-        'img/objetos/destapador2.png'
+        'img/objetos/destapador2.png',
+        'img/objetos/copa_llena.png',
+        'img/objetos/sacacorchos.png',
+        'img/objetos/uvas_blancas.png',
+        'img/objetos/barril_roble.png',
+        'img/objetos/botella_vino_blanco.png',
+        'img/objetos/botella_vino_rojo.png',
+        'img/objetos/racimo_uva_rojas.png'
       ];
       this.goodItemImagePaths = goodPaths.slice();
       this.goodItemImages = goodPaths.map(p => loadImage(p));
@@ -89,7 +96,20 @@
         'img/malos/bicho4.png',
         'img/malos/bicho5.png',
         'img/malos/bicho6.png',
-        'img/malos/bicho7.png'
+        'img/malos/bicho7.png',
+        'img/malos/bicho9.png',
+        'img/malos/bicho10.png',
+        'img/malos/bicho11.png',
+        'img/malos/bicho12.png',
+        'img/malos/bicho13.png',
+        'img/malos/bicho14.png',
+        'img/malos/bicho15.png',
+        'img/malos/bicho16.png',
+        'img/malos/bicho17.png',
+        'img/malos/bicho18.png',
+        'img/malos/bicho19.png',
+        'img/malos/bicho20.png',
+        'img/malos/bicho21.png'
       ];
       this.badItemImagePaths = badPaths.slice();
       this.badItemImages = badPaths.map(p => loadImage(p));
@@ -100,7 +120,22 @@
         'img/background/fondo2.jpg',
         'img/background/fondo3.jpg',
         'img/background/fondo4.jpg',
-        'img/background/fondo5.jpg'
+        'img/background/fondo5.jpg',
+        'img/background/fondo6.jpg',
+        'img/background/fondo7.jpg',
+        'img/background/fondo8.jpg',
+        'img/background/fondo9.jpg',
+        'img/background/fondo10.jpg',
+        'img/background/fondo11.jpg',
+        'img/background/fondo12.jpg',
+        'img/background/fondo13.jpg',
+        'img/background/fondo14.jpg',
+        'img/background/fondo15.jpg',
+        'img/background/fondo16.jpg',
+        'img/background/fondo17.jpg',
+        'img/background/fondo18.jpg',
+        'img/background/fondo19.jpg',
+        'img/background/fondo20.jpg'
       ];
       this.backgroundImagePaths = bgPaths.slice();
       this.backgroundTextures = bgPaths.map(p => loadImage(p));

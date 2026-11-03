@@ -2102,7 +2102,6 @@ window.getBadHaloSettings = function() {
         setSlider('waterRefraccionSlider', 'waterRefraccionValue', wp.refraccion);
         setSlider('waterRelieveSlider', 'waterRelieveValue', wp.relieve);
         setSlider('waterProfundidadSlider', 'waterProfundidadValue', wp.profundidad);
-        setSlider('waterCausticasSlider', 'waterCausticasValue', wp.causticas);
         setSlider('waterEspumaSlider', 'waterEspumaValue', wp.espuma);
         setSlider('waterBrilloSlider', 'waterBrilloValue', wp.brillo);
         setSlider('waterEspecularSlider', 'waterEspecularValue', wp.especular);
@@ -2138,7 +2137,6 @@ window.getBadHaloSettings = function() {
         bindSlider('waterRefraccionSlider', 'waterRefraccionValue', 'refraccion');
         bindSlider('waterRelieveSlider', 'waterRelieveValue', 'relieve');
         bindSlider('waterProfundidadSlider', 'waterProfundidadValue', 'profundidad');
-        bindSlider('waterCausticasSlider', 'waterCausticasValue', 'causticas');
         bindSlider('waterEspumaSlider', 'waterEspumaValue', 'espuma');
         bindSlider('waterBrilloSlider', 'waterBrilloValue', 'brillo');
         bindSlider('waterEspecularSlider', 'waterEspecularValue', 'especular');

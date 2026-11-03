@@ -211,7 +211,22 @@ const WaterMultiBuffer = {
             'img/background/fondo2.jpg',
             'img/background/fondo3.jpg',
             'img/background/fondo4.jpg',
-            'img/background/fondo5.jpg'
+            'img/background/fondo5.jpg',
+            'img/background/fondo6.jpg',
+            'img/background/fondo7.jpg',
+            'img/background/fondo8.jpg',
+            'img/background/fondo9.jpg',
+            'img/background/fondo10.jpg',
+            'img/background/fondo11.jpg',
+            'img/background/fondo12.jpg',
+            'img/background/fondo13.jpg',
+            'img/background/fondo14.jpg',
+            'img/background/fondo15.jpg',
+            'img/background/fondo16.jpg',
+            'img/background/fondo17.jpg',
+            'img/background/fondo18.jpg',
+            'img/background/fondo19.jpg',
+            'img/background/fondo20.jpg'
         ];
         this.directBgTextures = [];
         defaultPaths.forEach((src, idx) => {
@@ -808,7 +823,6 @@ function renderShaders() {
             profundidad: 0.48,
             especular: 0.58,
             brillo: 0.62,
-            causticas: 0.38,
             espuma: 0.45,
             focoX: 0.52,
             focoY: 0.74,
@@ -820,7 +834,6 @@ function renderShaders() {
     WaterMultiBuffer.set1f(gl, prog, 'u_profundidad', Number.isFinite(wp.profundidad) ? wp.profundidad : 0.48);
     WaterMultiBuffer.set1f(gl, prog, 'u_especular', Number.isFinite(wp.especular) ? wp.especular : 0.58);
     WaterMultiBuffer.set1f(gl, prog, 'u_brillo', Number.isFinite(wp.brillo) ? wp.brillo : 0.62);
-    WaterMultiBuffer.set1f(gl, prog, 'u_causticas', Number.isFinite(wp.causticas) ? wp.causticas : 0.38);
     WaterMultiBuffer.set1f(gl, prog, 'u_espuma', Number.isFinite(wp.espuma) ? wp.espuma : 0.45);
     WaterMultiBuffer.set2f(gl, prog, 'u_foco', Number.isFinite(wp.focoX) ? wp.focoX : 0.52, Number.isFinite(wp.focoY) ? wp.focoY : 0.74);
     const ac = (Array.isArray(wp.aguaColor) && wp.aguaColor.length >= 3 && Number.isFinite(wp.aguaColor[0]))
@@ -930,7 +943,6 @@ if (typeof window !== 'undefined') {
         profundidad: 0.48,
         especular: 0.58,
         brillo: 0.62,
-        causticas: 0.38,
         espuma: 0.45,
         focoX: 0.52,
         focoY: 0.74,

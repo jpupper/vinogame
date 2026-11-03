@@ -1,0 +1,262 @@
+/* ============================================================
+   DELI & WINE · LLENÁ LAS COPAS
+   Segunda versión del juego: física de fluidos (partículas + Matter.js)
+   ============================================================ */
+:root{
+  --vino:#6d0b1e;
+  --vino-claro:#a4132f;
+  --dorado:#e8c477;
+  --crema:#f3e6d0;
+  --negro:#0a0607;
+  --panel:rgba(12,7,9,.82);
+  --borde:rgba(232,196,119,.28);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--negro);overflow:hidden}
+body{
+  font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+  color:var(--crema);
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+  overscroll-behavior:none;
+  user-select:none;
+}
+#app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#juego-wrap{position:relative;width:100%;height:100%;overflow:hidden}
+#escena{display:block;width:100%;height:100%;touch-action:none;position:relative;z-index:1}
+/* canvas del shader de metaballs del vino (encima del escenario, debajo del HUD) */
+#fluido{position:absolute;inset:0;pointer-events:none;z-index:2}
+/* fondo de agua: el canvas del include del JP Shader Editor va en z-index -1 y
+   acá se le pone un velo oscuro para que la botella y las copas se lean */
+#fondoAgua{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 35%,rgba(10,3,6,.55),rgba(5,2,4,.86) 70%);}
+
+/* ---------------- HUD ---------------- */
+#hud{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:center;gap:18px;
+  padding:14px 18px calc(10px + env(safe-area-inset-top)) 18px;
+  background:linear-gradient(180deg,rgba(0,0,0,.82) 30%,rgba(0,0,0,0));
+  pointer-events:none;z-index:5;
+  text-shadow:0 2px 8px rgba(0,0,0,.9);
+}
+.hud-bloque{display:flex;flex-direction:column;line-height:1}
+.hud-etq{font-size:10px;letter-spacing:.18em;color:rgba(243,230,208,.6);font-weight:600}
+.hud-val{font-family:"Bebas Neue",Impact,sans-serif;font-size:34px;letter-spacing:.02em;color:var(--dorado)}
+.hud-vidas .hud-val{color:#ff5d6c}
+#btnPausa{
+  margin-left:auto;pointer-events:auto;
+  width:42px;height:42px;border-radius:12px;
+  border:2px solid #ffd25f;background:linear-gradient(180deg,#5a1329,#440a1c);
+  color:#fff2c3;font-size:13px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,245,220,.25);
+  transition:filter .16s,box-shadow .16s;
+}
+#btnPausa:hover{filter:brightness(1.12);box-shadow:0 4px 18px rgba(255,210,95,.3),inset 0 1px 0 rgba(255,245,220,.3)}
+
+.aviso-nivel{
+  position:absolute;top:32%;left:50%;transform:translate(-50%,-50%) scale(.9);
+  font-family:"Bebas Neue",Impact,sans-serif;font-size:clamp(32px,7vw,64px);
+  color:var(--dorado);letter-spacing:.04em;text-shadow:0 4px 30px rgba(0,0,0,.8);
+  opacity:0;pointer-events:none;z-index:6;transition:opacity .25s,transform .25s;white-space:nowrap;
+}
+.aviso-nivel.ver{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+/* ---------------- PANTALLAS ---------------- */
+.pantalla{
+  position:absolute;inset:0;z-index:10;
+  display:none;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,rgba(60,8,20,.42),rgba(5,3,4,.74));
+  padding:20px;
+}
+.pantalla.visible{display:flex}
+.panel{
+  width:min(560px,94vw);
+  background:var(--panel);
+  border:1px solid var(--borde);
+  border-radius:20px;
+  padding:clamp(20px,4vw,36px);
+  text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(10px);
+  max-height:92vh;overflow:auto;
+}
+.panel-chico{width:min(360px,90vw)}
+.logo{width:min(230px,60vw);height:auto;margin-bottom:12px}
+.panel h1{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(32px,7vw,54px);letter-spacing:.03em;
+  color:var(--dorado);line-height:1;margin-bottom:10px;
+}
+.bajada{font-size:clamp(13px,2.6vw,15px);color:rgba(243,230,208,.78);line-height:1.5;margin-bottom:16px}
+.reglas{list-style:none;text-align:left;margin:0 auto 22px;max-width:400px;display:flex;flex-direction:column;gap:8px}
+.reglas li{
+  font-size:13px;line-height:1.45;padding:9px 12px;
+  border-radius:10px;background:rgba(232,196,119,.07);
+  border-left:3px solid var(--vino-claro);
+}
+.reglas b{color:var(--dorado)}
+/* ---------------- BOTONES (misma estética que Deli & Wine Remastered) ----------------
+   Remastered dibuja sus botones con: cuerpo borgoña (#440a1c) + doble marco dorado
+   (#ffd25f y #fff2c3), reflejo cristalino arriba y tipografía Cinzel. Acá se
+   replica en CSS para que los dos juegos se lean como el mismo producto. */
+.boton-grande{
+  position:relative;
+  display:block;width:100%;
+  font-family:"Cinzel",Georgia,serif;font-weight:700;
+  font-size:clamp(19px,3.4vw,25px);letter-spacing:.14em;text-transform:uppercase;
+  padding:18px 22px;border-radius:22px;cursor:pointer;
+  color:#fffaf0;
+  background:
+    linear-gradient(180deg,rgba(255,245,220,.16) 0%,rgba(255,245,220,0) 44%),
+    linear-gradient(180deg,#5a1329 0%,#440a1c 55%,#300713 100%);
+  border:3px solid #ffd25f;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.55),
+    0 0 26px rgba(255,210,95,.20),
+    inset 0 1px 0 rgba(255,245,220,.30);
+  text-shadow:0 2px 8px rgba(0,0,0,.75),0 0 18px rgba(255,210,95,.30);
+  transition:transform .16s,box-shadow .16s,filter .16s;
+}
+/* segundo marco, fino y por dentro */
+.boton-grande::before{
+  content:"";position:absolute;inset:5px;border-radius:16px;
+  border:1px solid rgba(255,242,195,.45);pointer-events:none;
+}
+.boton-grande:hover{
+  filter:brightness(1.08);
+  box-shadow:
+    0 12px 32px rgba(0,0,0,.6),
+    0 0 40px rgba(255,210,95,.34),
+    inset 0 1px 0 rgba(255,250,235,.4);
+}
+.boton-grande:active{transform:translateY(2px) scale(.995);filter:brightness(.96)}
+.boton-sec{
+  display:block;width:100%;margin-top:10px;cursor:pointer;
+  font-family:"Cinzel",Georgia,serif;font-weight:600;
+  font-size:clamp(14px,2.4vw,17px);letter-spacing:.12em;text-transform:uppercase;
+  padding:12px 20px;border-radius:16px;
+  color:rgba(255,242,195,.92);background:rgba(68,10,28,.45);
+  border:1.5px solid rgba(255,210,95,.5);
+  text-shadow:0 2px 6px rgba(0,0,0,.6);
+  transition:background .16s,border-color .16s;
+}
+.boton-sec:hover{background:rgba(90,19,41,.6);border-color:rgba(255,210,95,.8)}
+.chico{font-size:11px;color:rgba(243,230,208,.5);margin-top:14px;line-height:1.5}
+.puntaje-final{display:flex;flex-direction:column;align-items:center;margin:6px 0 14px}
+.puntaje-final .hud-val{font-size:clamp(54px,14vw,88px);line-height:.95}
+
+/* ---------------- HUD: reloj de la partida ---------------- */
+#hud{transition:opacity .25s ease}
+#hud.hud-off{opacity:0;pointer-events:none}
+.hud-tiempo .hud-val{color:var(--dorado);font-variant-numeric:tabular-nums}
+.hud-tiempo .hud-val.poco{color:#ff5d6c;animation:pulsoTiempo 1s ease-in-out infinite}
+@keyframes pulsoTiempo{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* ---------------- PANTALLA FINAL ---------------- */
+.panel-fin{
+  width:min(620px,94vw);
+  background:linear-gradient(180deg,rgba(24,9,13,.95),rgba(8,3,5,.97));
+  border-color:rgba(232,196,119,.42);
+}
+.fin-kicker{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(12px,2.6vw,15px);letter-spacing:.34em;
+  color:rgba(232,196,119,.78);margin-bottom:16px;
+}
+.fin-medalla{
+  position:relative;width:clamp(168px,42vw,214px);height:clamp(168px,42vw,214px);
+  margin:0 auto 16px;display:grid;place-items:center;
+}
+.fin-anillo{
+  position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from -90deg,#6d0b1e,#f0d397,#a4132f,#f0d397,#6d0b1e);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 10px),#000 calc(100% - 9px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 10px),#000 calc(100% - 9px));
+  filter:drop-shadow(0 0 16px rgba(232,196,119,.35));
+  animation:girarAro 16s linear infinite;
+}
+@keyframes girarAro{to{transform:rotate(1turn)}}
+.fin-centro{
+  position:relative;width:calc(100% - 28px);height:calc(100% - 28px);border-radius:50%;
+  background:radial-gradient(circle at 50% 30%,rgba(74,10,24,.96),rgba(8,3,5,.99));
+  border:1px solid rgba(232,196,119,.2);
+  box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 40px rgba(120,10,30,.35);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.fin-etq{font-size:10px;letter-spacing:.28em;color:rgba(243,230,208,.55);font-weight:600}
+.fin-numero{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(58px,15vw,88px);line-height:.9;color:#f4d79b;
+  text-shadow:0 0 30px rgba(240,211,151,.4);
+  font-variant-numeric:tabular-nums;
+}
+.fin-medalla.nuevo-record .fin-centro{
+  background:radial-gradient(circle at 50% 30%,rgba(120,26,34,.97),rgba(14,4,6,.99));
+  animation:latidoRecord 1.6s ease-in-out infinite;
+}
+@keyframes latidoRecord{0%,100%{box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 40px rgba(232,196,119,.35)}50%{box-shadow:inset 0 8px 28px rgba(0,0,0,.85),0 0 74px rgba(232,196,119,.6)}}
+.fin-cartel{
+  font-family:"Bebas Neue",Impact,sans-serif;
+  font-size:clamp(15px,3.4vw,19px);letter-spacing:.16em;
+  color:rgba(243,230,208,.82);margin-bottom:18px;
+}
+.fin-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin:0 auto 22px;max-width:420px;
+}
+.fin-stat{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:10px 6px;border-radius:12px;
+  background:rgba(232,196,119,.07);border:1px solid rgba(232,196,119,.14);
+}
+.fin-stat-etq{font-size:9px;letter-spacing:.16em;color:rgba(243,230,208,.55);font-weight:600}
+.fin-stat-val{font-family:"Bebas Neue",Impact,sans-serif;font-size:26px;color:var(--dorado);line-height:1}
+
+/* El botón de jugar de la pantalla final: mismo lenguaje que el resto, más grande */
+.boton-jugar{
+  font-size:clamp(24px,4.4vw,32px);
+  padding:22px 24px;
+  letter-spacing:.16em;
+  border-radius:24px;
+  overflow:hidden;
+}
+.boton-jugar::after{
+  content:"";position:absolute;inset:-40% -60%;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,245,220,.30) 50%,transparent 58%);
+  transform:translateX(-80%);animation:brilloBoton 3.6s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes brilloBoton{0%,58%{transform:translateX(-80%)}88%,100%{transform:translateX(80%)}}
+.boton-jugar:active{transform:translateY(2px) scale(.995)}
+
+.cargando{
+  position:absolute;inset:0;z-index:20;display:none;
+  align-items:center;justify-content:center;
+  background:var(--negro);color:var(--dorado);
+  font-family:"Bebas Neue",Impact,sans-serif;font-size:22px;letter-spacing:.2em;
+}
+.cargando.visible{display:flex}
+
+@media (max-width:600px){
+  #hud{gap:12px;padding:10px 12px calc(8px + env(safe-area-inset-top)) 12px}
+  .hud-val{font-size:26px}
+  .hud-etq{font-size:9px}
+  #btnPausa{width:38px;height:38px}
+  .panel{border-radius:16px}
+}
+
+/* Pantallas BAJAS (o ventana chica): la pantalla final tiene que entrar entera,
+   con el botón de jugar visible sin scrollear. */
+@media (max-height:760px){
+  .panel-fin{padding:18px 20px;border-radius:16px}
+  .fin-kicker{margin-bottom:10px;font-size:11px}
+  .fin-medalla{width:clamp(118px,30vw,150px);height:clamp(118px,30vw,150px);margin-bottom:10px}
+  .fin-numero{font-size:clamp(40px,10.5vw,58px)}
+  .fin-cartel{margin-bottom:12px;font-size:14px}
+  .fin-stats{margin-bottom:14px;gap:6px}
+  .fin-stat{padding:7px 4px}
+  .fin-stat-val{font-size:21px}
+  .boton-jugar{font-size:clamp(24px,4.6vw,30px);padding:16px 18px}
+  .panel-fin .chico{margin-top:10px;font-size:10px}
+}

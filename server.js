@@ -39,6 +39,17 @@ function resolvePanelConfigPath() {
   return path.join(__dirname, 'panel-config.json');
 }
 
+// Cada juego tiene su propio panel-config.json. Sin ?game= es el remasterizado.
+// juegovino1 (version antigua) escribe dentro de su propia carpeta para no pisar el tuning del remasterizado.
+const GAME_DIRS = {
+  juegovino1: path.join(__dirname, 'public', 'juegovino1')
+};
+
+function gameDir(game) {
+  const key = String(game || '').toLowerCase();
+  return GAME_DIRS[key] || null;
+}
+
 // Serve panel-config.json (prefers public/panel-config.json, falls back to root)
 app.get('/panel-config.json', (req, res) => {
   const filePath = resolvePanelConfigPath();
@@ -79,7 +90,10 @@ const storage = multer.diskStorage({
     if (!allowedCategories.has(category)) {
       return cb(new Error('Invalid category'));
     }
-    const dest = path.join(__dirname, 'public', 'img', 'custom', category);
+    const dir = gameDir(req.query.game);
+    const dest = dir
+      ? path.join(dir, 'img', 'custom', category)
+      : path.join(__dirname, 'public', 'img', 'custom', category);
     ensureDirExists(dest);
     cb(null, dest);
   },
@@ -123,18 +137,21 @@ app.post('/api/save-config', (req, res) => {
     if (typeof config !== 'object' || Array.isArray(config)) {
       return res.status(400).json({ error: 'Invalid JSON format' });
     }
-    const publicFilePath = path.join(__dirname, 'public', 'panel-config.json');
-    const rootFilePath = path.join(__dirname, 'panel-config.json');
+    const dir = gameDir(req.query.game);
+    const publicFilePath = dir
+      ? path.join(dir, 'panel-config.json')
+      : path.join(__dirname, 'public', 'panel-config.json');
+    const rootFilePath = dir ? null : path.join(__dirname, 'panel-config.json');
     const dataStr = JSON.stringify(config, null, 2);
 
     fs.writeFile(publicFilePath, dataStr, 'utf8', (err) => {
       if (err) {
-        console.error('Failed writing public/panel-config.json:', err);
+        console.error(`Failed writing ${publicFilePath}:`, err);
         return res.status(500).json({ error: 'Failed to save configuration' });
       }
-      // Keep root panel-config.json synced as well
-      fs.writeFile(rootFilePath, dataStr, 'utf8', () => {});
-      console.log('panel-config.json updated in public/ and root');
+      // Keep root panel-config.json synced as well (solo para el remasterizado)
+      if (rootFilePath) fs.writeFile(rootFilePath, dataStr, 'utf8', () => {});
+      console.log(`panel-config.json actualizado en ${path.relative(__dirname, publicFilePath)}`);
       return res.json({ ok: true });
     });
   } catch (e) {
@@ -145,9 +162,12 @@ app.post('/api/save-config', (req, res) => {
 
 const server = app.listen(PORT, () => {
   console.log(`==================================================`);
-  console.log(`🍷 VinoGame (Deli & Wine 2) corriendo en:`);
-  console.log(`   http://localhost:${PORT}`);
-  console.log(`   Sirviendo estáticos e index.html desde /public`);
+  console.log(`🍷 Deli & Wine — servidor local en:`);
+  console.log(`   http://localhost:${PORT}/                        galería (index.html)`);
+  console.log(`   http://localhost:${PORT}/juegovino.html           Deli & Wine 1 (original)`);
+  console.log(`   http://localhost:${PORT}/juegovinoremastered.html Deli & Wine Remastered`);
+  console.log(`   http://localhost:${PORT}/servirvino.html          Serve Wine`);
+  console.log(`   Estáticos desde /public`);
   console.log(`==================================================`);
 });
 

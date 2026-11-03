@@ -1,632 +1,84 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-AR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Deli & Wine · Interactive Experience</title>
-    <link rel="icon" type="image/png" href="img/logo/logo.png">
-    <!-- Tipografía unificada Deli & Wine (Cinzel & Montserrat) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=22">
-    <script src="js/p5.min2.js"></script>
-    <!-- AssetManager centralizado para imágenes y escalado -->
-    <script src="js/assetManager.js?v=22"></script>
-    <script src="js/config.js?v=22"></script>
-    <script src="js/pointserver.js?v=22"></script>
-    <script src="js/particles.js?v=22"></script>
-    <script src="js/background.js?v=22"></script>
-    <script src="js/scoreeffect.js?v=22"></script>
-    <!-- Animación unificada de fin -->
-    <script src="js/endanimation.js?v=22"></script>
-    <script src="js/wineglasses.js?v=22"></script>
-    <script src="js/medidor.js?v=22"></script>
-    <script src="js/gamestate.js?v=22"></script>
-    <script src="js/tutorialscreen.js?v=22"></script>
-    <script src="js/sketch.js?v=22"></script>
-    <script src="js/controlpanel.js?v=22"></script>
-    <script src="js/customButton.js?v=22"></script>
-    <script>
-        console.log('Deli & Wine Water Shader Edition v22 - ' + new Date().toISOString());
-        try {
-            localStorage.clear();
-            sessionStorage.clear();
-        } catch (e) {
-            console.log('No se pudo limpiar cache');
-        }
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deli &amp; Wine · Galería de juegos</title>
+<meta name="description" content="Tres juegos de vendimia de Deli & Wine: la versión original, la remastered y Serve Wine.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<base href="galeria/">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Pantalla de selección de modo (HTML/CSS): Logo protagonista arriba + título unificado -->
-    <div id="modeSelectionOverlay" class="mode-selection-overlay">
-        <div class="mode-logo-wrapper">
-            <img src="img/logo/logo.png" alt="Deli & Wine Logo" class="mode-logo">
-        </div>
-        <div class="mode-title-card">
-            <span class="mode-kicker">✦ EXPERIENCIA INTERACTIVA DE VENDIMIA ✦</span>
-            <h1 class="mode-title">¡COMPITE CON ALGUIEN PARA VER QUIÉN HACE MÁS PUNTOS!</h1>
-            <div class="mode-divider"><span>◆</span></div>
-        </div>
-    </div>
-    
-    <!-- Panel de Control Oculto -->
-    <div id="controlPanel">
-        <h3>🎮 Panel de Control</h3>
-        
-        <!-- Navegación por Pestañas -->
-        <div class="tab-navigation">
-            <button class="tab-button active" data-tab="controls">⚙️ Controles</button>
-            <button class="tab-button" data-tab="watershader">💧 Agua / Shader</button>
-            <button class="tab-button" data-tab="particles">✨ Partículas</button>
-            <button class="tab-button" data-tab="winlose">🏆 Win/Lose</button>
-            <button class="tab-button" data-tab="assets">🎨 Assets</button>
-            <button class="tab-button" data-tab="stats">📊 STATS</button>
-            <button class="tab-button" data-tab="collision">🧱 Collision</button>
-        </div>
-        
-        <!-- Pestaña de Controles -->
-        <div class="tab-content active" id="controls-tab">
-            <!-- Mostrar/Ocultar botones de modo de juego -->
-            <div class="control-group">
-                <label>Botones de Modo de Juego</label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
-                    <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                        <input type="checkbox" id="showCooperativeButton" checked>
-                        Mostrar Cooperativo
-                    </label>
-                    <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                        <input type="checkbox" id="showCompetitiveButton" checked>
-                        Mostrar Competir
-                    </label>
-                </div>
-                <div class="help-text">Controla qué botones se muestran en la pantalla de selección. Si solo hay uno visible, se centrará automáticamente.</div>
-            </div>
 
-            <!-- Mostrar/Ocultar puntos del LIDAR -->
-            <div class="control-group">
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" id="showLidarPointsCheckbox">
-                    Mostrar puntos del LIDAR (processJSON)
-                </label>
-                <div class="help-text">Permite ocultar la visualización de los puntos recibidos del LIDAR. Se guarda en panel-config.json.</div>
-            </div>
+<div class="fondo" aria-hidden="true">
+  <span class="brillo brillo-a"></span>
+  <span class="brillo brillo-b"></span>
+  <span class="brillo brillo-c"></span>
+  <span class="grano"></span>
+</div>
 
-            <!-- Nuevo: Ocultar fondo (desactiva shader de background) -->
-            <div class="control-group">
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" id="hideBackgroundCheckbox">
-                    Ocultar fondo (no renderizar shader de fondo)
-                </label>
-                <div class="help-text">Al activar, no se procesa ni dibuja el fondo; solo se verán los assets en primer plano. Se guarda en panel-config.json.</div>
-            </div>
+<main class="marco">
 
-            <div class="control-group">
-                <label for="hoverTimeSlider">
-                    Tiempo de agarre (hover)
-                    <span class="value-display" id="hoverTimeValue">1000 ms</span>
-                </label>
-                <input type="range" id="hoverTimeSlider" min="1" max="3000" step="1" value="1000">
-                <div class="help-text">Tiempo necesario para capturar un objeto bueno</div>
-            </div>
-            
-            <div class="control-group">
-                <label for="winComboSlider">
-                    Combo para GANAR
-                    <span class="value-display" id="winComboValue">20</span>
-                </label>
-                <input type="range" id="winComboSlider" min="5" max="50" step="1" value="20">
-                <div class="help-text">Cantidad de aciertos consecutivos necesarios para ganar</div>
-            </div>
-            
-            <!-- Controles de Halos -->
-            <div class="control-group">
-                <label>Halos de Elementos Buenos</label>
-                <div style="margin-top:8px">
-                    <label for="goodHaloSizeSlider">Tamaño</label>
-                    <input type="range" id="goodHaloSizeSlider" min="0.05" max="0.25" step="0.01" value="0.12">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="goodHaloStrengthSlider">Fuerza</label>
-                    <input type="range" id="goodHaloStrengthSlider" min="0.0" max="1.0" step="0.01" value="0.35">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="goodHaloColorInput">Color</label>
-                    <input type="color" id="goodHaloColorInput" value="#FFD700">
-                </div>
-            </div>
+  <header class="cabecera">
+    <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+    <p class="kicker">✦ Elegí tu experiencia ✦</p>
+    <h1>TRES JUEGOS DE VENDIMIA</h1>
+    <p class="bajada">La misma mesa, tres maneras de servir. Tocá una tarjeta y jugá.</p>
+  </header>
 
-            <div class="control-group">
-                <label>Halos de Elementos Malos</label>
-                <div style="margin-top:8px">
-                    <label for="badHaloSizeSlider">Tamaño</label>
-                    <input type="range" id="badHaloSizeSlider" min="0.05" max="0.3" step="0.01" value="0.14">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="badHaloStrengthSlider">Fuerza</label>
-                    <input type="range" id="badHaloStrengthSlider" min="0.0" max="1.0" step="0.01" value="0.27">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="badHaloColorInput">Color</label>
-                    <input type="color" id="badHaloColorInput" value="#FF0000">
-                </div>
-            </div>
+  <section class="galeria" aria-label="Juegos disponibles">
 
-            <!-- Halos del Cursor (mouse/touch/LIDAR) -->
-            <div class="control-group">
-                <label>Halos de Cursor</label>
-                <div style="margin-top:8px">
-                    <label for="cursorHaloSizeSlider">Tamaño</label>
-                    <input type="range" id="cursorHaloSizeSlider" min="0.03" max="0.25" step="0.01" value="0.08">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="cursorHaloStrengthSlider">Fuerza</label>
-                    <input type="range" id="cursorHaloStrengthSlider" min="0.0" max="2.0" step="0.05" value="1.0">
-                </div>
-                <div class="help-text">Controla el tamaño y la intensidad del halo que sigue a los cursores/punteros.</div>
-            </div>
-            
-            <!-- Controles de Shader de Fondo -->
-            <div class="control-group">
-                <label for="backgroundBrightnessSlider">
-                    Brillo del Fondo
-                    <span class="value-display" id="backgroundBrightnessValue">1.0</span>
-                </label>
-                <input type="range" id="backgroundBrightnessSlider" min="0.0" max="2.0" step="0.1" value="1.0">
-                <div class="help-text">Controla el brillo del shader de fondo</div>
-            </div>
+    <a class="tarjeta" href="../juegovino.html" aria-label="Jugar Deli and Wine 1, versión original">
+      <figure class="miniatura">
+        <img src="img/thumb-vieja.png?v=2" alt="Pantalla de inicio de Deli &amp; Wine 1" loading="lazy">
+        <span class="etiqueta">Original</span>
+      </figure>
+      <div class="cuerpo">
+        <p class="anio">DeliAndWine_1</p>
+        <h2>DELI &amp; WINE 1</h2>
+        <p class="texto">La primera versión: copas y objetos que caen, combo de aciertos y cartel de fin de partida. La clásica de feria.</p>
+        <span class="cta">Jugar <i>→</i></span>
+      </div>
+    </a>
 
-            <!-- Controles de Ondas Expansivas -->
-            <div class="control-group">
-                <label>Ondas Expansivas</label>
-                <div style="margin-top:8px">
-                    <label for="waveSpeedSlider">
-                        Velocidad de Expansión
-                        <span class="value-display" id="waveSpeedValue">0.5</span>
-                    </label>
-                    <input type="range" id="waveSpeedSlider" min="0.1" max="2.0" step="0.1" value="0.5">
-                    <div class="help-text">Velocidad de expansión de las ondas</div>
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waveForceSlider">
-                        Fuerza de Distorsión
-                        <span class="value-display" id="waveForceValue">0.09</span>
-                    </label>
-                    <input type="range" id="waveForceSlider" min="0.0" max="1.0" step="0.01" value="0.09">
-                    <div class="help-text">Intensidad de la distorsión visual de las ondas (0 a 1)</div>
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waveDurationSlider">
-                        Duración
-                        <span class="value-display" id="waveDurationValue">2.0</span>
-                    </label>
-                    <input type="range" id="waveDurationSlider" min="0.5" max="5.0" step="0.1" value="2.0">
-                    <div class="help-text">Duración de las ondas en segundos</div>
-                </div>
-            </div>
-            
-            <!-- Botón de Guardar Cambios -->
-            <div class="save-section">
-                <button class="save-changes-btn" id="saveChangesBtn">
-                    💾 Guardar Cambios
-                </button>
-                <div class="save-status" id="saveStatus"></div>
-            </div>
-        </div>
+    <a class="tarjeta destacada" href="../juegovinoremastered.html" aria-label="Jugar Deli and Wine Remastered">
+      <figure class="miniatura">
+        <img src="img/thumb-remastered.png?v=2" alt="Pantalla de inicio de Deli &amp; Wine Remastered" loading="lazy">
+        <span class="etiqueta etiqueta-oro">Remastered</span>
+      </figure>
+      <div class="cuerpo">
+        <p class="anio">DeliAndWineremastered</p>
+        <h2>DELI &amp; WINE REMASTERED</h2>
+        <p class="texto">La versión nueva: shader de agua en vivo, tipografía de lujo, modo 1 vs 1 y carteles de victoria unificados.</p>
+        <span class="cta">Jugar <i>→</i></span>
+      </div>
+    </a>
 
-        <!-- Pestaña de Agua / Shader (JPShaderEditor + Fluido Multibuffer) -->
-        <div class="tab-content" id="watershader-tab">
-            <!-- Sincronización con JPShaderEditor -->
-            <div class="control-group">
-                <label>🔗 JPShaderEditor Include / Plan</label>
-                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-                    <input type="text" id="jpshaderNameInput" value="solo-agua" placeholder="solo-agua o vinogame-agua" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,215,106,0.4);background:rgba(15,6,18,0.85);color:#fff;">
-                    <button type="button" id="syncJPShaderBtn" style="padding:6px 12px;border-radius:6px;border:1px solid #ffd76a;background:rgba(255,215,106,0.18);color:#ffd76a;cursor:pointer;font-weight:700;">🔄 Sincronizar</button>
-                </div>
-                <div style="display:flex;gap:10px;margin-top:8px;font-size:12px;">
-                    <a href="https://fullscreencode.com/jpshadereditor/shader.html?shader=solo-agua" target="_blank" style="color:#ffd76a;text-decoration:underline;">Abrir solo-agua</a>
-                    <a href="https://fullscreencode.com/jpshadereditor/shader.html?shader=vinogame-agua" target="_blank" style="color:#ffd76a;text-decoration:underline;">Abrir vinogame-agua</a>
-                </div>
-                <div class="help-text" id="jpshaderSyncStatus">Podés ajustar todos los parámetros acá abajo o traer los defaults desde JPShaderEditor (Atajo: tecla P o S).</div>
-            </div>
+    <a class="tarjeta" href="../servirvino.html" aria-label="Jugar Serve Wine, llená las copas">
+      <figure class="miniatura">
+        <img src="img/thumb-servewine.png?v=2" alt="Pantalla de inicio de Serve Wine" loading="lazy">
+        <span class="etiqueta etiqueta-vino">Nuevo</span>
+      </figure>
+      <div class="cuerpo">
+        <p class="anio">ServeWine</p>
+        <h2>SERVE WINE</h2>
+        <p class="texto">Verté vos el vino: física de fluidos real, chorro que cae por gravedad y copas que tenés que llenar a tiempo.</p>
+        <span class="cta">Jugar <i>→</i></span>
+      </div>
+    </a>
 
-            <!-- 1. Fluido del Puntero (Mouse / Touch / LIDAR) -->
-            <div class="control-group">
-                <label>🌊 Fluido del Puntero (Cursor / LIDAR)</label>
-                <div style="margin-top:8px">
-                    <label for="waterPointerForceSlider">
-                        Fuerza Fluido Puntero (u_fuerza / u_empuje)
-                        <span class="value-display" id="waterPointerForceValue">0.95</span>
-                    </label>
-                    <input type="range" id="waterPointerForceSlider" min="0.0" max="2.5" step="0.05" value="0.95">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterPointerRadiusSlider">
-                        Radio Fluido Puntero (u_radio)
-                        <span class="value-display" id="waterPointerRadiusValue">0.52</span>
-                    </label>
-                    <input type="range" id="waterPointerRadiusSlider" min="0.05" max="1.5" step="0.02" value="0.52">
-                </div>
-                <div class="help-text">Controla cuánto fluido y de qué tamaño sale desde el puntero al moverse.</div>
-            </div>
+  </section>
 
-            <!-- 2. Fluido de los Objetos que Caen -->
-            <div class="control-group">
-                <label>🍷 Fluido de Objetos que Caen (Copas / Uvas / Bichos)</label>
-                <div style="margin-top:8px">
-                    <label for="waterObjStrengthSlider">
-                        Fuerza Fluido Objetos (u_objWakeStrength)
-                        <span class="value-display" id="waterObjStrengthValue">0.90</span>
-                    </label>
-                    <input type="range" id="waterObjStrengthSlider" min="0.0" max="2.5" step="0.05" value="0.90">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterObjSizeSlider">
-                        Radio Estela Objetos (u_objWakeSize)
-                        <span class="value-display" id="waterObjSizeValue">0.52</span>
-                    </label>
-                    <input type="range" id="waterObjSizeSlider" min="0.05" max="1.5" step="0.02" value="0.52">
-                </div>
-                <div class="help-text">Controla la estela de agua que dejan los objetos mientras caen.</div>
-            </div>
+  <footer class="pie">
+    <span>Fullscreen Code · Deli &amp; Wine</span>
+    <span class="punto">◆</span>
+    <span>fullscreencode.com</span>
+  </footer>
 
-            <!-- 3. Física de Propagación del Agua -->
-            <div class="control-group">
-                <label>💧 Física de Propagación (Ecuación de Onda)</label>
-                <div style="margin-top:8px">
-                    <label for="waterAmortiguarSlider">
-                        Propagación / Persistencia (u_amortiguar)
-                        <span class="value-display" id="waterAmortiguarValue">0.64</span>
-                    </label>
-                    <input type="range" id="waterAmortiguarSlider" min="0.0" max="1.0" step="0.02" value="0.64">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterOleajeSlider">
-                        Velocidad de Oleaje (u_oleaje)
-                        <span class="value-display" id="waterOleajeValue">0.42</span>
-                    </label>
-                    <input type="range" id="waterOleajeSlider" min="0.05" max="1.0" step="0.02" value="0.42">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterPasoSlider">
-                        Paso Espacial (u_paso)
-                        <span class="value-display" id="waterPasoValue">0.38</span>
-                    </label>
-                    <input type="range" id="waterPasoSlider" min="0.05" max="1.0" step="0.02" value="0.38">
-                </div>
-            </div>
+</main>
 
-            <!-- 4. Óptica y Refracción sobre la Imagen de Fondo -->
-            <div class="control-group">
-                <label>✨ Óptica del Agua (Refracción, Relieve, Espuma)</label>
-                <div style="margin-top:8px">
-                    <label for="waterRefraccionSlider">
-                        Refracción del Fondo (u_refraccion)
-                        <span class="value-display" id="waterRefraccionValue">0.48</span>
-                    </label>
-                    <input type="range" id="waterRefraccionSlider" min="0.0" max="1.5" step="0.02" value="0.48">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterRelieveSlider">
-                        Relieve Normal 3D (u_relieve)
-                        <span class="value-display" id="waterRelieveValue">0.58</span>
-                    </label>
-                    <input type="range" id="waterRelieveSlider" min="0.0" max="1.5" step="0.02" value="0.58">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterProfundidadSlider">
-                        Profundidad (u_profundidad)
-                        <span class="value-display" id="waterProfundidadValue">0.48</span>
-                    </label>
-                    <input type="range" id="waterProfundidadSlider" min="0.0" max="1.0" step="0.02" value="0.48">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterCausticasSlider">
-                        Cáusticas (u_causticas)
-                        <span class="value-display" id="waterCausticasValue">0.38</span>
-                    </label>
-                    <input type="range" id="waterCausticasSlider" min="0.0" max="1.5" step="0.02" value="0.38">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterEspumaSlider">
-                        Espuma en Estelas (u_espuma)
-                        <span class="value-display" id="waterEspumaValue">0.45</span>
-                    </label>
-                    <input type="range" id="waterEspumaSlider" min="0.0" max="1.5" step="0.02" value="0.45">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterBrilloSlider">
-                        Brillo Especular (u_brillo)
-                        <span class="value-display" id="waterBrilloValue">0.62</span>
-                    </label>
-                    <input type="range" id="waterBrilloSlider" min="0.0" max="1.5" step="0.02" value="0.62">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterEspecularSlider">
-                        Dureza Especular (u_especular)
-                        <span class="value-display" id="waterEspecularValue">0.58</span>
-                    </label>
-                    <input type="range" id="waterEspecularSlider" min="0.0" max="1.0" step="0.02" value="0.58">
-                </div>
-                <div style="margin-top:8px">
-                    <label for="waterColorInput">Tinte del Agua (u_agua)</label>
-                    <input type="color" id="waterColorInput" value="#f5f2ff">
-                </div>
-            </div>
-
-            <!-- Botón de Guardar Cambios desde la pestaña de Agua -->
-            <div class="save-section">
-                <button class="save-changes-btn" id="saveWaterChangesBtn">
-                    💾 Guardar Parámetros de Agua
-                </button>
-            </div>
-        </div>
-
-        <!-- Pestaña de Partículas -->
-        <div class="tab-content" id="particles-tab">
-            <div class="control-group">
-                <label for="fallSpeedSlider">
-                    Velocidad de Caída
-                    <span class="value-display" id="fallSpeedValue">2.25</span>
-                </label>
-                <input type="range" id="fallSpeedSlider" min="0.5" max="50" step="0.1" value="2.25">
-                <div class="help-text">Controla qué tan rápido caen los objetos</div>
-            </div>
-
-            <!-- Nuevo: Modo de aparición de objetos -->
-            <div class="control-group">
-                <label for="spawnModeSelect">
-                    Modo de aparición
-                </label>
-                <select id="spawnModeSelect">
-                    <option value="top">desde arriba</option>
-                    <option value="random">posición random</option>
-                </select>
-                <div class="help-text">Selecciona si los objetos aparecen cayendo desde arriba o se generan en posiciones aleatorias sin velocidad.</div>
-            </div>
-
-            <div class="control-group">
-                <label for="livesSlider">
-                    Cantidad de Vidas
-                    <span class="value-display" id="livesValue">3</span>
-                </label>
-                <input type="range" id="livesSlider" min="1" max="10" step="1" value="3">
-                <div class="help-text">Número de vidas disponibles en el juego</div>
-            </div>
-
-            <div class="control-group">
-                <label for="objectSizeSlider">
-                    Tamaño de Objetos
-                    <span class="value-display" id="objectSizeValue">100px</span>
-                </label>
-                <input type="range" id="objectSizeSlider" min="50" max="200" step="10" value="100">
-                <div class="help-text">Controla el tamaño de los objetos que caen</div>
-            </div>
-
-            <div class="control-group">
-                <label for="spawnRateSlider">
-                    Frecuencia de Caída
-                    <span class="value-display" id="spawnRateValue">2.0s</span>
-                </label>
-                <input type="range" id="spawnRateSlider" min="500" max="5000" step="100" value="2000">
-                <div class="help-text">Controla cada cuánto tiempo aparecen nuevos objetos</div>
-            </div>
-
-            <!-- Límite de cantidad simultánea de items buenos y malos -->
-            <div class="control-group">
-                <label>
-                    Máximo de objetos simultáneos
-                </label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
-                    <label for="maxGoodItemsInput">Buenos
-                        <input type="number" id="maxGoodItemsInput" min="0" step="1" value="10">
-                    </label>
-                    <label for="maxBadItemsInput">Malos
-                        <input type="number" id="maxBadItemsInput" min="0" step="1" value="5">
-                    </label>
-                </div>
-                <div class="help-text">No se generarán nuevos objetos si ya hay en pantalla el máximo configurado</div>
-            </div>
-
-            <!-- Vida de los Objetos que Caen -->
-            <div class="control-group">
-                <label for="particleLifespanSlider">
-                    Vida de Objetos
-                    <span class="value-display" id="particleLifespanValue">6000ms</span>
-                </label>
-                <input type="range" id="particleLifespanSlider" min="1000" max="20000" step="500" value="6000">
-                <div class="help-text">Controla cuánto tiempo viven las copas y objetos antes de desvanecerse (1s - 20s)</div>
-            </div>
-        </div>
-        
-        <!-- Pestaña de Win/Lose -->
-        <div class="tab-content" id="winlose-tab">
-            <!-- Tamaño de textos GANASTE/PERDISTE -->
-            <div class="control-group">
-                <label for="winLoseTextSizeSlider">
-                    Tamaño de Textos (GANASTE/PERDISTE)
-                    <span class="value-display" id="winLoseTextSizeValue">0.12</span>
-                </label>
-                <input type="range" id="winLoseTextSizeSlider" min="0.005" max="0.30" step="0.001" value="0.12">
-                <div class="help-text">Tamaño relativo a la altura de la pantalla (0.12 = 12% de la altura)</div>
-            </div>
-
-            <!-- Textos personalizados -->
-            <div class="control-group">
-                <label for="winTextInput">
-                    Texto de Victoria
-                </label>
-                <input type="text" id="winTextInput" value="¡FELICITACIONES!" maxlength="24" style="width:100%;padding:8px;font-size:16px;">
-                <div class="help-text">Texto que aparece cuando ganas</div>
-            </div>
-
-            <div class="control-group">
-                <label for="loseTextInput">
-                    Texto de Derrota
-                </label>
-                <input type="text" id="loseTextInput" value="¡SEGUÍ PARTICIPANDO!" maxlength="24" style="width:100%;padding:8px;font-size:16px;">
-                <div class="help-text">Texto que aparece cuando pierdes</div>
-            </div>
-
-            <!-- Combo para ganar (movido desde Controles) -->
-            <div class="control-group">
-                <label for="winComboSliderWinLose">
-                    Combo para GANAR
-                    <span class="value-display" id="winComboValueWinLose">20</span>
-                </label>
-                <input type="range" id="winComboSliderWinLose" min="5" max="50" step="1" value="20">
-                <div class="help-text">Cantidad de aciertos consecutivos necesarios para ganar</div>
-            </div>
-
-            <!-- Cantidad de vidas (movido desde Partículas) -->
-            <div class="control-group">
-                <label for="livesSliderWinLose">
-                    Cantidad de Vidas
-                    <span class="value-display" id="livesValueWinLose">3</span>
-                </label>
-                <input type="range" id="livesSliderWinLose" min="1" max="10" step="1" value="3">
-                <div class="help-text">Número de vidas disponibles en el juego</div>
-            </div>
-
-            <!-- Tamaños de textos adicionales en pantalla de victoria -->
-            <div class="control-group">
-                <label>Tamaños de Textos Adicionales (Victoria)</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
-                    <div>
-                        <label for="scoreTextSizeSlider" style="font-size:13px;">
-                            Puntuación Final
-                            <span class="value-display" id="scoreTextSizeValue">40</span>
-                        </label>
-                        <input type="range" id="scoreTextSizeSlider" min="20" max="80" step="2" value="40">
-                    </div>
-                    <div>
-                        <label for="comboTextSizeSlider" style="font-size:13px;">
-                            Combo Más Alto
-                            <span class="value-display" id="comboTextSizeValue">30</span>
-                        </label>
-                        <input type="range" id="comboTextSizeSlider" min="15" max="60" step="2" value="30">
-                    </div>
-                </div>
-                <div class="help-text">Controla el tamaño de los textos de puntuación y combo en la pantalla de victoria</div>
-            </div>
-        </div>
-        
-        <!-- Pestaña de Assets -->
-        <div class="tab-content" id="assets-tab">
-            <div class="add-asset-section">
-                <button class="add-asset-btn" id="addAssetBtn">
-                    <span class="plus-icon">+</span>
-                    <span>Cargar Nuevo Asset</span>
-                </button>
-            </div>
-            
-            <div class="gallery-navigation">
-                <button class="gallery-nav-btn active" data-category="all">🎯 Todos</button>
-                <button class="gallery-nav-btn" data-category="objects">🍷 Objetos</button>
-                <button class="gallery-nav-btn" data-category="badItems">👾 Personajes Malos</button>
-                <button class="gallery-nav-btn" data-category="backgrounds">🌄 Fondos</button>
-            </div>
-            
-            <div class="gallery-content">
-                <div class="gallery-section" id="objects-gallery">
-                    <h3>🍷 Objetos del Juego</h3>
-                    <div class="current-assets-grid" id="currentObjectsGrid"></div>
-                </div>
-                
-                <div class="gallery-section" id="badItems-gallery">
-                    <h3>👾 Personajes Malos</h3>
-                    <div class="current-assets-grid" id="currentBadItemsGrid"></div>
-                </div>
-                
-                <div class="gallery-section" id="backgrounds-gallery">
-                    <h3>🌄 Fondos</h3>
-                    <div class="current-assets-grid" id="currentBackgroundsGrid"></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Pestaña de STATS -->
-        <div class="tab-content" id="stats-tab">
-            <div class="metrics-section">
-                <h4>📊 Estadísticas</h4>
-                <div class="metric-item">
-                    <label>FPS</label>
-                    <span class="metric-value" id="statsFpsCounter">0</span>
-                </div>
-                <div class="metric-item">
-                    <label>Objetos Cayendo</label>
-                    <span class="metric-value" id="statsFallingObjectsCount">0</span>
-                </div>
-                <div class="metric-item">
-                    <label>Cantidad de Puntos</label>
-                    <span class="metric-value" id="statsPointsCount">0</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Pestaña de Collision -->
-        <div class="tab-content" id="collision-tab">
-            <div class="control-group" id="collisionAreaControls">
-                <label>Área de colisión</label>
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" id="collisionAreaEnabled">
-                    Habilitar área de colisión (limitar chequeo)
-                </label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
-                    <label for="collisionAreaX">X
-                        <input type="number" id="collisionAreaX" step="any">
-                    </label>
-                    <label for="collisionAreaY">Y
-                        <input type="number" id="collisionAreaY" step="any">
-                    </label>
-                    <label for="collisionAreaW">Ancho
-                        <input type="number" id="collisionAreaW" step="any">
-                    </label>
-                    <label for="collisionAreaH">Alto
-                        <input type="number" id="collisionAreaH" step="any">
-                    </label>
-                </div>
-                <label class="toggle" style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-                    <input type="checkbox" id="collisionAreaOverlay">
-                    Mostrar overlay del área de colisión
-                </label>
-                <div class="help-text">Solo se calcularán colisiones dentro del rectángulo definido. Este ajuste se guarda en panel-config.json.</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para cargar assets -->
-    <div class="asset-upload-modal" id="assetUploadModal">
-        <div class="modal-content">
-            <h3>📦 Selecciona el tipo de asset</h3>
-            <div class="asset-type-options">
-                <button class="asset-type-btn" data-type="objects">
-                    <span class="icon">🍷</span>
-                    <div class="info">
-                        <div>Objetos del Juego</div>
-                        <small>Tamaño: 512x512 píxeles</small>
-                    </div>
-                </button>
-                <button class="asset-type-btn" data-type="badItems">
-                    <span class="icon">👾</span>
-                    <div class="info">
-                        <div>Personajes Malos</div>
-                        <small>Tamaño: 512x512 píxeles</small>
-                    </div>
-                </button>
-                <button class="asset-type-btn" data-type="backgrounds">
-                    <span class="icon">🌄</span>
-                    <div class="info">
-                        <div>Fondos</div>
-                        <small>Tamaño: 1920x1080 píxeles</small>
-                    </div>
-                </button>
-            </div>
-            <button class="modal-close-btn" id="closeModalBtn">Cancelar</button>
-        </div>
-    </div>
-    
-    <!-- Input oculto para cargar archivos -->
-    <input type="file" id="hiddenFileInput" accept="image/*" multiple style="display: none;">
 </body>
 </html>

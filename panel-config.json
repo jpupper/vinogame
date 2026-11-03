@@ -2,7 +2,7 @@
   "metadata": {
     "version": "2.0.0",
     "created": "2024-01-01",
-    "lastModified": "2026-11-02",
+    "lastModified": "2026-11-03",
     "description": "Configuraciones del panel de control para Deli & Wine Water Shader Edition"
   },
   "gameSettings": {
@@ -105,7 +105,14 @@
       "img/objetos/copa2.png",
       "img/objetos/botella.png",
       "img/objetos/destapador.png",
-      "img/objetos/destapador2.png"
+      "img/objetos/destapador2.png",
+      "img/objetos/copa_llena.png",
+      "img/objetos/sacacorchos.png",
+      "img/objetos/uvas_blancas.png",
+      "img/objetos/barril_roble.png",
+      "img/objetos/botella_vino_blanco.png",
+      "img/objetos/botella_vino_rojo.png",
+      "img/objetos/racimo_uva_rojas.png"
     ],
     "badItems": [
       "img/malos/bicho1.png",
@@ -114,14 +121,42 @@
       "img/malos/bicho4.png",
       "img/malos/bicho5.png",
       "img/malos/bicho6.png",
-      "img/malos/bicho7.png"
+      "img/malos/bicho7.png",
+      "img/malos/bicho9.png",
+      "img/malos/bicho10.png",
+      "img/malos/bicho11.png",
+      "img/malos/bicho12.png",
+      "img/malos/bicho13.png",
+      "img/malos/bicho14.png",
+      "img/malos/bicho15.png",
+      "img/malos/bicho16.png",
+      "img/malos/bicho17.png",
+      "img/malos/bicho18.png",
+      "img/malos/bicho19.png",
+      "img/malos/bicho20.png",
+      "img/malos/bicho21.png"
     ],
     "backgrounds": [
       "img/background/fondo1.jpg",
       "img/background/fondo2.jpg",
       "img/background/fondo3.jpg",
       "img/background/fondo4.jpg",
-      "img/background/fondo5.jpg"
+      "img/background/fondo5.jpg",
+      "img/background/fondo6.jpg",
+      "img/background/fondo7.jpg",
+      "img/background/fondo8.jpg",
+      "img/background/fondo9.jpg",
+      "img/background/fondo10.jpg",
+      "img/background/fondo11.jpg",
+      "img/background/fondo12.jpg",
+      "img/background/fondo13.jpg",
+      "img/background/fondo14.jpg",
+      "img/background/fondo15.jpg",
+      "img/background/fondo16.jpg",
+      "img/background/fondo17.jpg",
+      "img/background/fondo18.jpg",
+      "img/background/fondo19.jpg",
+      "img/background/fondo20.jpg"
     ]
   },
   "panelSettings": {
@@ -200,7 +235,6 @@
       "profundidad": 0.48,
       "especular": 0.5,
       "brillo": 1.44,
-      "causticas": 0.38,
       "espuma": 0.45,
       "focoX": 0.52,
       "focoY": 0.74,
