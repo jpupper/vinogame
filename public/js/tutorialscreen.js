@@ -19,7 +19,25 @@ class TutorialScreen {
     this.active = true;
     this.startTime = millis();
     this.glowPhase = 0;
+    // Caché del filtro de imágenes: antes se filtraba cada array 2 veces por
+    // frame (basura de GC constante). Se arma una sola vez al empezar.
+    this._goodValid = null;
+    this._badValid = null;
     this.initStreams();
+  }
+
+  // Devuelve sólo las imágenes ya cargadas. Se recalcula si cambió la cantidad
+  // (por si los assets terminan de cargar después del start).
+  imagenesValidas(isGood) {
+    const arr = isGood
+      ? ((typeof window !== 'undefined' && Array.isArray(window.goodItemImages)) ? window.goodItemImages : [])
+      : ((typeof window !== 'undefined' && Array.isArray(window.badItemImages)) ? window.badItemImages : []);
+    const key = isGood ? '_goodValid' : '_badValid';
+    const cache = this[key];
+    if (cache && cache.src === arr && cache.n === arr.length) return cache.list;
+    const list = arr.filter(img => img && img.width > 0);
+    this[key] = { src: arr, n: arr.length, list: list };
+    return list;
   }
 
   initStreams() {
@@ -265,11 +283,7 @@ class TutorialScreen {
     ctx.strokeWeight(2);
     ctx.line(centerX - spanX * 0.48, centerY, centerX + spanX * 0.48, centerY);
 
-    const imagesArray = isGood
-      ? ((typeof window !== 'undefined' && Array.isArray(window.goodItemImages)) ? window.goodItemImages : [])
-      : ((typeof window !== 'undefined' && Array.isArray(window.badItemImages)) ? window.badItemImages : []);
-
-    const validImages = imagesArray.filter(img => img && img.width > 0);
+    const validImages = this.imagenesValidas(isGood);
     const baseSize = Math.min(86, width * 0.062);
 
     // Ordenar para que el objeto más cercano al centro se dibuje encima
@@ -301,7 +315,7 @@ class TutorialScreen {
       }
 
       // Aura exterior multicapa (dorada para objetos buenos, roja para malos)
-      for (let layer = 5; layer >= 1; layer--) {
+      for (let layer = 3; layer >= 1; layer--) {
         const haloDia = itemSize * (1.05 + layer * 0.24 * pulse);
         const haloAlpha = (72 / layer) * alphaFactor * pulse;
         ctx.fill(color[0], color[1], color[2], haloAlpha);

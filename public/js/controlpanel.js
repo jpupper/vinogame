@@ -15,6 +15,7 @@ class ControlPanel {
         this.showLidarPointsCheckbox = null;
         // Mostrar/Ocultar fondo
         this.hideBackgroundCheckbox = null;
+        this.hideWaterCheckbox = null;
         // Mostrar/Ocultar botones de modo de juego
         this.showCooperativeButton = null;
         this.showCompetitiveButton = null;
@@ -423,12 +424,21 @@ class ControlPanel {
         if (typeof settings.hideBackground === 'undefined') {
             settings.hideBackground = false;
         }
+        // OJO: hideBackground apaga el agua/shader Y TAMBIEN las fotos de fondo.
+        // Para conservar las fotos va el flag opuesto, hideWaterOnly.
+        if (typeof settings.hideWaterOnly === 'undefined') {
+            settings.hideWaterOnly = false;
+        }
         const hideBg = !!settings.hideBackground;
         if (this.hideBackgroundCheckbox) {
             this.hideBackgroundCheckbox.checked = hideBg;
         }
+        if (this.hideWaterCheckbox) {
+            this.hideWaterCheckbox.checked = !!settings.hideWaterOnly;
+        }
         if (typeof window !== 'undefined') {
             window.hideBackground = hideBg;
+            window.hideWaterOnly = !!settings.hideWaterOnly;
         }
 
         // Nuevos: máximos de objetos simultáneos
@@ -610,6 +620,9 @@ class ControlPanel {
             ? !!this.showLidarPointsCheckbox.checked
             : (typeof window !== 'undefined' ? !!window.showLidarPoints : true);
         // Persistir ocultar fondo
+        this.configData.gameSettings.hideWaterOnly = this.hideWaterCheckbox
+            ? !!this.hideWaterCheckbox.checked
+            : false;
         this.configData.gameSettings.hideBackground = this.hideBackgroundCheckbox
             ? !!this.hideBackgroundCheckbox.checked
             : (typeof window !== 'undefined' ? !!window.hideBackground : false);
@@ -826,6 +839,7 @@ class ControlPanel {
         this.showLidarPointsCheckbox = document.getElementById('showLidarPointsCheckbox');
         // Checkbox de ocultar fondo
         this.hideBackgroundCheckbox = document.getElementById('hideBackgroundCheckbox');
+        this.hideWaterCheckbox = document.getElementById('hideWaterCheckbox');
         // Checkboxes de visibilidad de botones de modo
         this.showCooperativeButton = document.getElementById('showCooperativeButton');
         this.showCompetitiveButton = document.getElementById('showCompetitiveButton');
@@ -961,6 +975,15 @@ class ControlPanel {
             });
         }
         
+        if (this.hideWaterCheckbox) {
+            this.hideWaterCheckbox.addEventListener('change', (event) => {
+                const hide = !!event.target.checked;
+                if (typeof window !== 'undefined') {
+                    window.hideWaterOnly = hide;
+                }
+            });
+        }
+
         // Listeners para los sliders
         if (this.fallSpeedSlider) {
             this.fallSpeedSlider.addEventListener('input', (event) => {

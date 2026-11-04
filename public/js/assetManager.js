@@ -78,7 +78,6 @@
         'img/objetos/destapador.png',
         'img/objetos/destapador2.png',
         'img/objetos/copa_llena.png',
-        'img/objetos/sacacorchos.png',
         'img/objetos/uvas_blancas.png',
         'img/objetos/barril_roble.png',
         'img/objetos/botella_vino_blanco.png',
@@ -150,7 +149,8 @@
       this.images.trophy = loadImage('img/copa/copa.png');
 
       // Logo
-      this.images.logo = loadImage('img/logo/logo.png');
+      // @3x: el logo original de 472x191 se veia pixelado cuando p5 lo dibuja grande
+      this.images.logo = loadImage('img/logo/logo@4x.png');
 
       // Exponer globales para compatibilidad inmediata
       if (typeof window !== 'undefined') {

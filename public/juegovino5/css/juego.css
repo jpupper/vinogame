@@ -23,7 +23,10 @@ body{
 }
 #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
 #juego-wrap{position:relative;width:100%;height:100%;overflow:hidden}
-#escena{display:block;width:100%;height:100%;touch-action:none;position:relative;z-index:1}
+#escena{display:block;width:100%;height:100%;touch-action:none;position:relative;z-index:1;cursor:none}
+/* el servewine se juega con la botella, no con un puntero: sin cursor de mouse */
+#juego-wrap{cursor:none}
+#hud,#hud *,button,.switch-inclinar,.switch-inclinar *{cursor:pointer}
 /* canvas offscreen del fluido WebGL (se compone en orden de capas sobre #escena) */
 #fluido{position:absolute;inset:0;pointer-events:none;z-index:2;display:none}
 /* fondo de agua: el canvas del include del JP Shader Editor va en z-index -1 y
@@ -239,14 +242,14 @@ body{
 }
 .fin-etq{
   font-family:"Cinzel",Georgia,serif;
-  font-size:clamp(7px,1.3vw,8.5px);letter-spacing:.16em;
+  font-size:clamp(6px,1vw,7px);letter-spacing:.14em;
   color:#450B02;font-weight:700;
   border-bottom:1px solid rgba(69,11,2,.28);
   padding-bottom:1px;margin-bottom:1px;
 }
 .fin-numero{
   font-family:"Bebas Neue",Impact,sans-serif;
-  font-size:clamp(24px,5.6vw,36px);line-height:.92;color:#450B02;
+  font-size:clamp(18px,3.6vw,25px);line-height:.92;color:#450B02;
   text-shadow:0 1px 0 rgba(255,255,255,.65);
   font-variant-numeric:tabular-nums;
 }
@@ -411,7 +414,7 @@ body{
   .marca-fin .logo-fin{width:min(240px,62vw)}
   .fin-kicker{margin-bottom:6px;font-size:11px}
   .fin-medalla.fin-botella{width:clamp(175px,34vh,215px);height:clamp(175px,34vh,215px);margin:-4px auto 6px}
-  .fin-numero{font-size:clamp(26px,6vw,36px)}
+  .fin-numero{font-size:clamp(18px,4vw,24px)}
   .fin-cartel{margin-bottom:10px;font-size:14px}
   .fin-stats{margin-bottom:12px;gap:6px}
   .fin-stat{padding:7px 4px}

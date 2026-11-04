@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deli &amp; Wine · Pong Vendimia</title>
+<meta name="description" content="Pong Vendimia: el ping pong de Deli & Wine. Dos botellas por paleta, un corcho en juego y un rally que no se puede cortar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/pong.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="escena"></canvas>
+
+  <!-- HUD -->
+  <header id="hud" class="hud-off">
+    <img class="hud-logo" src="img/logo.png" alt="Deli &amp; Wine">
+    <div class="hud-bloque">
+      <span class="hud-etq" id="hudEtqA">Puntos</span>
+      <span id="hudValA" class="hud-val">0</span>
+    </div>
+    <div class="hud-bloque">
+      <span class="hud-etq" id="hudEtqB">Rally</span>
+      <span id="hudValB" class="hud-val">0</span>
+    </div>
+    <div class="hud-bloque hud-vidas">
+      <span class="hud-etq">Vidas</span>
+      <span id="hudVidas" class="hud-val"></span>
+    </div>
+    <div class="hud-botones">
+      <button id="btnPausa" type="button" title="Pausa (espacio)" aria-label="Pausa">❚❚</button>
+      <button id="btnReiniciar" type="button" title="Reiniciar (R)" aria-label="Reiniciar">↺</button>
+    </div>
+  </header>
+
+  <!-- PANTALLA INICIO -->
+  <section id="pantallaInicio" class="pantalla visible">
+    <div class="panel">
+      <div class="marca">
+        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p class="kicker">✦ Ping pong de bodega ✦</p>
+      <h1>PONG VENDIMIA</h1>
+      <p class="bajada">Cada jugador es una botella. Mantené el corcho en juego: cada toque suma y acelera.</p>
+      <div class="modos" role="group" aria-label="Modo de juego">
+        <button class="modo activo" data-modo="coop" type="button">COOPERATIVO</button>
+        <button class="modo" data-modo="duelo" type="button">DUELO</button>
+      </div>
+      <button id="btnJugar" class="boton-grande" type="button">JUGAR</button>
+      <p class="chico">Movés el mouse o tocás la pantalla · <b>espacio</b> pausa · <b>R</b> reinicia</p>
+    </div>
+  </section>
+
+  <!-- PANTALLA PAUSA -->
+  <section id="pantallaPausa" class="pantalla">
+    <div class="panel panel-chico">
+      <p class="kicker">✦ Copa en descanso ✦</p>
+      <h1>EN PAUSA</h1>
+      <button id="btnSeguir" class="boton-grande" type="button">SEGUIR</button>
+      <button id="btnSalir" class="boton-sec" type="button">VOLVER AL INICIO</button>
+    </div>
+  </section>
+
+  <!-- PANTALLA FIN -->
+  <section id="pantallaFin" class="pantalla">
+    <div class="panel panel-fin">
+      <div class="marca marca-fin">
+        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p id="finKicker" class="kicker">✦ Se cortó el rally ✦</p>
+      <div class="medalla">
+        <span class="medalla-etq" id="finMedallaEtq">PUNTOS</span>
+        <span id="finPuntos" class="medalla-numero">0</span>
+      </div>
+      <p id="finCartel" class="fin-cartel">TU MEJOR MARCA: 0</p>
+      <div class="fin-stats">
+        <div class="fin-stat"><span class="fin-stat-etq">TOQUES</span><span id="finToques" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq">MEJOR RALLY</span><span id="finRally" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq" id="finEtqRecord">RÉCORD</span><span id="finRecord" class="fin-stat-val">0</span></div>
+      </div>
+      <button id="btnOtra" class="boton-grande boton-jugar" type="button">JUGAR OTRA VEZ</button>
+    </div>
+  </section>
+</div>
+
+<script src="../comun/fondo-dw.js"></script>
+<script src="../comun/impactos-dw.js"></script>
+<script src="js/pong.js"></script>
+<script src="js/lidar.js"></script>
+</body>
+</html>

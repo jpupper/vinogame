@@ -1,0 +1,270 @@
+/* ============================================================
+   BODEGA BUSTER · Deli & Wine
+   Arkanoide de bodega. Estética: borgoña + doble filete dorado,
+   Cinzel para títulos, Montserrat para textos.
+   ============================================================ */
+:root{
+  --vino:#440a1c;
+  --vino-alto:#5a1329;
+  --vino-claro:#8a1738;
+  --vino-fuerte:#a4132f;
+  --dorado:#ffd25f;
+  --dorado-suave:#e8c477;
+  --crema:#fff2c3;
+  --crema-texto:#f3e6d0;
+  --negro:#0a0406;
+  --fuente-titulo:"Cinzel",Georgia,"Times New Roman",serif;
+  --fuente-texto:"Montserrat",-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+html{background:var(--negro)}
+body{
+  font-family:var(--fuente-texto);
+  color:var(--crema-texto);
+  background:radial-gradient(ellipse at 50% -20%,rgba(120,20,40,.5),transparent 62%),
+             radial-gradient(ellipse at 50% 120%,rgba(60,8,20,.7),transparent 58%),
+             linear-gradient(180deg,#0b0507,#060203 65%,#0a0406);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+#app{position:fixed;inset:0;overflow:hidden}
+#escena{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:2}
+
+/* ---------------- HUD ---------------- */
+#hud{
+  position:absolute;top:0;left:0;right:0;z-index:6;
+  display:flex;align-items:center;gap:clamp(10px,1.6vw,22px);
+  padding:clamp(10px,1.7vh,18px) clamp(14px,2.2vw,30px);
+  background:linear-gradient(180deg,rgba(8,3,5,.88),rgba(8,3,5,.42) 70%,transparent);
+  transition:opacity .35s ease,transform .35s ease;
+}
+#hud.hud-off{opacity:0;transform:translateY(-14px);pointer-events:none}
+/* MODO 2 JUGADORES: el HUD se parte en dos, uno por cancha, pegado a los bordes.
+   Nunca en el medio de la pantalla (el medio es la cancha). */
+#hud.modo-2{justify-content:space-between;gap:0}
+#hud.modo-2 .hud-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:clamp(26px,4vh,38px);opacity:.55}
+#hud.modo-2 .hud-bloque{min-width:0}
+/* izquierda: logo + puntos + uvas + copas   |   derecha: puntos + vidas */
+#hud.modo-2 .hud-bloque.hud-izq,
+#hud.modo-2 .hud-bloque:nth-of-type(2),
+#hud.modo-2 .hud-bloque:nth-of-type(3){align-items:flex-start}
+#hud.modo-2 .hud-bloque.hud-der{margin-left:auto;align-items:flex-end;text-align:right}
+/* etiquetas del HUD en 2P: chicas, en una sola linea, sin pisar los numeros */
+#hud.modo-2 .hud-etq{font-size:clamp(9px,.85vw,11px);letter-spacing:.14em;white-space:nowrap}
+#hud.modo-2 .hud-bloque{min-width:0;gap:2px}
+#hud.modo-2 .hud-bloque.hud-izq{margin-left:clamp(6px,1vw,14px)}
+#hud.modo-2 .hud-logo{display:none}   /* el logo va en el centro: no empuja los bloques */
+#hud.modo-2 .hud-bloque.hud-nivel{display:none}
+#hud.modo-2 .hud-bloque:nth-of-type(4),
+#hud.modo-2 .hud-bloque.hud-vidas{display:none}
+.hud-logo{height:clamp(36px,5.6vh,52px);width:auto;filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));opacity:.95}
+.hud-bloque{display:flex;flex-direction:column;gap:3px;min-width:86px}
+.hud-etq{
+  font-size:clamp(10px,1vw,12.5px);letter-spacing:.24em;text-transform:uppercase;
+  color:rgba(232,196,119,.62);font-weight:600;
+}
+.hud-val{
+  font-family:var(--fuente-titulo);font-weight:700;
+  font-size:clamp(21px,2.9vw,34px);line-height:1;
+  color:var(--crema);text-shadow:0 0 18px rgba(255,210,95,.35);
+  font-variant-numeric:tabular-nums;
+}
+.hud-vidas .hud-val{display:flex;gap:5px;align-items:center;height:clamp(15px,2.1vw,24px)}
+.hud-icon{height:clamp(19px,2.5vw,28px);width:auto;margin-right:5px;vertical-align:-3px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.hud-uvas .hud-val,.hud-copas .hud-val{display:flex;align-items:center}
+.vida{width:clamp(19px,2.6vw,29px);height:auto;display:block;transition:opacity .3s,transform .3s}
+.vida.off{opacity:.22;transform:scale(.86)}
+.hud-botones{margin-left:auto;display:flex;gap:8px}
+.hud-botones button{
+  width:clamp(38px,4.3vw,52px);height:clamp(38px,4.3vw,52px);
+  border-radius:50%;cursor:pointer;
+  font-family:var(--fuente-texto);font-size:16px;line-height:1;
+  color:var(--crema);
+  background:linear-gradient(180deg,rgba(90,19,41,.9),rgba(40,8,18,.92));
+  border:1.5px solid rgba(255,210,95,.45);
+  box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12);
+  transition:transform .18s,border-color .18s,background .18s;
+}
+.hud-botones button:hover{border-color:var(--dorado);background:linear-gradient(180deg,rgba(120,26,54,.95),rgba(58,12,26,.95));transform:translateY(-1px)}
+.hud-botones button:active{transform:translateY(0) scale(.97)}
+
+@media (max-width:560px){
+  .hud-logo{display:none}
+  .hud-bloque{min-width:0}
+  .hud-nivel{display:none}
+  .hud-val{font-size:15px}
+}
+
+/* ---------------- Pantallas ---------------- */
+.pantalla{
+  position:absolute;inset:0;z-index:8;
+  display:grid;place-items:center;
+  padding:clamp(12px,3vw,32px);
+  background:radial-gradient(ellipse at 50% 40%,rgba(12,4,7,.55),rgba(6,2,3,.92));
+  opacity:0;pointer-events:none;
+  transition:opacity .34s ease;
+  backdrop-filter:blur(2px);
+}
+.pantalla.visible{opacity:1;pointer-events:auto}
+.sin-transicion .pantalla{transition:none !important}
+.panel{
+  position:relative;
+  width:min(680px,94vw);
+  max-height:calc(100dvh - 24px);
+  overflow-y:auto;
+  padding:clamp(20px,3.4vh,34px) clamp(18px,3vw,36px);
+  text-align:center;
+  border-radius:26px;
+  background:
+    radial-gradient(ellipse at 50% -10%,rgba(164,19,47,.34),transparent 62%),
+    linear-gradient(180deg,rgba(30,9,16,.97),rgba(13,4,8,.985));
+  border:2px solid rgba(255,210,95,.5);
+  box-shadow:0 40px 90px rgba(0,0,0,.78),inset 0 0 0 1px rgba(255,242,195,.14),inset 0 1px 0 rgba(255,255,255,.06);
+  scrollbar-width:thin;scrollbar-color:rgba(255,210,95,.35) transparent;
+}
+.panel::-webkit-scrollbar{width:8px}
+.panel::-webkit-scrollbar-thumb{background:rgba(255,210,95,.32);border-radius:8px}
+.panel-chico{width:min(520px,92vw)}
+.panel-fin{width:min(620px,94vw)}
+.marca{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:clamp(8px,1.4vh,16px)}
+.logo{width:min(210px,46vw);height:auto;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+.marca-nombre{
+  font-family:var(--fuente-titulo);font-size:clamp(12px,1.3vw,14px);
+  letter-spacing:.42em;text-transform:uppercase;color:rgba(232,196,119,.78);
+}
+.marca-fin{margin-bottom:6px}
+.marca-fin .logo{width:min(150px,34vw)}
+.kicker{
+  font-size:clamp(11px,1.2vw,13px);letter-spacing:.34em;text-transform:uppercase;
+  color:rgba(232,196,119,.7);font-weight:600;
+}
+.panel h1{
+  margin-top:8px;
+  font-family:var(--fuente-titulo);font-weight:700;
+  font-size:clamp(34px,5.6vw,58px);line-height:1.05;letter-spacing:.06em;
+  color:#fff;text-shadow:0 0 30px rgba(255,210,95,.34),0 6px 26px rgba(0,0,0,.8);
+}
+.panel h1::after{
+  content:"";display:block;width:min(260px,60%);height:1px;margin:clamp(8px,1.4vh,14px) auto 0;
+  background:linear-gradient(90deg,transparent,rgba(255,210,95,.7),transparent);
+}
+.bajada{
+  margin-top:clamp(8px,1.4vh,14px);
+  font-size:clamp(14.5px,1.7vw,18px);line-height:1.6;
+  color:rgba(243,230,208,.76);
+}
+
+/* modos (1 / 2 jugadores) */
+.modos{
+  display:flex;justify-content:center;gap:6px;
+  margin:clamp(12px,2vh,20px) auto clamp(4px,1vh,8px);
+  padding:5px;width:fit-content;border-radius:999px;
+  background:rgba(8,3,5,.6);border:1px solid rgba(255,210,95,.2);
+}
+.modo{
+  cursor:pointer;border:0;border-radius:999px;padding:10px 20px;
+  font-family:var(--fuente-texto);font-size:13px;font-weight:600;letter-spacing:.12em;
+  color:rgba(243,230,208,.6);background:transparent;transition:all .2s;
+}
+.modo:hover{color:var(--crema)}
+.modo.activo{
+  color:#1a0709;background:linear-gradient(180deg,#f4d79b,#d8a94f);
+  box-shadow:0 4px 16px rgba(232,196,119,.35);
+}
+
+/* ---------------- Botones Deli & Wine ---------------- */
+.boton-grande,.boton-sec{
+  position:relative;display:block;width:min(390px,88%);
+  margin:clamp(10px,1.8vh,18px) auto 0;
+  cursor:pointer;
+  font-family:var(--fuente-titulo);font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;
+  border-radius:22px;
+  transition:transform .18s ease,box-shadow .22s ease,filter .22s ease;
+}
+.boton-grande{
+  padding:clamp(15px,2.3vh,21px) 30px;
+  font-size:clamp(17px,2vw,22px);
+  color:var(--crema);
+  background:linear-gradient(180deg,var(--vino-alto) 0%,var(--vino) 62%,#380817 100%);
+  border:3px solid var(--dorado);
+  box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 34px rgba(255,210,95,.22),inset 0 2px 0 rgba(255,255,255,.1);
+}
+.boton-grande::before{
+  content:"";position:absolute;inset:5px;border-radius:15px;
+  border:1px solid rgba(255,242,195,.85);pointer-events:none;
+}
+.boton-grande:hover{transform:translateY(-2px);filter:brightness(1.08);box-shadow:0 20px 44px rgba(0,0,0,.66),0 0 46px rgba(255,210,95,.36),inset 0 2px 0 rgba(255,255,255,.14)}
+.boton-grande:active{transform:translateY(0) scale(.985)}
+.boton-sec{
+  padding:10px 22px;font-size:11.5px;margin-top:10px;
+  color:rgba(243,230,208,.72);background:transparent;
+  border:1px solid rgba(255,210,95,.32);
+}
+.boton-sec:hover{color:var(--crema);border-color:rgba(255,210,95,.7)}
+.boton-jugar{animation:latiendo 2.6s ease-in-out infinite}
+@keyframes latiendo{
+  0%,100%{box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 30px rgba(255,210,95,.2),inset 0 2px 0 rgba(255,255,255,.1)}
+  50%{box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 54px rgba(255,210,95,.42),inset 0 2px 0 rgba(255,255,255,.16)}
+}
+.chico{
+  margin-top:clamp(8px,1.4vh,14px);
+  font-size:13px;line-height:1.6;letter-spacing:.04em;
+  color:rgba(243,230,208,.44);
+}
+.chico b{color:rgba(232,196,119,.8);font-weight:600}
+
+/* ---------------- Fin de partida ---------------- */
+.medalla{
+  margin:clamp(10px,2vh,18px) auto 0;
+  width:clamp(170px,23vh,215px);height:clamp(170px,23vh,215px);
+  display:grid;place-content:center;gap:2px;border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(164,19,47,.9),rgba(30,6,12,.96) 68%),
+    linear-gradient(180deg,#1d0710,#0b0306);
+  border:2px solid rgba(255,210,95,.55);
+  box-shadow:0 0 0 7px rgba(255,210,95,.08),0 22px 50px rgba(0,0,0,.7),inset 0 0 40px rgba(164,19,47,.5);
+  position:relative;
+}
+.medalla::after{
+  content:"";position:absolute;inset:-11px;border-radius:50%;
+  border:1px dashed rgba(255,210,95,.35);animation:giro 26s linear infinite;
+}
+@keyframes giro{to{transform:rotate(360deg)}}
+.medalla-etq{font-size:11px;letter-spacing:.3em;color:rgba(232,196,119,.7);font-weight:600}
+.medalla-numero{
+  font-family:var(--fuente-titulo);font-weight:700;
+  font-size:clamp(38px,6.4vw,56px);line-height:1;color:#fff;
+  text-shadow:0 0 26px rgba(255,210,95,.5);
+  font-variant-numeric:tabular-nums;
+}
+.fin-cartel{
+  margin-top:clamp(8px,1.4vh,12px);
+  font-family:var(--fuente-titulo);font-size:clamp(13px,1.5vw,15px);
+  letter-spacing:.2em;color:rgba(232,196,119,.82);text-transform:uppercase;
+}
+.fin-stats{
+  display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(6px,1.6vw,20px);
+  margin-top:clamp(10px,1.8vh,18px);
+}
+.fin-stat{display:flex;flex-direction:column;gap:3px;min-width:64px}
+.fin-stat-etq{font-size:10.5px;letter-spacing:.24em;color:rgba(232,196,119,.6);font-weight:600}
+.fin-stat-val{font-family:var(--fuente-titulo);font-size:clamp(19px,2.4vw,26px);color:var(--crema)}
+
+@media (max-height:640px){
+  .panel{padding:16px 20px}
+  .logo{width:min(120px,30vw)}
+  .marca{margin-bottom:4px}
+  .panel h1{font-size:clamp(22px,3.6vw,30px)}
+  .bajada{font-size:11.5px;margin-top:6px}
+  .modos{margin:8px auto 2px}
+  .medalla{width:112px;height:112px;margin-top:6px}
+  .boton-grande{padding:10px 20px;font-size:13px;margin-top:8px}
+  .fin-stats{margin-top:8px}
+}
+@media (max-height:520px){
+  .bajada,.chico{display:none}
+  .logo{width:96px}
+}

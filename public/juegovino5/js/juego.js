@@ -33,6 +33,7 @@
     maxBotellas: 6,
     maxParticulas: 1400,
     capacidadCopa: 48,        // partículas colisionando que llenan la copa hasta la marca
+    sobranteDesborde: 30,     // partículas que tienen que salirse para cobrar el desborde
     inclinarbotella: true     // true = botella inclinada a 45° (izq/der según mitad); false = vertical (180°)
   };
 
@@ -189,20 +190,26 @@
     c.width = W; c.height = H;
     const g = c.getContext('2d');
 
-    // Papel crema cálido que cubre el centro de la etiqueta de la botella
+    // La botella YA trae su etiqueta: no se tapa con un rectángulo crema
+    // (eso era lo que se veía "pegado"). Solo un velo tenue que unifica el papel
+    // y deja pasar las guardas y la textura originales.
     const fondo = g.createLinearGradient(0, 0, W, 0);
-    fondo.addColorStop(0, '#ddd2be');
-    fondo.addColorStop(0.18, '#f7f1e3');
-    fondo.addColorStop(0.82, '#f3ecdc');
-    fondo.addColorStop(1, '#cfc3ae');
+    fondo.addColorStop(0, 'rgba(247,241,227,0)');
+    fondo.addColorStop(0.12, 'rgba(247,241,227,.30)');
+    fondo.addColorStop(0.5, 'rgba(255,250,240,.16)');
+    fondo.addColorStop(0.88, 'rgba(243,236,220,.30)');
+    fondo.addColorStop(1, 'rgba(247,241,227,0)');
     g.fillStyle = fondo;
-    if (g.roundRect) { g.beginPath(); g.roundRect(4, 4, W - 8, H - 8, 8); g.fill(); }
-    else g.fillRect(4, 4, W - 8, H - 8);
+    g.fillRect(0, 0, W, H);
 
-    // Marco interior fino en color vino #450B02
-    g.strokeStyle = 'rgba(69, 11, 2, 0.55)';
-    g.lineWidth = 2.2;
-    g.strokeRect(10, 10, W - 20, H - 20);
+    // sombra suave arriba y abajo: apoya la impresión en el vidrio
+    const sombra = g.createLinearGradient(0, 0, 0, H);
+    sombra.addColorStop(0, 'rgba(40,10,18,.20)');
+    sombra.addColorStop(0.14, 'rgba(40,10,18,0)');
+    sombra.addColorStop(0.86, 'rgba(40,10,18,0)');
+    sombra.addColorStop(1, 'rgba(40,10,18,.18)');
+    g.fillStyle = sombra;
+    g.fillRect(0, 0, W, H);
 
     // Dibujar el LOGO OFICIAL (img/logo.png) teñido en #450B02 para que contraste
     // perfecto sobre la etiqueta crema de la botella
@@ -823,7 +830,8 @@
   }, { passive: true });
 
   window.addEventListener('keydown', (ev) => {
-    if (ev.key === ' ' || ev.code === 'Space') { ev.preventDefault(); alternarPausa(); }
+    // Sin pausa: el kiosco no se detiene. (Espacio ya no hace nada.)
+    if (ev.key === ' ' || ev.code === 'Space') { ev.preventDefault(); }
     if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
       const b = E.botellas[0];
       if (b) moverA(b.id, b.x + (ev.key === 'ArrowLeft' ? -70 : 70) + SA.getBoundingClientRect().left);
@@ -985,12 +993,21 @@
   }
 
   function actualizarCopa(c) {
-    c.nivel = Math.min(1.3, c.particulasDentro / Math.max(1, c.capacidad));
+    // El nivel sólo sube: las partículas que rebotan pierden `copa` en algunos
+    // frames y el recuento cae; si se usara el valor crudo la copa podía
+    // "des-llenarse" un instante antes de quedar llena.
+    const crudo = Math.min(1.3, c.particulasDentro / Math.max(1, c.capacidad));
+    c.nivel = Math.max(c.nivel || 0, crudo);
+
     if (!c.llena && c.estado === 'activa' && c.nivel >= c.nivelObjetivo) {
       copaLlena(c);
       return;
     }
-    if (c.llena && c.sobrante > 18 && !c.desbordada) {
+
+    // REGLA: llenar la copa NUNCA resta puntos. El desborde sólo penaliza
+    // mientras se está sirviendo (copa activa); si la copa se llena en el
+    // mismo frame en que se desborda, el jugador no pierde nada.
+    if (!c.llena && c.estado === 'activa' && !c.desbordada && c.sobrante > CFG.sobranteDesborde) {
       c.desbordada = true;
       E.puntos = Math.max(0, E.puntos - CFG.penalidadDesborde);
       avisar(c.cx, c.yBorde - c.alto * 0.12, '−' + CFG.penalidadDesborde, '#ff7a8a');
@@ -1270,17 +1287,8 @@
       ctx.drawImage(imgBase, sp.x, sp.y, sp.w, sp.h);
     }
 
-    // Línea indicadora del nivel objetivo
-    const rObj = radioInteriorCopa(c, c.yObjetivo);
-    ctx.save();
-    ctx.strokeStyle = c.llena ? 'rgba(232,196,119,.78)' : 'rgba(232,196,119,.35)';
-    ctx.lineWidth = 1.3;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(c.cx - rObj + 3, c.yObjetivo);
-    ctx.lineTo(c.cx + rObj - 3, c.yObjetivo);
-    ctx.stroke();
-    ctx.restore();
+    // (La linea punteada que marcaba el nivel objetivo se saco: el propio
+    // borde del vino es la marca. Pedido del duenio.)
 
     // 2) Fluido de partículas colisionando estrictamente recortado al interior de la copa
     if (c.particulasDentro > 0) {
@@ -1370,14 +1378,16 @@
 
     actualizarHud();
     document.getElementById('hud').classList.remove('hud-off');
-    ['pantallaInicio', 'pantallaFin', 'pantallaPausa'].forEach((id) => document.getElementById(id).classList.remove('visible'));
+    ['pantallaInicio', 'pantallaFin'].forEach((id) => {
+      const p = document.getElementById(id);
+      if (p) p.classList.remove('visible');
+    });
+    E.pausado = false;
   }
 
-  function alternarPausa() {
-    if (!E.jugando) return;
-    E.pausado = !E.pausado;
-    document.getElementById('pantallaPausa').classList.toggle('visible', E.pausado);
-  }
+  // La pausa se saco del juego (pedido del duenio): el kiosco no pausa nunca.
+  // Se conserva la funcion como no-op para que Space / botones viejos no rompan.
+  function alternarPausa() {}
 
   function animarPuntaje(total) {
     const el = document.getElementById('finPuntos');
@@ -1486,9 +1496,10 @@
 
   document.getElementById('btnJugar').addEventListener('click', empezar);
   document.getElementById('btnOtra').addEventListener('click', empezar);
-  document.getElementById('btnSeguir').addEventListener('click', alternarPausa);
-  document.getElementById('btnReiniciar').addEventListener('click', empezar);
-  document.getElementById('btnPausa').addEventListener('click', alternarPausa);
+  [['btnSeguir', alternarPausa], ['btnReiniciar', empezar], ['btnPausa', alternarPausa]].forEach(([id, fn]) => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', fn);
+  });
 
   const chkInclinar = document.getElementById('chkInclinarBotella');
   if (chkInclinar) {

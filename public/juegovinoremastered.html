@@ -12,11 +12,11 @@
     <link rel="stylesheet" href="css/style.css?v=23">
     <script src="js/p5.min2.js"></script>
     <!-- AssetManager centralizado para imágenes y escalado -->
-    <script src="js/assetManager.js?v=23"></script>
+    <script src="js/assetManager.js?v=25"></script>
     <script src="js/config.js?v=23"></script>
     <script src="js/pointserver.js?v=23"></script>
     <script src="js/particles.js?v=23"></script>
-    <script src="js/background.js?v=23"></script>
+    <script src="js/background.js?v=25"></script>
     <script src="js/scoreeffect.js?v=23"></script>
     <!-- Animación unificada de fin -->
     <script src="js/endanimation.js?v=23"></script>
@@ -25,7 +25,7 @@
     <script src="js/gamestate.js?v=23"></script>
     <script src="js/tutorialscreen.js?v=23"></script>
     <script src="js/sketch.js?v=23"></script>
-    <script src="js/controlpanel.js?v=23"></script>
+    <script src="js/controlpanel.js?v=25"></script>
     <script src="js/customButton.js?v=23"></script>
     <script>
         console.log('Deli & Wine Water Shader Edition v22 - ' + new Date().toISOString());
@@ -41,7 +41,7 @@
     <!-- Pantalla de selección de modo (HTML/CSS): Logo protagonista arriba + título unificado -->
     <div id="modeSelectionOverlay" class="mode-selection-overlay">
         <div class="mode-logo-wrapper">
-            <img src="img/logo/logo.png" alt="Deli & Wine Logo" class="mode-logo">
+            <img src="img/logo/logo@4x.png" srcset="img/logo/logo.png 1x, img/logo/logo@4x.png 4x" alt="Deli & Wine Logo" class="mode-logo">
         </div>
         <div class="mode-title-card">
             <span class="mode-kicker">✦ EXPERIENCIA INTERACTIVA DE VENDIMIA ✦</span>
@@ -92,13 +92,22 @@
                 <div class="help-text">Permite ocultar la visualización de los puntos recibidos del LIDAR. Se guarda en panel-config.json.</div>
             </div>
 
-            <!-- Nuevo: Ocultar fondo (desactiva shader de background) -->
+            <!-- Desactivar el agua: deja el fondo de fotos intacto -->
+            <div class="control-group">
+                <label class="toggle" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="hideWaterCheckbox">
+                    Desactivar shader de agua (deja el fondo)
+                </label>
+                <div class="help-text">Al activar, el agua no se renderiza ni se calcula (se ahorra GPU) pero las fotos de fondo siguen rotando. Se guarda en panel-config.json.</div>
+            </div>
+
+            <!-- Ocultar fondo entero (fotos + agua) -->
             <div class="control-group">
                 <label class="toggle" style="display:flex;align-items:center;gap:8px;">
                     <input type="checkbox" id="hideBackgroundCheckbox">
-                    Ocultar fondo (no renderizar shader de fondo)
+                    Ocultar fondo entero (fotos y agua)
                 </label>
-                <div class="help-text">Al activar, no se procesa ni dibuja el fondo; solo se verán los assets en primer plano. Se guarda en panel-config.json.</div>
+                <div class="help-text">Al activar, no se procesa ni dibuja nada del fondo; solo se verán los assets en primer plano. Se guarda en panel-config.json.</div>
             </div>
 
             <div class="control-group">

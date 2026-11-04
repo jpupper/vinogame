@@ -629,7 +629,9 @@ function processShaders() {
         particleSystem.display(particulasBuffer);
     }
 
-    if (typeof window !== 'undefined' && window.hideBackground) {
+    // hideBackground apaga TODO (fotos + agua); hideWaterOnly deja las fotos
+    // y sólo saltea el pase de agua/shader: cero costo de GPU en el agua.
+    if (typeof window !== 'undefined' && (window.hideBackground || window.hideWaterOnly)) {
         return;
     }
 
@@ -754,6 +756,13 @@ function renderShaders() {
     if (typeof feedbackBuffer === 'undefined' || !feedbackBuffer) return;
 
     if (typeof window !== 'undefined' && window.hideBackground) {
+        feedbackBuffer.clear();
+        feedbackBuffer.background(0);
+        return;
+    }
+    // Sin agua: el buffer de feedback se limpia igual (sino se congela el
+    // último frame del agua encima del fondo) y no se dibuja nada.
+    if (typeof window !== 'undefined' && window.hideWaterOnly) {
         feedbackBuffer.clear();
         feedbackBuffer.background(0);
         return;
