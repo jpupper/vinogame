@@ -83,8 +83,7 @@
         prepararSpritesCopa();
         prepararEtiqueta();
         E.listo = true;
-        // Dentro del LIDAR no se muestra el puntero (kiosco); en la web sí.
-        document.body.classList.toggle('modo-lidar', esModoLidar());
+        E.modoLidar = esModoLidar();   // dentro del LIDAR las botellas salen sólo de los puntos
         const elCargando = document.getElementById('cargando');
         if (elCargando) elCargando.classList.remove('visible');
         if (location.search.indexOf('captura=') !== -1) {
@@ -1427,9 +1426,6 @@
     E.botellas = [];
     E.modoLidar = esModoLidar();
     ratonAbajo = false;
-    // El puntero se oculta sólo jugando (kiosco) o dentro del LIDAR.
-    document.body.classList.add('jugando');
-    document.body.classList.toggle('modo-lidar', E.modoLidar);
 
     actualizarHud();
     document.getElementById('hud').classList.remove('hud-off');
@@ -1456,7 +1452,6 @@
   function terminar() {
     E.jugando = false;
     E.botellas = [];
-    document.body.classList.remove('jugando');
     document.getElementById('hud').classList.add('hud-off');
     let record = 0;
     try { record = Number(localStorage.getItem('vinogame_wine_record') || 0); } catch (e) { }
@@ -1557,7 +1552,6 @@
     E.jugando = false;
     E.pausado = false;
     E.botellas = [];
-    document.body.classList.remove('jugando');
     const hud = document.getElementById('hud');
     if (hud) hud.classList.add('hud-off');
     const fin = document.getElementById('pantallaFin');
