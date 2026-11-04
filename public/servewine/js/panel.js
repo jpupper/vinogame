@@ -287,24 +287,51 @@
     return cont;
   }
 
+  // ── Parámetros del sistema LIDAR (config.json) ──
+  // El sitio publicado no tiene Grid Sequencer: para que el juego se comporte
+  // IGUAL que en el LIDAR, se leen los valores de `config.json` (los que el
+  // inspector guarda en Games/servewine/config.json) y se aplican como base.
+  // Un GUARDAR hecho en este dispositivo (localStorage) tiene prioridad.
+  let CFG_SISTEMA = null;
+  function cargarConfigSistema() {
+    if (!window.fetch) return;
+    fetch('config.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || !d.values) return;
+        CFG_SISTEMA = d.values;
+        cargar();
+      })
+      .catch(() => { });
+  }
+
   function cargar() {
     const g = leer();
     const F = window.FondoAgua, V = window.VinoGame;
     if (!F || !V) return;
 
     CAMPOS.forEach((c) => {
+      const clave = c.sec + ':' + c.k;
       const def = valorActual(c);
-      DEFAULTS[c.sec + ':' + c.k] = def;
-      const raw = g[c.sec + ':' + c.k];
+      DEFAULTS[clave] = def;
+      let raw = g[clave];
+      if (typeof raw !== 'number' && CFG_SISTEMA && typeof CFG_SISTEMA[c.k] === 'number') {
+        raw = CFG_SISTEMA[c.k];
+      }
       if (typeof raw === 'number') {
         aplicar(c, raw);
         if (c._input) { c._input.value = raw; c._mostrar(raw); }
       }
     });
-    if (g.evento) V.evento(g.evento);
+    const evento = g.evento || (CFG_SISTEMA && CFG_SISTEMA.evento) || '';
+    if (evento) V.evento(evento);
     if (typeof g.intervalo === 'number') F.setIntervalo(g.intervalo);
-    if (typeof g.inclinarbotella === 'boolean') aplicarClave('inclinarbotella', g.inclinarbotella);
-    if (typeof g.ySeguirPunto === 'boolean') aplicarClave('ySeguirPunto', g.ySeguirPunto);
+    const inc = (typeof g.inclinarbotella === 'boolean') ? g.inclinarbotella
+      : (CFG_SISTEMA && typeof CFG_SISTEMA.inclinarbotella === 'boolean' ? CFG_SISTEMA.inclinarbotella : null);
+    if (inc !== null) aplicarClave('inclinarbotella', inc);
+    const ysig = (typeof g.ySeguirPunto === 'boolean') ? g.ySeguirPunto
+      : (CFG_SISTEMA && typeof CFG_SISTEMA.ySeguirPunto === 'boolean' ? CFG_SISTEMA.ySeguirPunto : null);
+    if (ysig !== null) aplicarClave('ySeguirPunto', ysig);
   }
 
   function sincronizar() {
@@ -352,9 +379,12 @@
     let tries = 0;
     const t = setInterval(() => {
       tries++;
-      if (window.VinoGame && window.FondoAgua && window.FondoAgua.disponible()) {
+      // Basta con que existan los dos módulos: `disponible()` es sólo WebGL y si
+      // el shader no arranca los parámetros tienen que aplicarse igual.
+      if (window.VinoGame && window.FondoAgua) {
         clearInterval(t);
         cargar();
+        cargarConfigSistema();   // valores del LIDAR (config.json) como base
       } else if (tries > 60) {
         clearInterval(t);
       }

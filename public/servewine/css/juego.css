@@ -12,7 +12,7 @@
   --borde:rgba(232,196,119,.28);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--negro);overflow:hidden;cursor:none !important}
+html,body{height:100%;background:var(--negro);overflow:hidden}
 body{
   font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
   color:var(--crema);
@@ -20,13 +20,16 @@ body{
   touch-action:none;
   overscroll-behavior:none;
   user-select:none;
-  cursor:none !important;
 }
-*,*::before,*::after,#app,#juego-wrap,#escena,#fluido,button,.panel,.pantalla,#hud,#hud *{cursor:none !important}
+/* CURSOR: en el kiosco del LIDAR se juega con la botella y el puntero estorba,
+   así que ahí se oculta. En la web el cursor se ve SIEMPRE (menús y partida):
+   sin flecha el visitante no puede apuntar al JUGAR ni ubicar la botella. */
+body.modo-lidar, body.modo-lidar *{cursor:none !important}
+button, .boton-grande, .hud-botones button, input[type="range"], select{cursor:pointer}
+body.jugando #escena{cursor:crosshair}
 #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-#juego-wrap{position:relative;width:100%;height:100%;overflow:hidden;cursor:none !important}
-#escena{display:block;width:100%;height:100%;touch-action:none;position:relative;z-index:1;cursor:none !important}
-/* el servewine se juega con la botella: sin cursor de mouse */
+#juego-wrap{position:relative;width:100%;height:100%;overflow:hidden}
+#escena{display:block;width:100%;height:100%;touch-action:none;position:relative;z-index:1}
 /* canvas offscreen del fluido WebGL (se compone en orden de capas sobre #escena) */
 #fluido{position:absolute;inset:0;pointer-events:none;z-index:2;display:none}
 /* fondo de agua: el canvas del include del JP Shader Editor va en z-index -1 y

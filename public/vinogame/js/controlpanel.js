@@ -132,7 +132,7 @@ class ControlPanel {
                 maxGoodItems: { current: 10, default: 10 },
                 maxBadItems: { current: 5, default: 5 },
                 winComboThreshold: { current: 20, default: 20 },
-                hoverTime: { current: 1000, default: 1000 },
+                hoverTime: { current: 100, default: 100 },
                 collisionArea: { enabled: false, x: 0, y: 0, width: 0, height: 0, showOverlay: false },
                 // Nuevo: mostrar/ocultar puntos del LIDAR
                 showLidarPoints: false,

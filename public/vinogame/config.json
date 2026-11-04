@@ -6,7 +6,7 @@
     "lives": 3,
     "objectSize": 130,
     "spawnRate": 800,
-    "hoverTime": 44,
+    "hoverTime": 100,
     "winComboThreshold": 26,
     "maxGoodItems": 10,
     "maxBadItems": 10,
@@ -97,7 +97,7 @@
           "min": 50,
           "max": 3000,
           "step": 50,
-          "default": 1000,
+          "default": 100,
           "unit": "ms"
         },
         {

@@ -249,7 +249,7 @@ const CONFIG = {
         },
         itemSize: 100,                // Tamaño inicial de items (px)
         captureScale: 1.3,            // Escala al capturar (1.3 = 130%)
-        hoverTime: 1000,              // Tiempo requerido de hover en ms (1 segundo)
+        hoverTime: 100,              // Tiempo requerido de hover en ms (pedido del dueño: 100)
         points: {                     // Puntos por tipo de vino
             white: 5,
             red: 10,
