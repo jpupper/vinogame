@@ -1,0 +1,227 @@
+{
+  "gameId": "servewine",
+  "updatedAt": "2026-11-03T06:01:52.413Z",
+  "values": {
+    "gotasPorFrame": 2,
+    "capacidadCopa": 48,
+    "escalaParticulas": 1,
+    "caudalVelocidad": 1,
+    "duracion": 60,
+    "tiempoCopa": 9.5,
+    "maxCopas": 3,
+    "escalaCopas": 1,
+    "escalaBotella": 1,
+    "offsetY": 0,
+    "puntosCopa": 100,
+    "bonusMax": 60,
+    "penalidadCopa": 50,
+    "penalidadDesborde": 30,
+    "tinte": 0.22,
+    "intervalo": 16,
+    "inclinarbotella": true,
+    "ySeguirPunto": false,
+    "evento": "DELI & WINE"
+  },
+  "schema": [
+    {
+      "id": "tab_botella",
+      "title": "Botella",
+      "icon": "🍾",
+      "controls": [
+        {
+          "type": "toggle",
+          "key": "inclinarbotella",
+          "label": "Inclinar botella a 45°",
+          "default": true
+        },
+        {
+          "type": "toggle",
+          "key": "ySeguirPunto",
+          "label": "Y según el punto (apagado = Y fija + offset)",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "tab_vino",
+      "title": "Vino",
+      "icon": "🍷",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "gotasPorFrame",
+          "label": "Caudal del chorro",
+          "min": 1,
+          "max": 4,
+          "step": 1,
+          "default": 2,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "capacidadCopa",
+          "label": "Partículas para llenar copa",
+          "min": 25,
+          "max": 90,
+          "step": 1,
+          "default": 48,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "escalaParticulas",
+          "label": "Escala de las partículas",
+          "min": 0.4,
+          "max": 1.8,
+          "step": 0.05,
+          "default": 1,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "caudalVelocidad",
+          "label": "Velocidad del caudal",
+          "min": 0.4,
+          "max": 3,
+          "step": 0.1,
+          "default": 1,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "id": "tab_juego",
+      "title": "Juego",
+      "icon": "⚙️",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "duracion",
+          "label": "Duración (segundos)",
+          "min": 15,
+          "max": 180,
+          "step": 5,
+          "default": 60,
+          "unit": "s"
+        },
+        {
+          "type": "slider",
+          "key": "tiempoCopa",
+          "label": "Reloj por copa (s)",
+          "min": 3,
+          "max": 20,
+          "step": 0.5,
+          "default": 9.5,
+          "unit": "s"
+        },
+        {
+          "type": "slider",
+          "key": "maxCopas",
+          "label": "Copas a la vez",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "escalaCopas",
+          "label": "Escala de las copas",
+          "min": 0.5,
+          "max": 1.8,
+          "step": 0.05,
+          "default": 1,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "escalaBotella",
+          "label": "Tamaño de la botella",
+          "min": 0.4,
+          "max": 2,
+          "step": 0.05,
+          "default": 1,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "offsetY",
+          "label": "Offset Y de la botella (px)",
+          "min": -400,
+          "max": 400,
+          "step": 5,
+          "default": 0,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "puntosCopa",
+          "label": "Puntos por copa",
+          "min": 10,
+          "max": 500,
+          "step": 10,
+          "default": 100,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "bonusMax",
+          "label": "Bonus máximo",
+          "min": 0,
+          "max": 300,
+          "step": 5,
+          "default": 60,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "penalidadCopa",
+          "label": "Penalidad por vencer",
+          "min": 0,
+          "max": 300,
+          "step": 5,
+          "default": 50,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "penalidadDesborde",
+          "label": "Penalidad por desborde",
+          "min": 0,
+          "max": 300,
+          "step": 5,
+          "default": 30,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "id": "tab_fondo",
+      "title": "Fondo",
+      "icon": "🌅",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "tinte",
+          "label": "Oscuridad del fondo",
+          "min": 0,
+          "max": 0.7,
+          "step": 0.02,
+          "default": 0.22,
+          "unit": ""
+        },
+        {
+          "type": "slider",
+          "key": "intervalo",
+          "label": "Cambio de fondo (s)",
+          "min": 4,
+          "max": 60,
+          "step": 1,
+          "default": 16,
+          "unit": "s"
+        }
+      ]
+    }
+  ]
+}

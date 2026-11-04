@@ -16,7 +16,7 @@
 
   <!-- HUD -->
   <header id="hud" class="hud-off">
-    <img class="hud-logo" src="img/logo.png" alt="Deli &amp; Wine">
+    <img class="hud-logo" src="img/logo.svg" alt="Deli &amp; Wine">
     <div class="hud-bloque">
       <span class="hud-etq">PUNTOS</span>
       <span id="hudPuntos" class="hud-val">0</span>
@@ -51,7 +51,7 @@
   <section id="pantallaInicio" class="pantalla visible">
     <div class="panel">
       <div class="marca">
-        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
         <p class="marca-evento">MEMOTEST</p>
       </div>
       <h1>ENCONTRÁ LOS PARES</h1>
@@ -63,7 +63,7 @@
   <section id="pantallaFin" class="pantalla">
     <div class="panel panel-fin">
       <div class="marca marca-chica">
-        <img src="img/logo.png" alt="Deli &amp; Wine" class="logo">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
         <p class="marca-evento">MEMOTEST</p>
       </div>
       <p id="finKicker" class="fin-kicker">✦ BODEGA COMPLETA ✦</p>
@@ -106,6 +106,14 @@
     </div>
     <div class="cfg-cartas-body">
       <label class="cfg-fila">
+        <span class="cfg-cab"><span>Pares (dificultad)</span><b id="valCfgPares">6</b></span>
+        <input id="inpCfgPares" type="range" min="4" max="10" step="2" value="6">
+      </label>
+      <label class="cfg-fila">
+        <span class="cfg-cab"><span>Tiempo de partida</span><b id="valCfgTiempo">60 s</b></span>
+        <input id="inpCfgTiempo" type="range" min="20" max="180" step="5" value="60">
+      </label>
+      <label class="cfg-fila">
         <span class="cfg-cab"><span>Tamaño (escala)</span><b id="valCfgTam">1.00×</b></span>
         <input id="inpCfgTam" type="range" min="0.50" max="1.60" step="0.01" value="1">
       </label>
@@ -128,5 +136,9 @@
 
 <script src="js/botellas.js"></script>
 <script src="js/juego.js"></script>
+<!-- Puente con el Grid Sequencer: parámetros indexados + config.json del sistema LIDAR -->
+<script src="js/grid-adapter.js?v=1"></script>
+<!-- Entrada LIDAR: blobs del sensor -> punteros/clicks del juego -->
+<script src="js/lidar-input.js?v=1"></script>
 </body>
 </html>

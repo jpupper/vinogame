@@ -85,17 +85,19 @@ body{
 .hud-tiempo .hud-val.poco{color:#ff5d6c;animation:pulsoTiempo 1s ease-in-out infinite}
 @keyframes pulsoTiempo{0%,100%{opacity:1}50%{opacity:.45}}
 
-.hud-botones{margin-left:auto;display:flex;gap:8px}
-.hud-botones button{
-  width:40px;height:40px;border-radius:12px;cursor:pointer;
-  border:2px solid #ffd25f;
-  background:linear-gradient(180deg,#5a1329,#440a1c);
-  color:#fff2c3;font-size:15px;line-height:1;
-  box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,245,220,.25);
-  transition:filter .16s,box-shadow .16s,transform .16s;
+/* Menú invisible para el promotor (arriba a la derecha): Reiniciar y Volver al inicio */
+.hud-botones{
+  position:fixed;top:10px;right:14px;z-index:999;
+  display:flex;gap:10px;
+  pointer-events:auto;
 }
-.hud-botones button:hover{filter:brightness(1.14);box-shadow:0 4px 18px rgba(255,210,95,.3),inset 0 1px 0 rgba(255,245,220,.3)}
-.hud-botones button:active{transform:translateY(1px)}
+.hud-botones button{
+  width:52px;height:52px;border-radius:12px;cursor:pointer;
+  opacity:0;
+  border:none;background:transparent;color:transparent;
+  box-shadow:none;outline:none;
+  -webkit-tap-highlight-color:transparent;
+}
 
 /* ---------------- ZONA DE JUEGO ---------------- */
 #zona{

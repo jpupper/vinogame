@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deli &amp; Wine · Bodega Buster</title>
+<meta name="description" content="Bodega Buster: el arkanoide de Deli & Wine. La barra sigue tu cuerpo y rompés las cajas de vino.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/buster.css?v=3">
+</head>
+<body>
+<div id="app">
+  <canvas id="escena"></canvas>
+
+  <!-- HUD SIMÉTRICO 1P Y 2P -->
+  <header id="hud" class="hud-off">
+    <!-- Lado Izquierdo: Jugador 1 -->
+    <div class="hud-player hud-player-1">
+      <div class="hud-bloque hud-puntos-bloque">
+        <span id="hudEtqP1" class="hud-etq">PUNTOS</span>
+        <span id="hudPuntos" class="hud-val">0</span>
+      </div>
+      <div class="hud-bloque hud-uvas-bloque">
+        <span class="hud-etq">UVAS</span>
+        <span class="hud-val"><img class="hud-icon" src="img/racimo.png" alt=""><span id="hudUvas">0</span></span>
+      </div>
+      <div class="hud-bloque hud-copas-bloque">
+        <span class="hud-etq">COPAS</span>
+        <span class="hud-val"><img class="hud-icon" src="img/copa.png" alt=""><span id="hudCopas">0</span></span>
+      </div>
+      <div class="hud-bloque hud-vidas hud-vidas-p1">
+        <span class="hud-etq">VIDAS</span>
+        <span id="hudVidas" class="hud-val"></span>
+      </div>
+    </div>
+
+    <!-- Centro: Logo y Nivel -->
+    <div class="hud-center">
+      <img class="hud-logo" src="img/logo.svg" alt="Deli &amp; Wine">
+      <div class="hud-bloque hud-nivel" id="hudNivelBloque">
+        <span class="hud-etq">NIVEL</span>
+        <span id="hudNivel" class="hud-val">1</span>
+      </div>
+    </div>
+
+    <!-- Lado Derecho: Jugador 2 (sólo en 2P, diseño idéntico simétrico) -->
+    <div class="hud-player hud-player-2" id="hudPlayer2">
+      <div class="hud-bloque hud-vidas hud-vidas-p2">
+        <span class="hud-etq">VIDAS</span>
+        <span id="hudVidasP2" class="hud-val"></span>
+      </div>
+      <div class="hud-bloque hud-copas-bloque">
+        <span class="hud-etq">COPAS</span>
+        <span class="hud-val"><img class="hud-icon" src="img/copa.png" alt=""><span id="hudCopasP2">0</span></span>
+      </div>
+      <div class="hud-bloque hud-uvas-bloque">
+        <span class="hud-etq">UVAS</span>
+        <span class="hud-val"><img class="hud-icon" src="img/racimo.png" alt=""><span id="hudUvasP2">0</span></span>
+      </div>
+      <div class="hud-bloque hud-puntos-bloque">
+        <span id="hudEtqP2" class="hud-etq">JUGADOR 2</span>
+        <span id="hudPuntosDer" class="hud-val">0</span>
+      </div>
+    </div>
+
+    <!-- Menú invisible para el promotor (arriba a la derecha): Reiniciar y Volver al inicio -->
+    <div class="hud-botones">
+      <button id="btnReiniciar" type="button" title="Reiniciar la partida" aria-label="Reiniciar la partida">↺</button>
+      <button id="btnSalir" type="button" title="Volver al inicio" aria-label="Volver al inicio">⌂</button>
+    </div>
+  </header>
+
+  <!-- PANTALLA INICIO -->
+  <section id="pantallaInicio" class="pantalla visible">
+    <div class="panel">
+      <div class="marca">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p class="kicker">✦ Arcade de bodega ✦</p>
+      <h1>BODEGA BUSTER</h1>
+      <p class="bajada">La barra sigue tu cuerpo. Rompé las cajas de vino sin dejar caer la cosecha.</p>
+      <div class="modos" role="group" aria-label="Cantidad de jugadores">
+        <button class="modo activo" data-modo="1" type="button">1 JUGADOR</button>
+        <button class="modo" data-modo="2" type="button">2 JUGADORES</button>
+      </div>
+      <button id="btnJugar" class="boton-grande" type="button">JUGAR</button>
+      <p class="chico">Movés el mouse o tocás la pantalla · cada jugador mueve su barra desde su lado</p>
+    </div>
+  </section>
+
+  <!-- PANTALLA FIN (con botella de vino en lugar del círculo) -->
+  <section id="pantallaFin" class="pantalla">
+    <div class="panel panel-fin">
+      <div class="marca marca-fin">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p id="finKicker" class="kicker">✦ Se terminó la cosecha ✦</p>
+
+      <!-- Botella de vino para puntaje fin -->
+      <div id="finMedalla" class="fin-medalla fin-botella">
+        <img class="botella-fin-img" src="img/botella.png" alt="" aria-hidden="true">
+        <div class="fin-centro">
+          <span class="fin-etq">PUNTOS</span>
+          <span id="finPuntos" class="fin-numero">0</span>
+        </div>
+      </div>
+
+      <p id="finCartel" class="fin-cartel">TU MEJOR MARCA: 0</p>
+      <div class="fin-stats">
+        <div class="fin-stat"><span class="fin-stat-etq">UVAS</span><span id="finBloques" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq">COPAS</span><span id="finCopas" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq">NIVEL</span><span id="finNivel" class="fin-stat-val">1</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq">RÉCORD</span><span id="finRecord" class="fin-stat-val">0</span></div>
+      </div>
+      <button id="btnOtra" class="boton-grande boton-jugar" type="button">JUGAR OTRA VEZ</button>
+    </div>
+  </section>
+</div>
+
+<script src="../comun/fondo-dw.js"></script>
+<script src="../comun/impactos-dw.js"></script>
+<script src="js/buster.js?v=3"></script>
+<script src="js/lidar.js"></script>
+</body>
+</html>

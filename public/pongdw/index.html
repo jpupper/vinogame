@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deli &amp; Wine · Pong Vendimia</title>
+<meta name="description" content="Pong Vendimia: el ping pong de Deli & Wine. Dos botellas por paleta, un corcho en juego y un rally que no se puede cortar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/pong.css?v=2">
+</head>
+<body>
+<div id="app">
+  <canvas id="escena"></canvas>
+
+  <!-- HUD SIMÉTRICO: CADA JUGADOR TIENE SU PROPIO SISTEMA DE PUNTOS -->
+  <header id="hud" class="hud-off">
+    <!-- Lado Izquierdo: Jugador 1 -->
+    <div class="hud-player hud-player-1">
+      <div class="hud-bloque">
+        <span class="hud-etq" id="hudEtqP1">JUGADOR 1</span>
+        <span id="hudPuntosP1" class="hud-val">0</span>
+      </div>
+      <div class="hud-bloque" id="hudToquesBloqueP1">
+        <span class="hud-etq">TOQUES</span>
+        <span id="hudToquesP1" class="hud-val">0</span>
+      </div>
+    </div>
+
+    <!-- Centro: Logo, Rally y Vidas -->
+    <div class="hud-center">
+      <img class="hud-logo" src="img/logo.svg" alt="Deli &amp; Wine">
+      <div class="hud-center-info">
+        <div class="hud-bloque hud-rally-bloque" id="hudRallyBloque">
+          <span class="hud-etq" id="hudEtqRally">RALLY</span>
+          <span id="hudValRally" class="hud-val">0</span>
+        </div>
+        <div class="hud-bloque hud-vidas" id="hudVidasBloque">
+          <span class="hud-etq">VIDAS</span>
+          <span id="hudVidas" class="hud-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lado Derecho: Jugador 2 -->
+    <div class="hud-player hud-player-2">
+      <div class="hud-bloque" id="hudToquesBloqueP2">
+        <span class="hud-etq">TOQUES</span>
+        <span id="hudToquesP2" class="hud-val">0</span>
+      </div>
+      <div class="hud-bloque">
+        <span class="hud-etq" id="hudEtqP2">JUGADOR 2</span>
+        <span id="hudPuntosP2" class="hud-val">0</span>
+      </div>
+    </div>
+
+    <!-- Menú invisible para el promotor (arriba a la derecha): Reiniciar y Volver al inicio -->
+    <div class="hud-botones">
+      <button id="btnReiniciar" type="button" title="Reiniciar la partida" aria-label="Reiniciar la partida">↺</button>
+      <button id="btnSalir" type="button" title="Volver al inicio" aria-label="Volver al inicio">⌂</button>
+    </div>
+  </header>
+
+  <!-- PANTALLA INICIO -->
+  <section id="pantallaInicio" class="pantalla visible">
+    <div class="panel">
+      <div class="marca">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p class="kicker">✦ Ping pong de bodega ✦</p>
+      <h1>PONG VENDIMIA</h1>
+      <p class="bajada">Cada jugador es una botella. Mantené el corcho en juego: cada toque suma y acelera.</p>
+      <div class="modos" role="group" aria-label="Modo de juego">
+        <button class="modo activo" data-modo="coop" type="button">COOPERATIVO</button>
+        <button class="modo" data-modo="duelo" type="button">DUELO</button>
+      </div>
+      <button id="btnJugar" class="boton-grande" type="button">JUGAR</button>
+      <p class="chico">Movés el mouse o tocás la pantalla · cada jugador controla su botella</p>
+    </div>
+  </section>
+
+  <!-- PANTALLA FIN (Botella de vino Deli & Wine con puntos en la etiqueta) -->
+  <section id="pantallaFin" class="pantalla">
+    <div class="panel panel-fin">
+      <div class="marca marca-fin">
+        <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
+        <p class="marca-nombre">DELI &amp; WINE</p>
+      </div>
+      <p id="finKicker" class="kicker">✦ Se cortó el rally ✦</p>
+
+      <!-- Botella de vino con puntos en la etiqueta -->
+      <div id="finMedalla" class="fin-medalla fin-botella">
+        <img class="botella-fin-img" src="img/botella.png" alt="" aria-hidden="true">
+        <div class="fin-centro">
+          <span class="fin-etq" id="finMedallaEtq">PUNTOS</span>
+          <span id="finPuntos" class="fin-numero">0</span>
+        </div>
+      </div>
+
+      <p id="finCartel" class="fin-cartel">TU MEJOR MARCA: 0</p>
+      <div class="fin-stats">
+        <div class="fin-stat"><span class="fin-stat-etq" id="finEtqStat1">JUGADOR 1</span><span id="finStat1" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq" id="finEtqStat2">JUGADOR 2</span><span id="finStat2" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq">MEJOR RALLY</span><span id="finRally" class="fin-stat-val">0</span></div>
+        <div class="fin-stat"><span class="fin-stat-etq" id="finEtqRecord">RÉCORD</span><span id="finRecord" class="fin-stat-val">0</span></div>
+      </div>
+      <button id="btnOtra" class="boton-grande boton-jugar" type="button">JUGAR OTRA VEZ</button>
+    </div>
+  </section>
+</div>
+
+<script src="../comun/fondo-dw.js"></script>
+<script src="../comun/impactos-dw.js"></script>
+<script src="js/pong.js?v=2"></script>
+<script src="js/lidar.js"></script>
+</body>
+</html>

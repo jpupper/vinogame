@@ -10,19 +10,24 @@
   const PROPORCION = 0.76; // ancho / alto ideal de cada carta
   const CLAVE_RECORDS = 'deliwine.memotest.v1';
   const CLAVE_CFG = 'deliwine.memotest.cfg.v1';
-  const PARES_UNICO = 6; // Dificultad unificada (6 pares = 12 cartas)
-  const TIEMPO_MAX = 60000; // 60 segundos máximo por partida
+  // Dificultad y duración ahora son parámetros del sistema (CFG): se pueden
+  // mover desde el panel del juego o desde el inspector del Grid Sequencer.
+  const PARES_DEF = 6; // 6 pares = 12 cartas (era la dificultad fija original)
+  const TIEMPO_DEF = 60; // segundos
+  const tiempoMaxMs = () => Math.max(10, Math.min(300, Number(CFG.tiempoMax) || TIEMPO_DEF)) * 1000;
 
   const CFG_DEF = {
     escala: 1,
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
+    pares: PARES_DEF,
+    tiempoMax: TIEMPO_DEF
   };
 
   const CFG = Object.assign({}, CFG_DEF, leerCfg());
 
   const E = {
-    nivel: PARES_UNICO,
+    nivel: PARES_DEF,
     cartas: [],
     abiertas: [],
     bloqueado: true,
@@ -33,7 +38,7 @@
     combo: 0,
     inicio: 0,
     ms: 0,
-    restante: TIEMPO_MAX,
+    restante: tiempoMaxMs(),
     reloj: null,
     timerFalla1: 0,
     timerFalla2: 0
@@ -68,6 +73,10 @@
     panelCfgCartas: $('#panelCfgCartas'),
     btnCerrarCfgCartas: $('#btnCerrarCfgCartas'),
     btnResetCfgCartas: $('#btnResetCfgCartas'),
+    inpCfgPares: $('#inpCfgPares'),
+    inpCfgTiempo: $('#inpCfgTiempo'),
+    valCfgPares: $('#valCfgPares'),
+    valCfgTiempo: $('#valCfgTiempo'),
     inpCfgTam: $('#inpCfgTam'),
     inpCfgOffX: $('#inpCfgOffX'),
     inpCfgOffY: $('#inpCfgOffY'),
@@ -229,6 +238,14 @@
 
   function sincronizarPanelCfg() {
     if (!el.panelCfgCartas) return;
+    if (el.inpCfgPares) {
+      el.inpCfgPares.value = CFG.pares;
+      el.valCfgPares.textContent = CFG.pares;
+    }
+    if (el.inpCfgTiempo) {
+      el.inpCfgTiempo.value = CFG.tiempoMax;
+      el.valCfgTiempo.textContent = CFG.tiempoMax + ' s';
+    }
     el.inpCfgTam.value = CFG.escala;
     el.inpCfgOffX.value = CFG.offsetX;
     el.inpCfgOffY.value = CFG.offsetY;
@@ -253,7 +270,7 @@
     b.innerHTML =
       '<span class="carta-int">' +
         '<span class="cara dorso">' +
-          '<img class="dorso-logo" src="img/logo.png" alt="">' +
+          '<img class="dorso-logo" src="img/logo.svg" alt="">' +
           '<span class="dorso-txt">MEMOTEST</span>' +
         '</span>' +
         '<span class="cara frente">' +
@@ -277,7 +294,7 @@
     clearInterval(E.reloj);
     E.reloj = null;
 
-    const pares = PARES_UNICO;
+    const pares = Math.max(4, Math.min(10, Number(CFG.pares) || PARES_DEF));
     E.nivel = pares;
     E.cartas = [];
     E.abiertas = [];
@@ -289,7 +306,7 @@
     E.combo = 0;
     E.inicio = 0;
     E.ms = 0;
-    E.restante = TIEMPO_MAX;
+    E.restante = tiempoMaxMs();
 
     // una viña por par, distinta en cada partida
     const vinas = barajar(Botellas.VARIETALES.slice()).slice(0, pares);
@@ -329,7 +346,7 @@
     E.reloj = setInterval(() => {
       if (!E.jugando) return;
       E.ms = performance.now() - E.inicio;
-      E.restante = Math.max(0, TIEMPO_MAX - E.ms);
+      E.restante = Math.max(0, tiempoMaxMs() - E.ms);
       pintarTiempo();
       if (E.restante <= 0) {
         terminar(true);
@@ -435,11 +452,11 @@
     limpiarTimersFalla();
 
     if (porTiempo) {
-      E.ms = TIEMPO_MAX;
+      E.ms = tiempoMaxMs();
       E.restante = 0;
     } else if (E.inicio) {
-      E.ms = Math.min(TIEMPO_MAX, performance.now() - E.inicio);
-      E.restante = Math.max(0, TIEMPO_MAX - E.ms);
+      E.ms = Math.min(tiempoMaxMs(), performance.now() - E.inicio);
+      E.restante = Math.max(0, tiempoMaxMs() - E.ms);
     }
     clearInterval(E.reloj);
     E.reloj = null;
@@ -502,7 +519,7 @@
     limpiarTimersFalla();
     clearInterval(E.reloj);
     E.reloj = null;
-    E.restante = TIEMPO_MAX;
+    E.restante = tiempoMaxMs();
     el.pantallaFin.classList.remove('visible');
     el.pantallaInicio.classList.add('visible');
     el.hud.classList.add('hud-off');
@@ -515,28 +532,45 @@
     el.btnOtra.addEventListener('click', () => nuevaPartida());
     el.btnSalir.addEventListener('click', volverAlInicio);
     el.btnReiniciar.addEventListener('click', () => {
-      if (E.jugando) nuevaPartida();
+      nuevaPartida();
     });
 
     if (el.panelCfgCartas) {
       sincronizarPanelCfg();
+      if (el.inpCfgPares) el.inpCfgPares.addEventListener('input', () => {
+        CFG.pares = Number(el.inpCfgPares.value) || PARES_DEF;
+        sincronizarPanelCfg();
+        guardarCfg();
+        if (E.jugando) nuevaPartida(); else pintarHUD();
+        avisarGrid('pares', CFG.pares);
+      });
+      if (el.inpCfgTiempo) el.inpCfgTiempo.addEventListener('input', () => {
+        CFG.tiempoMax = Number(el.inpCfgTiempo.value) || TIEMPO_DEF;
+        sincronizarPanelCfg();
+        guardarCfg();
+        if (E.jugando) nuevaPartida(); else { E.restante = tiempoMaxMs(); pintarTiempo(); }
+        avisarGrid('tiempoMax', CFG.tiempoMax);
+      });
       el.inpCfgTam.addEventListener('input', () => {
         CFG.escala = Number(el.inpCfgTam.value) || 1;
         sincronizarPanelCfg();
         guardarCfg();
         ajustarTablero(true);
+        avisarGrid('escala', CFG.escala);
       });
       el.inpCfgOffX.addEventListener('input', () => {
         CFG.offsetX = Number(el.inpCfgOffX.value) || 0;
         sincronizarPanelCfg();
         guardarCfg();
         aplicarOffsetsTablero();
+        avisarGrid('offsetX', CFG.offsetX);
       });
       el.inpCfgOffY.addEventListener('input', () => {
         CFG.offsetY = Number(el.inpCfgOffY.value) || 0;
         sincronizarPanelCfg();
         guardarCfg();
         aplicarOffsetsTablero();
+        avisarGrid('offsetY', CFG.offsetY);
       });
       el.btnCerrarCfgCartas.addEventListener('click', () => alternarPanelCfg(false));
       el.btnResetCfgCartas.addEventListener('click', () => {
@@ -581,7 +615,7 @@
   function arrancar() {
     enganchar();
     aplicarOffsetsTablero();
-    el.hudPares.textContent = '0/' + PARES_UNICO;
+    el.hudPares.textContent = '0/' + (Number(CFG.pares) || PARES_DEF);
     Botellas.cargar()
       .then(() => {
         el.cargando.classList.remove('visible');
@@ -611,8 +645,44 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
+  // Avisa un cambio local al inspector del Grid Sequencer (si está el puente).
+  function avisarGrid(k, v) {
+    try {
+      if (window.DeliGrid && window.DeliGrid.emit) window.DeliGrid.emit(k, v);
+    } catch (e) { }
+  }
+
+  // Aplica un parámetro que viene del inspector (sin re-emitir: evita el loop).
+  function aplicarParam(k, v) {
+    if (k === 'pares') CFG.pares = Math.max(4, Math.min(10, parseInt(v, 10) || PARES_DEF));
+    else if (k === 'tiempoMax') CFG.tiempoMax = Math.max(20, Math.min(180, Number(v) || TIEMPO_DEF));
+    else if (k === 'escala') CFG.escala = Math.max(0.5, Math.min(1.6, Number(v) || 1));
+    else if (k === 'offsetX') CFG.offsetX = Math.max(-300, Math.min(300, Number(v) || 0));
+    else if (k === 'offsetY') CFG.offsetY = Math.max(-300, Math.min(300, Number(v) || 0));
+    else return;
+
+    sincronizarPanelCfg();
+    guardarCfg();
+    if (k === 'pares' || k === 'tiempoMax') {
+      if (E.jugando) nuevaPartida();
+      else { E.restante = tiempoMaxMs(); pintarTiempo(); pintarHUD(); }
+    } else if (k === 'escala') {
+      ajustarTablero(true);
+    } else {
+      aplicarOffsetsTablero();
+    }
+  }
+
   // API para probar sin jugar (consola):
   window.Memotest = {
+    aplicar: aplicarParam,
+    valores: () => ({
+      pares: CFG.pares,
+      tiempoMax: CFG.tiempoMax,
+      escala: CFG.escala,
+      offsetX: CFG.offsetX,
+      offsetY: CFG.offsetY
+    }),
     estado: E,
     cfg: CFG,
     empezar: () => nuevaPartida(),

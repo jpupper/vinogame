@@ -523,7 +523,7 @@
     if (promesa) return promesa;
     promesa = Promise.all([
       cargarImagen('img/botella.png'),
-      cargarImagen('img/logo.png')
+      cargarImagen('img/logo.svg')
     ])
       .then(([botella, logo]) => {
         IMG.botella = botella;

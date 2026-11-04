@@ -1,0 +1,139 @@
+{
+  "gameId": "pongdw",
+  "updatedAt": "2026-11-03T06:20:00.000Z",
+  "values": {
+    "velocidad": 1,
+    "paleta": 1,
+    "vidas": 3,
+    "modo": "coop",
+    "objetivo": 7,
+    "brillo": 0.55,
+    "apertura": 0.6,
+    "rayos": 0.55,
+    "duracion": 0.85,
+    "fuerza": 1.0
+  },
+  "schema": [
+    {
+      "id": "tab_juego",
+      "title": "Juego",
+      "icon": "🏓",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "velocidad",
+          "label": "Velocidad del corcho",
+          "min": 0.5,
+          "max": 2,
+          "step": 0.05,
+          "default": 1,
+          "unit": "x"
+        },
+        {
+          "type": "slider",
+          "key": "paleta",
+          "label": "Largo de la botella",
+          "min": 0.6,
+          "max": 1.8,
+          "step": 0.05,
+          "default": 1,
+          "unit": "x"
+        },
+        {
+          "type": "slider",
+          "key": "vidas",
+          "label": "Vidas (cooperativo)",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        }
+      ]
+    },
+    {
+      "id": "tab_modo",
+      "title": "Modo",
+      "icon": "👥",
+      "controls": [
+        {
+          "type": "select",
+          "key": "modo",
+          "label": "Formato",
+          "default": "coop",
+          "options": [
+            {
+              "value": "coop",
+              "label": "Cooperativo (sostener el rally)"
+            },
+            {
+              "value": "duelo",
+              "label": "Duelo (1 vs 1)"
+            }
+          ]
+        },
+        {
+          "type": "slider",
+          "key": "objetivo",
+          "label": "Puntos para ganar el duelo",
+          "min": 3,
+          "max": 15,
+          "step": 1,
+          "default": 7
+        }
+      ]
+    },
+    {
+      "id": "tab_impactos",
+      "title": "Impactos",
+      "icon": "✦",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "brillo",
+          "label": "Brillo del golpe",
+          "min": 0,
+          "max": 2,
+          "step": 0.05,
+          "default": 0.55
+        },
+        {
+          "type": "slider",
+          "key": "apertura",
+          "label": "Apertura de la onda",
+          "min": 0.2,
+          "max": 1.6,
+          "step": 0.02,
+          "default": 0.6
+        },
+        {
+          "type": "slider",
+          "key": "rayos",
+          "label": "Rayos",
+          "min": 0,
+          "max": 2,
+          "step": 0.05,
+          "default": 0.55
+        },
+        {
+          "type": "slider",
+          "key": "duracion",
+          "label": "Duración",
+          "min": 0.3,
+          "max": 2,
+          "step": 0.05,
+          "default": 0.85,
+          "unit": "s"
+        },
+        {
+          "type": "slider",
+          "key": "fuerza",
+          "label": "Fuerza / tamaño",
+          "min": 0.2,
+          "max": 2,
+          "step": 0.05,
+          "default": 1
+        }
+      ]
+    }
+  ]
+}

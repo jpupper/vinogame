@@ -1,0 +1,471 @@
+{
+  "gameId": "vinogame",
+  "updatedAt": "2026-11-03T05:09:03.346Z",
+  "values": {
+    "fallSpeed": 3.9,
+    "lives": 3,
+    "objectSize": 130,
+    "spawnRate": 800,
+    "hoverTime": 44,
+    "winComboThreshold": 26,
+    "maxGoodItems": 10,
+    "maxBadItems": 10,
+    "particleLifespan": 20000,
+    "spawnMode": "top",
+    "goodHaloSize": 0.12,
+    "goodHaloStrength": 0.35,
+    "goodHaloColor": "#ffd700",
+    "badHaloSize": 0.14,
+    "badHaloStrength": 0.27,
+    "badHaloColor": "#ff0000",
+    "cursorHaloSize": 0.08,
+    "cursorHaloStrength": 1,
+    "backgroundBrightness": 1,
+    "waveSpeed": 0.5,
+    "waveForce": 0.09,
+    "waveDuration": 2,
+    "winLoseTextSize": 0.12,
+    "scoreTextSize": 40,
+    "comboTextSize": 31,
+    "oleaje": 0.65,
+    "fuerza": 0.2,
+    "amortiguar": 0.98,
+    "paso": 0.53,
+    "refraccion": 0.48,
+    "relieve": 0.58,
+    "profundidad": 0.48,
+    "espuma": 0.45,
+    "brillo": 1.44,
+    "especular": 0.5,
+    "radio": 1.47,
+    "aguaColorHex": "#ffffff",
+    "showLidarPoints": false,
+    "hideBackground": false,
+    "showCooperativeButton": false,
+    "showCompetitiveButton": true,
+    "especularColorHex": "#fffaf0"
+  },
+  "schema": [
+    {
+      "id": "tab_juego",
+      "title": "Juego",
+      "icon": "⚙️",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "fallSpeed",
+          "label": "Velocidad de caída",
+          "min": 0.5,
+          "max": 12,
+          "step": 0.1,
+          "default": 2.25,
+          "unit": "x"
+        },
+        {
+          "type": "slider",
+          "key": "lives",
+          "label": "Vidas",
+          "min": 1,
+          "max": 10,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "type": "slider",
+          "key": "objectSize",
+          "label": "Tamaño de objetos",
+          "min": 50,
+          "max": 260,
+          "step": 5,
+          "default": 100,
+          "unit": "px"
+        },
+        {
+          "type": "slider",
+          "key": "spawnRate",
+          "label": "Frecuencia de aparición",
+          "min": 400,
+          "max": 5000,
+          "step": 100,
+          "default": 2000,
+          "unit": "ms"
+        },
+        {
+          "type": "slider",
+          "key": "hoverTime",
+          "label": "Tiempo de agarre",
+          "min": 50,
+          "max": 3000,
+          "step": 50,
+          "default": 1000,
+          "unit": "ms"
+        },
+        {
+          "type": "slider",
+          "key": "particleLifespan",
+          "label": "Vida de los objetos",
+          "min": 1000,
+          "max": 30000,
+          "step": 500,
+          "default": 6000,
+          "unit": "ms"
+        },
+        {
+          "type": "slider",
+          "key": "winComboThreshold",
+          "label": "Combo para ganar",
+          "min": 5,
+          "max": 50,
+          "step": 1,
+          "default": 20
+        },
+        {
+          "type": "slider",
+          "key": "maxGoodItems",
+          "label": "Máx. objetos buenos",
+          "min": 1,
+          "max": 30,
+          "step": 1,
+          "default": 10
+        },
+        {
+          "type": "slider",
+          "key": "maxBadItems",
+          "label": "Máx. objetos malos",
+          "min": 1,
+          "max": 30,
+          "step": 1,
+          "default": 5
+        },
+        {
+          "type": "select",
+          "key": "spawnMode",
+          "label": "Aparición de copas",
+          "default": "top",
+          "options": [
+            {
+              "value": "top",
+              "label": "Desde arriba"
+            },
+            {
+              "value": "random",
+              "label": "Aleatoria"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab_halos",
+      "title": "Halos",
+      "icon": "✨",
+      "controls": [
+        {
+          "type": "section",
+          "title": "Objetos buenos"
+        },
+        {
+          "type": "slider",
+          "key": "goodHaloSize",
+          "label": "Tamaño",
+          "min": 0.02,
+          "max": 0.4,
+          "step": 0.01,
+          "default": 0.12
+        },
+        {
+          "type": "slider",
+          "key": "goodHaloStrength",
+          "label": "Fuerza",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.35
+        },
+        {
+          "type": "color",
+          "key": "goodHaloColor",
+          "label": "Color",
+          "default": "#ffd700"
+        },
+        {
+          "type": "section",
+          "title": "Objetos malos"
+        },
+        {
+          "type": "slider",
+          "key": "badHaloSize",
+          "label": "Tamaño",
+          "min": 0.02,
+          "max": 0.4,
+          "step": 0.01,
+          "default": 0.14
+        },
+        {
+          "type": "slider",
+          "key": "badHaloStrength",
+          "label": "Fuerza",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.27
+        },
+        {
+          "type": "color",
+          "key": "badHaloColor",
+          "label": "Color",
+          "default": "#ff0000"
+        },
+        {
+          "type": "section",
+          "title": "Cursor / LIDAR"
+        },
+        {
+          "type": "slider",
+          "key": "cursorHaloSize",
+          "label": "Tamaño del cursor",
+          "min": 0.02,
+          "max": 0.4,
+          "step": 0.01,
+          "default": 0.08
+        },
+        {
+          "type": "slider",
+          "key": "cursorHaloStrength",
+          "label": "Fuerza del cursor",
+          "min": 0,
+          "max": 2,
+          "step": 0.05,
+          "default": 1
+        }
+      ]
+    },
+    {
+      "id": "tab_fondo",
+      "title": "Fondo / Agua",
+      "icon": "🌊",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "backgroundBrightness",
+          "label": "Brillo del fondo",
+          "min": 0,
+          "max": 2,
+          "step": 0.1,
+          "default": 1
+        },
+        {
+          "type": "slider",
+          "key": "waveSpeed",
+          "label": "Velocidad de las ondas",
+          "min": 0.1,
+          "max": 2,
+          "step": 0.1,
+          "default": 0.5
+        },
+        {
+          "type": "slider",
+          "key": "waveForce",
+          "label": "Fuerza de distorsión",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.09
+        },
+        {
+          "type": "slider",
+          "key": "waveDuration",
+          "label": "Duración de la onda",
+          "min": 0.5,
+          "max": 8,
+          "step": 0.5,
+          "default": 2,
+          "unit": "s"
+        },
+        {
+          "type": "toggle",
+          "key": "hideBackground",
+          "label": "Ocultar fondo (shader)",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "tab_agua",
+      "title": "Agua (shader)",
+      "icon": "💧",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "oleaje",
+          "label": "Oleaje",
+          "min": 0,
+          "max": 1.5,
+          "step": 0.01,
+          "default": 0.42
+        },
+        {
+          "type": "slider",
+          "key": "fuerza",
+          "label": "Fuerza del puntero",
+          "min": 0,
+          "max": 2,
+          "step": 0.01,
+          "default": 0.95
+        },
+        {
+          "type": "slider",
+          "key": "radio",
+          "label": "Radio del puntero",
+          "min": 0.05,
+          "max": 1.5,
+          "step": 0.01,
+          "default": 0.52
+        },
+        {
+          "type": "slider",
+          "key": "amortiguar",
+          "label": "Amortiguación",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.64
+        },
+        {
+          "type": "slider",
+          "key": "paso",
+          "label": "Paso de simulación",
+          "min": 0.05,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.38
+        },
+        {
+          "type": "slider",
+          "key": "refraccion",
+          "label": "Refracción",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.48
+        },
+        {
+          "type": "slider",
+          "key": "relieve",
+          "label": "Relieve",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.58
+        },
+        {
+          "type": "slider",
+          "key": "profundidad",
+          "label": "Profundidad",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.48
+        },
+        {
+          "type": "slider",
+          "key": "espuma",
+          "label": "Espuma",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.45
+        },
+        {
+          "type": "slider",
+          "key": "brillo",
+          "label": "Brillo",
+          "min": 0,
+          "max": 2,
+          "step": 0.01,
+          "default": 0.62
+        },
+        {
+          "type": "slider",
+          "key": "especular",
+          "label": "Especular",
+          "min": 0,
+          "max": 2,
+          "step": 0.01,
+          "default": 0.58
+        },
+        {
+          "type": "color",
+          "key": "aguaColorHex",
+          "label": "Color del agua",
+          "default": "#f5f2ff"
+        },
+        {
+          "type": "color",
+          "key": "especularColorHex",
+          "label": "Color de la luz especular",
+          "default": "#fffaf0"
+        }
+      ]
+    },
+    {
+      "id": "tab_winlose",
+      "title": "Win / Lose",
+      "icon": "🏆",
+      "controls": [
+        {
+          "type": "slider",
+          "key": "winLoseTextSize",
+          "label": "Tamaño del cartel",
+          "min": 0.01,
+          "max": 0.3,
+          "step": 0.005,
+          "default": 0.15
+        },
+        {
+          "type": "slider",
+          "key": "scoreTextSize",
+          "label": "Tamaño del puntaje",
+          "min": 10,
+          "max": 80,
+          "step": 1,
+          "default": 40
+        },
+        {
+          "type": "slider",
+          "key": "comboTextSize",
+          "label": "Tamaño del combo",
+          "min": 10,
+          "max": 80,
+          "step": 1,
+          "default": 30
+        }
+      ]
+    },
+    {
+      "id": "tab_lidar",
+      "title": "LIDAR",
+      "icon": "📡",
+      "controls": [
+        {
+          "type": "toggle",
+          "key": "showLidarPoints",
+          "label": "Mostrar puntos del LIDAR",
+          "default": false
+        },
+        {
+          "type": "toggle",
+          "key": "showCooperativeButton",
+          "label": "Botón Cooperativo",
+          "default": true
+        },
+        {
+          "type": "toggle",
+          "key": "showCompetitiveButton",
+          "label": "Botón Competir",
+          "default": true
+        }
+      ]
+    }
+  ]
+}

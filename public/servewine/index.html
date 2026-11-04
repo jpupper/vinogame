@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deli &amp; Wine · Llená las copas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/juego.css?v=20">
+</head>
+<body>
+<div id="app">
+  <div id="juego-wrap">
+    <div id="fondoAgua" aria-hidden="true"></div>
+    <canvas id="escena"></canvas>
+    <canvas id="fluido"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hud-off">
+      <div class="hud-bloque">
+        <span class="hud-etq">PUNTOS</span>
+        <span id="hudPuntos" class="hud-val">0</span>
+      </div>
+      <div class="hud-bloque">
+        <span class="hud-etq">COPAS</span>
+        <span id="hudCopas" class="hud-val">0</span>
+      </div>
+      <div class="hud-bloque hud-tiempo">
+        <span class="hud-etq">TIEMPO</span>
+        <span id="hudTiempo" class="hud-val">1:00</span>
+      </div>
+      <!-- Menú invisible para el promotor (arriba a la derecha): Reiniciar y Volver al inicio -->
+      <div class="hud-botones">
+        <button id="btnReiniciar" type="button" title="Reiniciar la partida" aria-label="Reiniciar la partida">↺</button>
+        <button id="btnSalir" type="button" title="Volver al inicio" aria-label="Volver al inicio">⌂</button>
+      </div>
+    </div>
+
+    <!-- PANTALLA INICIO -->
+    <section id="pantallaInicio" class="pantalla visible">
+      <div class="panel">
+        <div class="marca">
+          <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo">
+        </div>
+        <h1>MOVÉ LA BOTELLA PARA LLENAR LAS COPAS</h1>
+        <button id="btnJugar" class="boton-grande" type="button">JUGAR</button>
+      </div>
+    </section>
+
+    <!-- PANTALLA FIN -->
+    <section id="pantallaFin" class="pantalla">
+      <div class="panel panel-fin">
+        <div class="marca marca-fin">
+          <img src="img/logo.svg" alt="Deli &amp; Wine" class="logo logo-fin">
+        </div>
+        <p class="fin-kicker">✦ SE TERMINÓ EL TIEMPO ✦</p>
+        <div id="finMedalla" class="fin-medalla fin-botella">
+          <img class="botella-fin-img" src="img/botella.png" alt="" aria-hidden="true">
+          <div class="fin-centro">
+            <span class="fin-etq">PUNTOS</span>
+            <span id="finPuntos" class="fin-numero">0</span>
+          </div>
+        </div>
+        <p id="finCartel" class="fin-cartel">TU MEJOR MARCA: 0</p>
+        <div class="fin-stats">
+          <div class="fin-stat">
+            <span class="fin-stat-etq">COPAS</span>
+            <span id="finCopas" class="fin-stat-val">0</span>
+          </div>
+          <div class="fin-stat">
+            <span class="fin-stat-etq">VENCIDAS</span>
+            <span id="finFallas" class="fin-stat-val">0</span>
+          </div>
+          <div class="fin-stat">
+            <span class="fin-stat-etq">RÉCORD</span>
+            <span id="finRecord" class="fin-stat-val">0</span>
+          </div>
+        </div>
+        <button id="btnOtra" class="boton-grande boton-jugar" type="button">JUGAR OTRA VEZ</button>
+        <p class="chico">Una botella por cada dedo · mové el mouse o tocá la pantalla</p>
+      </div>
+    </section>
+
+    <div id="cargando" class="cargando visible">CARGANDO…</div>
+  </div>
+</div>
+
+<script src="js/fluido.js"></script>
+<script src="js/fondo.js"></script>
+<script src="js/juego.js?v=21"></script>
+<script src="js/panel.js?v=15"></script>
+<!-- Puente con el Grid Sequencer: parámetros indexados + config.json del sistema LIDAR -->
+<script src="js/grid-adapter.js?v=2"></script>
+<!-- Entrada LIDAR: blobs del sensor -> punteros/clicks del juego -->
+<script src="js/lidar-input.js?v=1"></script>
+</body>
+</html>

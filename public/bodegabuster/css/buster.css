@@ -1,0 +1,329 @@
+/* ============================================================
+   BODEGA BUSTER · Deli & Wine
+   Arkanoide de bodega. Estética: borgoña + doble filete dorado,
+   Cinzel para títulos, Montserrat para textos.
+   ============================================================ */
+:root{
+  --vino:#440a1c;
+  --vino-alto:#5a1329;
+  --vino-claro:#8a1738;
+  --vino-fuerte:#a4132f;
+  --dorado:#ffd25f;
+  --dorado-suave:#e8c477;
+  --crema:#fff2c3;
+  --crema-texto:#f3e6d0;
+  --negro:#0a0406;
+  --fuente-titulo:"Cinzel",Georgia,"Times New Roman",serif;
+  --fuente-texto:"Montserrat",-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+html{background:var(--negro)}
+body{
+  font-family:var(--fuente-texto);
+  color:var(--crema-texto);
+  background:radial-gradient(ellipse at 50% -20%,rgba(120,20,40,.5),transparent 62%),
+             radial-gradient(ellipse at 50% 120%,rgba(60,8,20,.7),transparent 58%),
+             linear-gradient(180deg,#0b0507,#060203 65%,#0a0406);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+#app{position:fixed;inset:0;overflow:hidden}
+#escena{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:2}
+
+/* ---------------- HUD SIMÉTRICO ---------------- */
+#hud{
+  position:absolute;top:0;left:0;right:0;z-index:6;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:clamp(8px,1.4vh,16px) clamp(14px,2.2vw,30px);
+  background:linear-gradient(180deg,rgba(8,3,5,.92),rgba(8,3,5,.45) 75%,transparent);
+  transition:opacity .35s ease,transform .35s ease;
+  pointer-events:none;
+}
+#hud.hud-off{opacity:0;transform:translateY(-14px);pointer-events:none}
+
+.hud-player{
+  display:flex;align-items:center;gap:clamp(10px,1.4vw,20px);
+  pointer-events:auto;
+}
+.hud-player-1{justify-content:flex-start}
+.hud-player-2{
+  justify-content:flex-end;
+  display:none; /* Oculto en modo 1P */
+}
+#hud.modo-2 .hud-player-2{
+  display:flex;
+}
+
+.hud-center{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  pointer-events:auto;
+}
+
+#hud.modo-2 .hud-center .hud-nivel{
+  display:none;
+}
+
+.hud-logo{
+  height:clamp(32px,5vh,48px);width:auto;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));opacity:.95;
+}
+.hud-bloque{display:flex;flex-direction:column;gap:2px;min-width:68px}
+.hud-player-2 .hud-bloque{text-align:right}
+
+.hud-etq{
+  font-size:clamp(9.5px,.85vw,11.5px);letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(232,196,119,.68);font-weight:600;white-space:nowrap;
+}
+.hud-val{
+  font-family:var(--fuente-titulo);font-weight:700;
+  font-size:clamp(19px,2.5vw,30px);line-height:1;
+  color:var(--crema);text-shadow:0 0 18px rgba(255,210,95,.35);
+  font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;
+}
+.hud-player-2 .hud-val{
+  justify-content:flex-end;
+}
+
+.hud-vidas .hud-val{display:flex;gap:4px;align-items:center;height:clamp(14px,1.9vw,22px)}
+.hud-icon{height:clamp(17px,2.2vw,24px);width:auto;margin-right:4px;vertical-align:-2px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.hud-player-2 .hud-icon{margin-right:0;margin-left:4px;order:2}
+.hud-player-2 .hud-icon + span{order:1}
+
+.vida{width:clamp(17px,2.3vw,26px);height:auto;display:block;transition:opacity .3s,transform .3s}
+.vida.off{opacity:.2;transform:scale(.85)}
+
+/* Ocultar interfaz de pausa y herramientas de calibración */
+#pantallaPausa, #dwImpactosBtn, #dwImpactosPanel {
+  display: none !important;
+}
+
+/* Menú invisible para el promotor (arriba a la derecha): Reiniciar y Volver al inicio */
+.hud-botones {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  z-index: 999;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+.hud-botones button {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  cursor: pointer;
+  opacity: 0;
+  border: none;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width:680px){
+  .hud-logo{display:none}
+  .hud-bloque{min-width:0}
+  .hud-nivel{display:none}
+  .hud-val{font-size:15px}
+  .hud-player{gap:6px}
+}
+
+/* ---------------- Pantallas ---------------- */
+.pantalla{
+  position:absolute;inset:0;z-index:8;
+  display:grid;place-items:center;
+  padding:clamp(12px,3vw,32px);
+  background:radial-gradient(ellipse at 50% 40%,rgba(12,4,7,.55),rgba(6,2,3,.92));
+  opacity:0;pointer-events:none;
+  transition:opacity .34s ease;
+  backdrop-filter:blur(2px);
+}
+.pantalla.visible{opacity:1;pointer-events:auto}
+.sin-transicion .pantalla{transition:none !important}
+.panel{
+  position:relative;
+  width:min(680px,94vw);
+  max-height:calc(100dvh - 24px);
+  overflow-y:auto;
+  padding:clamp(20px,3.4vh,34px) clamp(18px,3vw,36px);
+  text-align:center;
+  border-radius:26px;
+  background:
+    radial-gradient(ellipse at 50% -10%,rgba(164,19,47,.34),transparent 62%),
+    linear-gradient(180deg,rgba(30,9,16,.97),rgba(13,4,8,.985));
+  border:2px solid rgba(255,210,95,.5);
+  box-shadow:0 40px 90px rgba(0,0,0,.78),inset 0 0 0 1px rgba(255,242,195,.14),inset 0 1px 0 rgba(255,255,255,.06);
+  scrollbar-width:thin;scrollbar-color:rgba(255,210,95,.35) transparent;
+}
+.panel::-webkit-scrollbar{width:8px}
+.panel::-webkit-scrollbar-thumb{background:rgba(255,210,95,.32);border-radius:8px}
+.panel-chico{width:min(520px,92vw)}
+.panel-fin{width:min(620px,94vw)}
+.marca{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:clamp(8px,1.4vh,16px)}
+.logo{width:min(210px,46vw);height:auto;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+.marca-nombre{
+  font-family:var(--fuente-titulo);font-size:clamp(12px,1.3vw,14px);
+  letter-spacing:.42em;text-transform:uppercase;color:rgba(232,196,119,.78);
+}
+.marca-fin{margin-bottom:4px}
+.marca-fin .logo{width:min(140px,30vw)}
+.kicker{
+  font-size:clamp(11px,1.2vw,13px);letter-spacing:.34em;text-transform:uppercase;
+  color:rgba(232,196,119,.7);font-weight:600;
+}
+.panel h1{
+  margin-top:8px;
+  font-family:var(--fuente-titulo);font-weight:700;
+  font-size:clamp(34px,5.6vw,58px);line-height:1.05;letter-spacing:.06em;
+  color:#fff;text-shadow:0 0 30px rgba(255,210,95,.34),0 6px 26px rgba(0,0,0,.8);
+}
+.panel h1::after{
+  content:"";display:block;width:min(260px,60%);height:1px;margin:clamp(8px,1.4vh,14px) auto 0;
+  background:linear-gradient(90deg,transparent,rgba(255,210,95,.7),transparent);
+}
+.bajada{
+  margin-top:clamp(8px,1.4vh,14px);
+  font-size:clamp(14.5px,1.7vw,18px);line-height:1.6;
+  color:rgba(243,230,208,.76);
+}
+
+/* modos (1 / 2 jugadores) */
+.modos{
+  display:flex;justify-content:center;gap:6px;
+  margin:clamp(12px,2vh,20px) auto clamp(4px,1vh,8px);
+  padding:5px;width:fit-content;border-radius:999px;
+  background:rgba(8,3,5,.6);border:1px solid rgba(255,210,95,.2);
+}
+.modo{
+  cursor:pointer;border:0;border-radius:999px;padding:10px 20px;
+  font-family:var(--fuente-texto);font-size:13px;font-weight:600;letter-spacing:.12em;
+  color:rgba(243,230,208,.6);background:transparent;transition:all .2s;
+}
+.modo:hover{color:var(--crema)}
+.modo.activo{
+  color:#1a0709;background:linear-gradient(180deg,#f4d79b,#d8a94f);
+  box-shadow:0 4px 16px rgba(232,196,119,.35);
+}
+
+/* ---------------- Botones Deli & Wine ---------------- */
+.boton-grande,.boton-sec{
+  position:relative;display:block;width:min(390px,88%);
+  margin:clamp(10px,1.8vh,18px) auto 0;
+  cursor:pointer;
+  font-family:var(--fuente-titulo);font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;
+  border-radius:22px;
+  transition:transform .18s ease,box-shadow .22s ease,filter .22s ease;
+}
+.boton-grande{
+  padding:clamp(15px,2.3vh,21px) 30px;
+  font-size:clamp(17px,2vw,22px);
+  color:var(--crema);
+  background:linear-gradient(180deg,var(--vino-alto) 0%,var(--vino) 62%,#380817 100%);
+  border:3px solid var(--dorado);
+  box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 34px rgba(255,210,95,.22),inset 0 2px 0 rgba(255,255,255,.1);
+}
+.boton-grande::before{
+  content:"";position:absolute;inset:5px;border-radius:15px;
+  border:1px solid rgba(255,242,195,.85);pointer-events:none;
+}
+.boton-grande:hover{transform:translateY(-2px);filter:brightness(1.08);box-shadow:0 20px 44px rgba(0,0,0,.66),0 0 46px rgba(255,210,95,.36),inset 0 2px 0 rgba(255,255,255,.14)}
+.boton-grande:active{transform:translateY(0) scale(.985)}
+.boton-sec{
+  padding:10px 22px;font-size:11.5px;margin-top:10px;
+  color:rgba(243,230,208,.72);background:transparent;
+  border:1px solid rgba(255,210,95,.32);
+}
+.boton-sec:hover{color:var(--crema);border-color:rgba(255,210,95,.7)}
+.boton-jugar{animation:latiendo 2.6s ease-in-out infinite}
+@keyframes latiendo{
+  0%,100%{box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 30px rgba(255,210,95,.2),inset 0 2px 0 rgba(255,255,255,.1)}
+  50%{box-shadow:0 16px 38px rgba(0,0,0,.6),0 0 54px rgba(255,210,95,.42),inset 0 2px 0 rgba(255,255,255,.16)}
+}
+.chico{
+  margin-top:clamp(8px,1.4vh,14px);
+  font-size:13px;line-height:1.6;letter-spacing:.04em;
+  color:rgba(243,230,208,.44);
+}
+.chico b{color:rgba(232,196,119,.8);font-weight:600}
+
+/* ---------------- Fin de partida: Botella de Vino Deli & Wine ---------------- */
+.fin-medalla.fin-botella{
+  position:relative;
+  width:clamp(190px,36vh,250px);
+  height:clamp(190px,36vh,250px);
+  margin:-4px auto 8px;
+  display:flex;align-items:center;justify-content:center;
+  filter:drop-shadow(0 14px 28px rgba(0,0,0,.82)) drop-shadow(0 0 22px rgba(232,196,119,.24));
+}
+.botella-fin-img{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:contain;
+  transform:scale(1.05);
+  display:block;pointer-events:none;
+}
+.fin-botella .fin-centro{
+  position:absolute;z-index:2;
+  top:61.2%;left:49.2%;
+  transform:translateX(-50%);
+  width:24%;
+  min-height:28%;
+  padding:5px 3px 4px;
+  border-radius:3px;
+  background:
+    linear-gradient(90deg,rgba(214,196,164,.98) 0%,rgba(253,248,236,.99) 18%,rgba(250,242,224,.99) 82%,rgba(208,190,158,.98) 100%);
+  border:1.5px solid #d4a64a;
+  box-shadow:
+    inset 0 0 0 1px rgba(69,11,2,.28),
+    0 3px 10px rgba(0,0,0,.55);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+}
+.fin-etq{
+  font-family:"Cinzel",Georgia,serif;
+  font-size:clamp(6px,1vw,7.5px);letter-spacing:.14em;
+  color:#450B02;font-weight:700;
+  border-bottom:1px solid rgba(69,11,2,.28);
+  padding-bottom:1px;margin-bottom:1px;
+}
+.fin-numero{
+  font-family:"Cinzel",Georgia,serif;
+  font-weight:700;
+  font-size:clamp(18px,3.8vw,26px);line-height:1;
+  color:#450B02;
+  font-variant-numeric:tabular-nums;
+}
+
+.fin-cartel{
+  margin-top:clamp(8px,1.4vh,12px);
+  font-family:var(--fuente-titulo);font-size:clamp(13px,1.5vw,16px);
+  letter-spacing:.2em;color:rgba(232,196,119,.85);text-transform:uppercase;
+  font-weight:700;
+}
+.fin-stats{
+  display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(6px,1.6vw,20px);
+  margin-top:clamp(10px,1.8vh,18px);
+}
+.fin-stat{display:flex;flex-direction:column;gap:3px;min-width:64px}
+.fin-stat-etq{font-size:10.5px;letter-spacing:.24em;color:rgba(232,196,119,.6);font-weight:600}
+.fin-stat-val{font-family:var(--fuente-titulo);font-size:clamp(19px,2.4vw,26px);color:var(--crema)}
+
+@media (max-height:640px){
+  .panel{padding:16px 20px}
+  .logo{width:min(120px,30vw)}
+  .marca{margin-bottom:4px}
+  .panel h1{font-size:clamp(22px,3.6vw,30px)}
+  .bajada{font-size:11.5px;margin-top:6px}
+  .modos{margin:8px auto 2px}
+  .fin-medalla.fin-botella{width:140px;height:140px;margin-top:4px}
+  .boton-grande{padding:10px 20px;font-size:13px;margin-top:8px}
+  .fin-stats{margin-top:8px}
+}
+@media (max-height:520px){
+  .bajada,.chico{display:none}
+  .logo{width:96px}
+}
