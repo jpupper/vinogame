@@ -773,12 +773,26 @@
     return E.botellas.find((b) => b.id === key) || null;
   }
 
+  // En el LIDAR las botellas salen SOLO de los puntos detectados. La botella
+  // del mouse que se creaba al arrancar quedaba fija en pantalla.
+  function esModoLidar() {
+    return !!(window.LidarPointer || window.LidarAdapter || window.LidarIntegration ||
+              window.GameGridBridge ||
+              document.querySelector('script[src*="lidar-pointer"]') ||
+              document.querySelector('script[src*="grid-adapter"]') ||
+              document.querySelector('script[src*="game-grid-bridge"]'));
+  }
+
   function abrirBotella(id, x) {
     let b = botellaDe(id);
     if (b) { b.alfaObj = 1; return b; }
     if (E.botellas.filter((x2) => x2.alfaObj > 0).length >= CFG.maxBotellas) return null;
     b = crearBotella(String(id), x);
     E.botellas.push(b);
+    if (b.id !== 'mouse') {
+      const raton = E.botellas.find((o) => o.id === 'mouse');
+      if (raton) raton.alfaObj = 0;
+    }
     return b;
   }
 
@@ -800,6 +814,7 @@
   SA.addEventListener('pointerdown', (ev) => {
     try { SA.setPointerCapture?.(ev.pointerId); } catch (e) { }
     const esMouse = ev.pointerType === 'mouse' || ev.pointerType === 'pen';
+    if (esMouse && esModoLidar()) return;   // en LIDAR manda el punto, no el mouse
     const id = esMouse ? 'mouse' : 'p' + ev.pointerId;
     const b = abrirBotella(id, ev.clientX - SA.getBoundingClientRect().left);
     if (b) moverA(id, ev.clientX);
@@ -807,6 +822,7 @@
 
   SA.addEventListener('pointermove', (ev) => {
     const esMouse = ev.pointerType === 'mouse' || ev.pointerType === 'pen';
+    if (esMouse && esModoLidar()) return;   // en LIDAR manda el punto, no el mouse
     const id = esMouse ? 'mouse' : 'p' + ev.pointerId;
     if (!botellaDe(id)) {
       if (esMouse && E.jugando && E.botellas.length < CFG.maxBotellas) {
@@ -1373,8 +1389,12 @@
     E.tSpawn = 350;
 
     const xIni = E.botellas[0] ? E.botellas[0].x : E.ancho / 2;
-    E.botellas = [crearBotella('mouse', xIni)];
-    E.botellas[0].alfa = 1;
+    if (esModoLidar()) {
+      E.botellas = [];   // sólo botellas que generan los puntos
+    } else {
+      E.botellas = [crearBotella('mouse', xIni)];
+      E.botellas[0].alfa = 1;
+    }
 
     actualizarHud();
     document.getElementById('hud').classList.remove('hud-off');
