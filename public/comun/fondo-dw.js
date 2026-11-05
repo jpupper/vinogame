@@ -40,7 +40,12 @@
         velocidad: 0.055,
         tinte: 0.26,
         oscurecer: 0.34,
-        crossfade: 2.6
+        crossfade: 2.6,
+        // Escala y desplazamiento del recorte (las fotos siempre con cover):
+        //   1 = cubre la pantalla justo; >1 acerca, <1 aleja
+        escala: 1,
+        offsetX: 0,   // en fracciones del ancho de la pantalla (-0.5 .. 0.5)
+        offsetY: 0    // en fracciones del alto (-0.5 .. 0.5), positivo = sube la foto
     };
 
     var F = {
@@ -76,6 +81,8 @@
         'uniform float u_oscurecer;',
         'uniform float u_arA;',
         'uniform float u_arB;',
+        'uniform float u_esc;',             // escala del recorte (1 = cover justo)
+        'uniform vec2  u_off;',             // desplazamiento en fraccion de pantalla
         'uniform vec3 u_pt[4];',            // x, y, fuerza (uv 0..1, y abajo)
         'uniform int u_npt;',
         '',
@@ -107,6 +114,8 @@
         '  vec2 p = uv - 0.5;',
         '  if (sr > ar) p.y *= ar / sr;',
         '  else p.x *= sr / ar;',
+        '  // encuadre: aleja/acerca y corre el recorte (siempre sin estirar)',
+        '  p = p / max(u_esc, 0.001) - u_off;',
         '  return p + 0.5;',
         '}',
         '',
@@ -213,11 +222,14 @@
 
     function drawCover(ctx, img, w, h, alfa) {
         var iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
-        var esc = Math.max(w / iw, h / ih);
+        // mismo encuadre que el shader: escala + offset (0 = centrado)
+        var esc = Math.max(w / iw, h / ih) * (F.cfg.escala || 1);
         var dw = iw * esc, dh = ih * esc;
+        var ox = (F.cfg.offsetX || 0) * w;
+        var oy = (F.cfg.offsetY || 0) * h;   // positivo = sube la foto
         ctx.save();
         ctx.globalAlpha = alfa;
-        ctx.drawImage(img, (w - dw) / 2, (h - dh) * 0.45, dw, dh);
+        ctx.drawImage(img, (w - dw) / 2 + ox, (h - dh) / 2 - oy, dw, dh);
         ctx.restore();
     }
 
@@ -296,7 +308,8 @@
         gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
         var nombres = ['u_res', 'u_imgA', 'u_imgB', 'u_mezcla', 'u_t', 'u_intensidad',
-            'u_velocidad', 'u_tinte', 'u_oscurecer', 'u_arA', 'u_arB', 'u_pt', 'u_npt'];
+            'u_velocidad', 'u_tinte', 'u_oscurecer', 'u_arA', 'u_arB', 'u_pt', 'u_npt',
+            'u_esc', 'u_off'];
         nombres.forEach(function (n) { F.uni[n] = gl.getUniformLocation(prog, n); });
 
         F.tex[0] = textura(gl);
@@ -392,6 +405,8 @@
         gl.uniform1f(u.u_oscurecer, F.cfg.oscurecer);
         gl.uniform1f(u.u_arA, F.ar[F.idxA] || 1.78);
         gl.uniform1f(u.u_arB, F.ar[F.idxB] || 1.78);
+        gl.uniform1f(u.u_esc, typeof F.cfg.escala === 'number' ? F.cfg.escala : 1);
+        gl.uniform2f(u.u_off, F.cfg.offsetX || 0, F.cfg.offsetY || 0);
 
         var pts = new Float32Array(12);
         var n = 0;
@@ -427,6 +442,15 @@
         params: function (cambios) {
             if (cambios) Object.assign(F.cfg, cambios);
             return Object.assign({}, F.cfg);
+        },
+        // forma corta para el inspector del grid: escala + offset del recorte
+        encuadre: function (cfg) {
+            if (cfg) {
+                if (typeof cfg.escala === 'number') F.cfg.escala = Math.max(0.5, Math.min(3, cfg.escala));
+                if (typeof cfg.offsetX === 'number') F.cfg.offsetX = Math.max(-0.5, Math.min(0.5, cfg.offsetX));
+                if (typeof cfg.offsetY === 'number') F.cfg.offsetY = Math.max(-0.5, Math.min(0.5, cfg.offsetY));
+            }
+            return { escala: F.cfg.escala, offsetX: F.cfg.offsetX, offsetY: F.cfg.offsetY };
         },
         apagar: function () {
             F.ok = false;
